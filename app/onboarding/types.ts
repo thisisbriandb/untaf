@@ -95,12 +95,12 @@ export const languageLevels = [
 // ─── Existing Constants ─────────────────────────────────────────────────────
 
 export const colorSwatches: ColorSwatch[] = [
-  { id: "indigo", name: "Indigo", bg: "bg-indigo-600", border: "border-indigo-600", text: "text-indigo-600", hex: "#4f46e5" },
-  { id: "blue", name: "Bleu Océan", bg: "bg-blue-600", border: "border-blue-600", text: "text-blue-600", hex: "#2563eb" },
+  { id: "navy", name: "Bleu Steel Untaf", bg: "bg-[#234C6A]", border: "border-[#234C6A]", text: "text-[#234C6A]", hex: "#234C6A" },
+  { id: "darknavy", name: "Bleu Nuit Untaf", bg: "bg-[#1B3C53]", border: "border-[#1B3C53]", text: "text-[#1B3C53]", hex: "#1B3C53" },
+  { id: "slate", name: "Ardoise Slate", bg: "bg-[#456882]", border: "border-[#456882]", text: "text-[#456882]", hex: "#456882" },
+  { id: "sand", name: "Sable Warm", bg: "bg-[#D2C1B6]", border: "border-[#D2C1B6]", text: "text-[#D2C1B6]", hex: "#D2C1B6" },
   { id: "emerald", name: "Émeraude", bg: "bg-emerald-600", border: "border-emerald-600", text: "text-emerald-600", hex: "#059669" },
   { id: "violet", name: "Violet Studio", bg: "bg-violet-600", border: "border-violet-600", text: "text-violet-600", hex: "#7c3aed" },
-  { id: "rose", name: "Bordeaux", bg: "bg-rose-700", border: "border-rose-700", text: "text-rose-700", hex: "#be123c" },
-  { id: "slate", name: "Ardoise", bg: "bg-slate-800", border: "border-slate-800", text: "text-slate-800", hex: "#1e293b" }
 ];
 
 export const cvTemplates: CVTemplate[] = [

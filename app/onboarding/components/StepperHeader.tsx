@@ -40,10 +40,10 @@ export function StepperHeader({
       {userFlowChoice !== null && !isSubmitting && (
         <div>
           <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-            <span className={cn(step >= 1 && "text-primary")}>1. Diagnostic 360°</span>
-            <span className={cn(step >= 2 && "text-primary")}>2. Rédaction IA</span>
-            <span className={cn(step >= 3 && "text-primary")}>3. Studio Design Typst</span>
-            <span className={cn(step >= 4 && "text-primary")}>4. Finalisation & Matching</span>
+            <span className={cn(step >= 1 && "text-primary")}>1. Importation & Diagnostic</span>
+            <span className={cn(step >= 2 && "text-primary")}>2. Choix du Modèle & Style</span>
+            <span className={cn(step >= 3 && "text-primary")}>3. Éditeur de CV</span>
+            <span className={cn(step >= 4 && "text-primary")}>4. Matching & Offres</span>
           </div>
           <div className="mt-2 flex gap-2">
             {[1, 2, 3, 4].map((s) => (

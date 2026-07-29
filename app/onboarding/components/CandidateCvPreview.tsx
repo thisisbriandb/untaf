@@ -1,7 +1,8 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { useEffect, useState, useTransition } from "react";
 import { cvTemplates, ExperienceEntry, EducationEntry, LanguageEntry } from "../types";
+import { Loader2 } from "lucide-react";
 
 interface CandidateCvPreviewProps {
   fullName: string;
@@ -15,18 +16,10 @@ interface CandidateCvPreviewProps {
   selectedColorHex: string;
   showPhoto: boolean;
   userPhotoUrl: string | null;
-  // New structured data
   experiences?: ExperienceEntry[];
   education?: EducationEntry[];
   languages?: LanguageEntry[];
   phone?: string;
-}
-
-function formatDate(d: string): string {
-  if (!d || d === "present") return "Présent";
-  const [year, month] = d.split("-");
-  const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-  return month ? `${months[parseInt(month) - 1]} ${year}` : year;
 }
 
 export function CandidateCvPreview({
@@ -47,184 +40,137 @@ export function CandidateCvPreview({
   phone,
 }: CandidateCvPreviewProps) {
   const tpl = cvTemplates.find((t) => t.id === templateId) || cvTemplates[0];
-  const isSidebar = tpl.layout === "left-sidebar" || tpl.layout === "creative";
   const photoToDisplay = userPhotoUrl || tpl.photo;
 
-  const hasExperiences = experiences.length > 0 && experiences.some((e) => e.jobTitle || e.company);
-  const hasEducation = education.length > 0 && education.some((e) => e.degree || e.institution);
-  const hasLanguages = languages.length > 0 && languages.some((l) => l.language);
+  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const payload = {
+          template_id: templateId,
+          color_hex: selectedColorHex,
+          show_photo: showPhoto,
+          photo_url: photoToDisplay,
+          full_name: fullName,
+          headline: headline,
+          summary: summary,
+          email: email,
+          phone: phone,
+          location: "France",
+          skills: skills,
+          experiences: experiences.map((exp) => ({
+            jobTitle: exp.jobTitle,
+            company: exp.company,
+            location: exp.location,
+            startDate: exp.startDate,
+            endDate: exp.endDate,
+            isCurrent: exp.isCurrent,
+            highlights: exp.highlights,
+          })),
+          education: education.map((edu) => ({
+            degree: edu.degree,
+            institution: edu.institution,
+            location: edu.location,
+            startYear: edu.startYear,
+            endYear: edu.endYear,
+            description: edu.description,
+          })),
+          languages: languages.map((lang) => ({
+            language: lang.language,
+            level: lang.level,
+          })),
+        };
+
+        const res = await fetch("http://localhost:8000/api/candidates/render-preview-svg", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          throw new Error("Erreur de génération SVG");
+        }
+
+        const text = await res.text();
+        if (isMounted) {
+          setSvgContent(text);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error("Preview SVG error:", err);
+          setError("Impossible de charger l'aperçu Typst.");
+          setLoading(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [
+    fullName,
+    headline,
+    summary,
+    email,
+    linkedinUrl,
+    skills,
+    experienceYears,
+    templateId,
+    selectedColorHex,
+    showPhoto,
+    photoToDisplay,
+    experiences,
+    education,
+    languages,
+    phone,
+  ]);
 
   return (
-    <div className="w-full rounded-xl border border-border bg-white text-slate-900 shadow-md overflow-hidden text-xs transition-all">
-      {/* Header */}
-      <div
-        className={cn("p-5 border-b text-white flex items-center justify-between")}
-        style={{ backgroundColor: selectedColorHex }}
-      >
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-extrabold tracking-tight truncate">{fullName || "Votre Nom"}</h2>
-          <p className="text-xs font-medium opacity-90 mt-0.5 truncate">{headline || "Titre professionnel"}</p>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] opacity-80 mt-2">
-            <span>{email || "email@example.com"}</span>
-            {phone && <span>• {phone}</span>}
-            {linkedinUrl && <span className="truncate max-w-[140px]">• {linkedinUrl}</span>}
-            {!hasExperiences && <span>• Expérience: {experienceYears} ans</span>}
-          </div>
+    <div className="w-full max-w-[600px] mx-auto min-h-[780px] bg-white shadow-2xl rounded-lg border border-slate-200 overflow-hidden flex flex-col justify-between relative ring-1 ring-slate-900/5 transition-all">
+      {/* Indicator header */}
+      <div className="bg-slate-900 text-slate-200 px-4 py-2 flex items-center justify-between text-xs border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="font-semibold tracking-wide uppercase text-[11px] text-slate-300">Aperçu Typst Temps Réel (Source Unique)</span>
         </div>
-        {showPhoto && (
-          <img
-            src={photoToDisplay}
-            alt={fullName}
-            className="h-14 w-14 rounded-full object-cover border-2 border-white/80 shadow-md shrink-0 hidden sm:block"
-          />
-        )}
+        <span className="text-[10px] text-slate-400 font-mono">100% Fidèle au PDF</span>
       </div>
 
-      <div className={cn("p-5 space-y-4", isSidebar ? "grid grid-cols-3 gap-5 space-y-0" : "")}>
-        {/* Main column */}
-        <div className={cn(isSidebar ? "col-span-2 space-y-4" : "space-y-4")}>
-          {/* Summary */}
-          {(summary || !hasExperiences) && (
-            <div>
-              <h3
-                className="font-bold text-xs uppercase tracking-wider border-b pb-1 mb-1.5"
-                style={{ color: selectedColorHex, borderColor: selectedColorHex + "40" }}
-              >
-                Profil Professionnel
-              </h3>
-              <p className="text-xs leading-relaxed text-slate-700">
-                {summary ||
-                  "Professionnel expérimenté spécialisé dans la conception et le déploiement d'applications web performantes. Expertise reconnue en architecture logicielle, optimisation de code et travail en équipe projet."}
-              </p>
-            </div>
-          )}
-
-          {/* Experiences */}
-          <div>
-            <h3
-              className="font-bold text-xs uppercase tracking-wider border-b pb-1 mb-1.5"
-              style={{ color: selectedColorHex, borderColor: selectedColorHex + "40" }}
-            >
-              {hasExperiences ? "Expériences Professionnelles" : "Expérience Majeure"}
-            </h3>
-            {hasExperiences ? (
-              <div className="space-y-3">
-                {experiences.filter((e) => e.jobTitle || e.company).map((exp) => (
-                  <div key={exp.id}>
-                    <div className="flex justify-between font-semibold text-slate-800 text-xs">
-                      <span>{exp.jobTitle || "Intitulé du poste"}</span>
-                      <span className="text-[11px] text-slate-500 shrink-0 ml-2">
-                        {formatDate(exp.startDate)} — {exp.isCurrent ? "Présent" : formatDate(exp.endDate)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {exp.company}{exp.location ? ` · ${exp.location}` : ""}
-                    </p>
-                    {exp.highlights.filter((h) => h.trim()).length > 0 && (
-                      <ul className="list-disc list-inside text-xs text-slate-600 mt-1 space-y-0.5">
-                        {exp.highlights.filter((h) => h.trim()).map((h, i) => (
-                          <li key={i}>{h}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div>
-                  <div className="flex justify-between font-semibold text-slate-800 text-xs">
-                    <span>Ingénieur Développeur Senior</span>
-                    <span className="text-[11px] text-slate-500">2022 - Présent</span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">Développement & Architecture Logicielle</p>
-                  <ul className="list-disc list-inside text-xs text-slate-600 mt-1 space-y-0.5">
-                    <li>Conception d&apos;architectures web scalables et optimisation des temps de réponse.</li>
-                    <li>Mise en œuvre des bonnes pratiques de code et déploiement continu.</li>
-                  </ul>
-                </div>
-              </div>
-            )}
+      {/* Main container for SVG */}
+      <div className="relative flex-1 bg-slate-100 flex items-center justify-center p-2 min-h-[720px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-2 text-slate-600 transition-opacity">
+            <Loader2 className="h-7 w-7 animate-spin text-slate-800" />
+            <span className="text-xs font-medium text-slate-700">Rendu Typst en cours...</span>
           </div>
+        )}
 
-          {/* Education */}
-          {hasEducation && (
-            <div>
-              <h3
-                className="font-bold text-xs uppercase tracking-wider border-b pb-1 mb-1.5"
-                style={{ color: selectedColorHex, borderColor: selectedColorHex + "40" }}
-              >
-                Formation
-              </h3>
-              <div className="space-y-2">
-                {education.filter((e) => e.degree || e.institution).map((edu) => (
-                  <div key={edu.id}>
-                    <div className="flex justify-between font-semibold text-slate-800 text-xs">
-                      <span>{edu.degree}</span>
-                      <span className="text-[11px] text-slate-500 shrink-0 ml-2">
-                        {edu.startYear}{edu.endYear ? ` — ${edu.endYear}` : ""}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {edu.institution}{edu.location ? ` · ${edu.location}` : ""}
-                    </p>
-                    {edu.description && (
-                      <p className="text-xs text-slate-600 mt-0.5">{edu.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar / Skills column */}
-        <div className={cn(isSidebar ? "col-span-1 border-l border-slate-200 pl-4 space-y-4" : "space-y-4")}>
-          <div>
-            <h3
-              className="font-bold text-xs uppercase tracking-wider border-b pb-1 mb-1.5"
-              style={{ color: selectedColorHex, borderColor: selectedColorHex + "40" }}
-            >
-              Compétences Clés
-            </h3>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {(skills.length > 0 ? skills : ["TypeScript", "React", "Node.js", "Python", "SQL"]).map((sk, idx) => (
-                <span
-                  key={idx}
-                  className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 border border-slate-200"
-                >
-                  {sk}
-                </span>
-              ))}
-            </div>
+        {error && !svgContent ? (
+          <div className="p-6 text-center text-rose-500 text-xs font-medium">
+            {error}
           </div>
+        ) : svgContent ? (
+          <div
+            className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-auto [&>svg]:max-h-[740px] [&>svg]:shadow-md [&>svg]:rounded-sm"
+            dangerouslySetInnerHTML={{ __html: svgContent }}
+          />
+        ) : null}
+      </div>
 
-          <div>
-            <h3
-              className="font-bold text-xs uppercase tracking-wider border-b pb-1 mb-1.5"
-              style={{ color: selectedColorHex, borderColor: selectedColorHex + "40" }}
-            >
-              Langues{!hasEducation && " & Formation"}
-            </h3>
-            {hasLanguages ? (
-              <div className="space-y-0.5">
-                {languages.filter((l) => l.language).map((l) => (
-                  <p key={l.id} className="text-xs text-slate-600">
-                    {l.language} <span className="text-slate-400">— {l.level}</span>
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-slate-600">Français (Native) • Anglais (Professionnel)</p>
-                {!hasEducation && (
-                  <p className="text-xs text-slate-500 mt-0.5">Diplôme d&apos;Ingénieur en Informatique</p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+      {/* Footer info */}
+      <div className="border-t border-slate-200 bg-white px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+        <span>Moteur Typst • Format Vectoriel SVG</span>
+        <span>A4 • Parité Visuelle 100%</span>
       </div>
     </div>
   );
 }
+

@@ -3,7 +3,9 @@
 import { motion } from "framer-motion";
 import { Download, Check, MapPin, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { contractOptions, remoteOptions, ColorSwatch } from "../types";
+import { API_BASE_URL } from "@/lib/config";
+import { useState } from "react";
+import { cvTemplates, contractOptions, remoteOptions, ColorSwatch, ExperienceEntry, EducationEntry, LanguageEntry } from "../types";
 import { CandidateCvPreview } from "./CandidateCvPreview";
 
 interface Step4MatchingPreferencesProps {
@@ -12,6 +14,10 @@ interface Step4MatchingPreferencesProps {
   summary: string;
   email: string;
   linkedinUrl: string;
+  phone?: string;
+  experiences?: ExperienceEntry[];
+  education?: EducationEntry[];
+  languages?: LanguageEntry[];
   skills: string[];
   experienceYears: number;
   setExperienceYears: (years: number) => void;
@@ -36,6 +42,10 @@ export function Step4MatchingPreferences({
   summary,
   email,
   linkedinUrl,
+  phone,
+  experiences = [],
+  education = [],
+  languages = [],
   skills,
   experienceYears,
   setExperienceYears,
@@ -53,6 +63,81 @@ export function Step4MatchingPreferences({
   addLocation,
   removeLocation,
 }: Step4MatchingPreferencesProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const tpl = cvTemplates.find((t) => t.id === selectedTemplate);
+      const photoUrlToSend = userPhotoUrl || tpl?.photo || null;
+
+      const response = await fetch(`${API_BASE_URL}/api/candidates/download-cv`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template_id: selectedTemplate,
+          color_hex: activeColorSwatch?.hex || "#234C6A",
+          show_photo: showPhotoOnCv,
+          photo_url: photoUrlToSend,
+          full_name: fullName || "Candidat",
+          email: email || "candidat@email.com",
+          phone: phone || null,
+          headline: headline || "Professionnel",
+          summary: summary || null,
+          skills: skills || [],
+          linkedin_url: linkedinUrl || null,
+          location: locations[0] || "France",
+          experiences: (experiences || []).map((exp) => ({
+            jobTitle: exp.jobTitle,
+            company: exp.company,
+            location: exp.location,
+            startDate: exp.startDate,
+            endDate: exp.isCurrent ? "present" : exp.endDate,
+            isCurrent: exp.isCurrent,
+            description: "",
+            highlights: exp.highlights || [],
+          })),
+          education: (education || []).map((edu) => ({
+            degree: edu.degree,
+            institution: edu.institution,
+            location: edu.location,
+            startYear: edu.startYear,
+            endYear: edu.endYear,
+          })),
+          languages: (languages || []).map((l) => ({
+            language: l.language,
+            level: l.level,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("CV engine error:", errText);
+        throw new Error("Erreur lors de la génération du PDF par cv-engine.");
+      }
+
+      // Use arrayBuffer to avoid blob encoding issues
+      const buffer = await response.arrayBuffer();
+      const pdfBlob = new Blob([buffer], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `CV_${(fullName || "candidat").replace(/\s+/g, "_")}_${selectedTemplate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      }, 200);
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors du téléchargement du PDF.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <motion.div
       key="step4"
@@ -72,16 +157,12 @@ export function Step4MatchingPreferences({
         </div>
         <button
           type="button"
-          onClick={() =>
-            window.open(
-              `http://localhost:8010/api/candidates/download-cv/${selectedTemplate}?name=${encodeURIComponent(fullName)}&headline=${encodeURIComponent(headline)}`,
-              "_blank"
-            )
-          }
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:brightness-110"
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:brightness-110 disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          Télécharger PDF
+          {isDownloading ? "Génération en cours..." : "Télécharger mon PDF"}
         </button>
       </div>
 
@@ -93,6 +174,10 @@ export function Step4MatchingPreferences({
           summary={summary}
           email={email}
           linkedinUrl={linkedinUrl}
+          phone={phone}
+          experiences={experiences}
+          education={education}
+          languages={languages}
           skills={skills}
           experienceYears={experienceYears}
           templateId={selectedTemplate}
