@@ -12,6 +12,7 @@ import { MissionView } from "./components/MissionView";
 import { CandidaturesView } from "./components/CandidaturesView";
 import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
+import { CanvasPanel, CanvasMode } from "./components/CanvasPanel";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -49,6 +50,17 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingAppId, setUpdatingAppId] = useState<string | null>(null);
+
+  // Canvas State (Side Panel for CV / Cover Letter editing)
+  const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>(null);
+  const [coverLetterData, setCoverLetterData] = useState<{ companyName?: string; content?: string } | undefined>(undefined);
+
+  const handleOpenCanvas = (mode: CanvasMode, data?: any) => {
+    setCanvasMode(mode);
+    if (data) setCoverLetterData(data);
+    setIsCanvasOpen(true);
+  };
 
   // 1. Load Candidate ID from localStorage or fallback
   useEffect(() => {
@@ -219,11 +231,11 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* ═══ Main Center Canvas (Full Screen Centered) ═══ */}
-      <div className="flex-1 min-h-screen flex flex-col items-center justify-center py-10 px-4 md:px-8 w-full">
+      {/* ═══ Main Center Canvas (Viewport Height Contained) ═══ */}
+      <div className="flex-1 h-[calc(100vh-64px)] max-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-4 px-4 md:px-8 w-full overflow-hidden">
         <AnimatePresence mode="wait">
           {activeTab === "alice" && (
-            <AliceView key="alice" userName={userName} />
+            <AliceView key="alice" userName={userName} onOpenCanvas={handleOpenCanvas} />
           )}
 
           {activeTab === "mission" && (
@@ -253,6 +265,14 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ═══ Lateral Canvas Slide-Over (CV Editor / Cover Letter) ═══ */}
+      <CanvasPanel
+        isOpen={isCanvasOpen}
+        onClose={() => setIsCanvasOpen(false)}
+        mode={canvasMode}
+        coverLetterData={coverLetterData}
+      />
     </main>
   );
 }

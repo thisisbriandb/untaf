@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp, ArrowUpRight, Plus, Mic } from "lucide-react";
 import { AlicePresence, AliceEmotion } from "../../onboarding/components/AlicePresence";
+import { sendMessageToAlice, type UiBlock, type JobCardData, type CvAuditData, type ApplicationData } from "@/lib/alice-client";
+import { JobCardList } from "./JobCard";
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface AliceViewProps {
   userName: string;
+  onOpenCanvas?: (mode: "cv_editor" | "cover_letter", data?: any) => void;
 }
 
 interface ChatMessage {
@@ -14,13 +19,16 @@ interface ChatMessage {
   sender: "alice" | "user";
   text: string;
   timestamp?: string;
+  uiBlocks?: UiBlock[];
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
 const METRICS = [
-  { label: "49 nouvelles offres", query: "Montre-moi les 49 nouvelles offres" },
-  { label: "8 candidatures", query: "Où en sont mes 8 candidatures ?" },
-  { label: "2 CV consultés", query: "Quelles entreprises ont consulté mon CV ?" },
-  { label: "1 entretien", query: "Dis-moi en plus sur mon entretien" },
+  { label: "Nouvelles offres", query: "Montre-moi les nouvelles offres" },
+  { label: "Mes candidatures", query: "Où en sont mes candidatures ?" },
+  { label: "Auditer mon CV", query: "Audite mon CV" },
+  { label: "Rédiger une lettre", query: "Rédige-moi une lettre de motivation" },
 ];
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -28,52 +36,110 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     id: "seed-1",
     sender: "alice",
     timestamp: "09:41",
-    text: "Doctolib a consulté ton CV et a demandé un premier échange.",
-  },
-  {
-    id: "seed-2",
-    sender: "alice",
-    timestamp: "09:27",
-    text: "Capgemini demande 5 ans d'expérience. Je n'ai pas postulé.",
-  },
-  {
-    id: "seed-3",
-    sender: "alice",
-    timestamp: "09:19",
-    text: "J'ai adapté ton CV pour 8 nouvelles opportunités.",
+    text: "J'ai terminé ma veille de ce matin. Demande-moi ce que tu veux savoir.",
   },
 ];
 
-/**
- * Placeholder reply generator. Swap this for a real API call
- * (e.g. `await fetchAliceReply(userText)`) once the backend is wired up —
- * the call site in submitQuery won't need to change shape.
- */
-function getMockReply(userText: string): string {
-  const lower = userText.toLowerCase();
-  if (lower.includes("offre")) {
-    return "J'ai sélectionné 49 offres compatibles avec ton profil sur Rennes et Paris (dont Doctolib, Miro et Qonto).";
-  }
-  if (lower.includes("candidature")) {
-    return "Tes 8 candidatures sont envoyées. 2 entreprises ont déjà ouvert ton profil.";
-  }
-  if (lower.includes("cv") || lower.includes("consulté")) {
-    return "Doctolib et Lucca ont consulté ton CV ce matin entre 09:15 et 09:41.";
-  }
-  if (lower.includes("entretien")) {
-    return "Doctolib souhaite programmer un premier entretien vidéo pour le poste de Développeur.";
-  }
-  return "Je m'en occupe. J'ai mis à jour tes préférences d'analyse.";
-}
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function formatTime(date: Date): string {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+// ── Inline UI Blocks ───────────────────────────────────────────────────────
+
+function AuditBlock({ data }: { data: CvAuditData }) {
+  return (
+    <div className="w-full p-4 rounded-xl border border-[#1A1918]/8 bg-white space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-normal text-[#1A1918] tracking-tight">
+          Audit ATS
+        </span>
+        <span className="text-sm font-medium text-[#006045] tabular-nums">
+          {data.ats_score}/100
+        </span>
+      </div>
+      {data.strengths.length > 0 && (
+        <div className="space-y-1">
+          {data.strengths.map((s, i) => (
+            <p key={i} className="text-xs font-light text-[#006045]/80 tracking-tight">
+              ✓ {s}
+            </p>
+          ))}
+        </div>
+      )}
+      {data.improvements.length > 0 && (
+        <div className="space-y-1">
+          {data.improvements.map((s, i) => (
+            <p key={i} className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+              → {s}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; counts: Record<string, number> } }) {
+  const STATUS_LABELS: Record<string, string> = {
+    matched: "Matchée",
+    pending: "En attente",
+    applied: "Postulée",
+    interview: "Entretien",
+    offer: "Offre",
+    rejected: "Refusée",
+    closed: "Fermée",
+  };
+
+  return (
+    <div className="w-full space-y-2 py-1">
+      {data.applications.map((app) => (
+        <div
+          key={app.id}
+          className="p-3 rounded-xl border border-[#1A1918]/8 bg-white flex items-center justify-between"
+        >
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
+              {app.job_title}
+            </p>
+            <p className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+              {app.company_name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-light text-[#1A1918]/50 tracking-tight">
+              {STATUS_LABELS[app.status] || app.status}
+            </span>
+            <span className="text-xs font-medium text-[#006045] tabular-nums">
+              {app.match_score}%
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UiBlockRenderer({ block }: { block: UiBlock }) {
+  switch (block.type) {
+    case "jobs":
+      return <JobCardList jobs={block.data as JobCardData[]} />;
+    case "cv_audit":
+      return <AuditBlock data={block.data as CvAuditData} />;
+    case "applications":
+      return <ApplicationsBlock data={block.data as { applications: ApplicationData[]; counts: Record<string, number> }} />;
+    default:
+      return null;
+  }
+}
+
+// ── Chat Bubble ────────────────────────────────────────────────────────────
+
 function ChatBubble({ msg }: { msg: ChatMessage }) {
   if (msg.sender === "alice") {
     return (
-      <div className="space-y-1 text-left w-full opacity-80">
+      <div className="space-y-2 text-left w-full opacity-80">
         {msg.timestamp && (
           <span className="font-mono text-[11px] text-[#006045]/75 font-medium tracking-tight">
             {msg.timestamp}
@@ -82,6 +148,9 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
         <p className="text-sm md:text-base font-light text-[#1A1918]/60 leading-relaxed tracking-tight">
           {msg.text}
         </p>
+        {msg.uiBlocks?.map((block, idx) => (
+          <UiBlockRenderer key={idx} block={block} />
+        ))}
       </div>
     );
   }
@@ -92,7 +161,9 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-export function AliceView({ userName }: AliceViewProps) {
+// ── Main Component ─────────────────────────────────────────────────────────
+
+export function AliceView({ userName, onOpenCanvas }: AliceViewProps) {
   const firstName = userName.split(" ")[0] || "Briand";
   const [prompt, setPrompt] = useState("");
   const [emotion, setEmotion] = useState<AliceEmotion>("idle");
@@ -100,15 +171,28 @@ export function AliceView({ userName }: AliceViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Prevent state updates firing after unmount (e.g. route change mid-"thinking")
+  const scrollToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isThinking]);
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (abortRef.current) abortRef.current.abort();
     };
   }, []);
 
-  const submitQuery = (userText: string) => {
+  const submitQuery = async (userText: string) => {
     const trimmed = userText.trim();
     if (!trimmed || isThinking) return;
 
@@ -116,25 +200,70 @@ export function AliceView({ userName }: AliceViewProps) {
     setIsThinking(true);
     setPrompt("");
 
+    // Append user message chronologically
     setMessages((prev) => [
-      { id: crypto.randomUUID(), sender: "user", text: trimmed },
       ...prev,
+      { id: crypto.randomUUID(), sender: "user", text: trimmed },
     ]);
 
-    timeoutRef.current = setTimeout(() => {
-      const reply = getMockReply(trimmed);
+    // Call real backend
+    const candidateId = localStorage.getItem("candidate_id");
+
+    if (!candidateId) {
+      // Fallback if no candidate_id (not logged in)
       setMessages((prev) => [
+        ...prev,
         {
           id: crypto.randomUUID(),
           sender: "alice",
           timestamp: formatTime(new Date()),
-          text: reply,
+          text: "Je ne trouve pas ton profil. Essaie de te reconnecter.",
         },
-        ...prev,
       ]);
       setEmotion("idle");
       setIsThinking(false);
-    }, 1000);
+      return;
+    }
+
+    try {
+      const response = await sendMessageToAlice(candidateId, trimmed);
+
+      // Check if any UI block triggers a Canvas opening action
+      for (const block of response.ui_blocks) {
+        if (block.type === "action") {
+          if (block.action === "open_cv_editor") {
+            onOpenCanvas?.("cv_editor");
+          } else if (block.action === "open_cover_letter") {
+            onOpenCanvas?.("cover_letter", block.data);
+          }
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "alice",
+          timestamp: formatTime(new Date()),
+          text: response.reply,
+          uiBlocks: response.ui_blocks.length > 0 ? response.ui_blocks : undefined,
+        },
+      ]);
+    } catch (err) {
+      console.error("Alice error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "alice",
+          timestamp: formatTime(new Date()),
+          text: "Désolée, j'ai rencontré un problème. Réessaie.",
+        },
+      ]);
+    } finally {
+      setEmotion("idle");
+      setIsThinking(false);
+    }
   };
 
   return (
@@ -143,18 +272,63 @@ export function AliceView({ userName }: AliceViewProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.35 }}
-      className="w-full max-w-xl mx-auto py-8 flex flex-col items-center select-none space-y-7 font-light tracking-tight"
+      className="w-full max-w-xl mx-auto h-full flex flex-col select-none font-light tracking-tight overflow-hidden"
     >
-      {/* ═══ 1. Alice Eyes (○  ○) & Greeting ═══ */}
-      <div className="flex flex-col items-center text-center gap-3">
-        <AlicePresence emotion={emotion} size="lg" />
-        <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
-          Bonjour {firstName}. On commence ?
-        </h1>
+      {/* ═══ Zone scrollable : Alice, salutation, métriques, historique ═══ */}
+      <div
+        ref={scrollContainerRef}
+        className="w-full flex-1 min-h-0 overflow-y-auto space-y-7 py-6 pr-1"
+        role="log"
+        aria-live="polite"
+        aria-label="Historique des échanges avec Alice"
+      >
+        <div className="flex flex-col items-center text-center gap-3">
+          <AlicePresence emotion={emotion} size="lg" />
+          <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
+            Bonjour {firstName}.
+          </h1>
+        </div>
+
+        <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          {METRICS.map((m) => (
+            <button
+              key={m.label}
+              type="button"
+              onClick={() => submitQuery(m.query)}
+              disabled={isThinking}
+              className="flex items-center gap-1.5 text-xs md:text-sm font-light text-[#1A1918]/70 hover:text-[#006045] transition-colors cursor-pointer group py-1 tracking-tight disabled:opacity-40"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-[#006045] stroke-[2] shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <span className="font-light">{m.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6">
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25 }}
+                className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+              >
+                <ChatBubble msg={msg} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {isThinking && (
+            <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
+              <span className="animate-pulse">Alice réfléchit…</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ═══ 2. Input Capsule ═══ */}
-      <div className="w-full pt-1">
+      {/* ═══ Bloc fixe en bas : input ═══ */}
+      <div className="w-full shrink-0 pt-3 pb-2 bg-white/80 backdrop-blur-sm">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -198,50 +372,6 @@ export function AliceView({ userName }: AliceViewProps) {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* ═══ 3. Quick metrics ═══ */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pt-1">
-        {METRICS.map((m) => (
-          <button
-            key={m.label}
-            type="button"
-            onClick={() => submitQuery(m.query)}
-            disabled={isThinking}
-            className="flex items-center gap-1.5 text-xs md:text-sm font-light text-[#1A1918]/70 hover:text-[#006045] transition-colors cursor-pointer group py-1 tracking-tight disabled:opacity-40"
-          >
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#006045] stroke-[2] shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            <span className="font-light">{m.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ═══ 4. Message stream ═══ */}
-      <div
-        className="w-full pt-6 space-y-3.5 border-t border-[#1A1918]/8"
-        role="log"
-        aria-live="polite"
-        aria-label="Historique des échanges avec Alice"
-      >
-        {isThinking && (
-          <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light">
-            <span className="animate-pulse">Alice réfléchit…</span>
-          </div>
-        )}
-        <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.25 }}
-              className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
-            >
-              <ChatBubble msg={msg} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
