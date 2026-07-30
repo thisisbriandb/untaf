@@ -239,3 +239,49 @@ body {
 .alice-wave-1 { animation: alice-wave-move 1.4s ease-in-out infinite; }
 .alice-wave-2 { animation: alice-wave-move 1.4s ease-in-out 0.2s infinite; }
 .alice-wave-3 { animation: alice-wave-move 1.4s ease-in-out 0.4s infinite; }
+
+/* ── Discreet scroll ─────────────────────────────────────────────────────────
+   Linux/Windows Chrome renders a permanent, full-chrome scrollbar (track +
+   stepper arrows) on any overflow container, which reads as a hard divider in
+   the middle of the conversation. Overlay it: no track, thin thumb, visible
+   only while the pointer is over the area. */
+.scroll-discreet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+}
+
+.scroll-discreet:hover,
+.scroll-discreet:focus-within {
+  scrollbar-color: rgba(26, 25, 24, 0.18) transparent;
+}
+
+.scroll-discreet::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-discreet::-webkit-scrollbar-track,
+.scroll-discreet::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.scroll-discreet::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.scroll-discreet::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+}
+
+.scroll-discreet:hover::-webkit-scrollbar-thumb,
+.scroll-discreet:focus-within::-webkit-scrollbar-thumb {
+  background-color: rgba(26, 25, 24, 0.18);
+}
+
+.scroll-discreet:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(26, 25, 24, 0.32);
+}

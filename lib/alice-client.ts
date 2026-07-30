@@ -36,10 +36,30 @@ export interface CvAuditData {
   suggested_skills: string[];
 }
 
+export interface MissionReportData {
+  mission: {
+    titre: string;
+    statut: string;
+    autonomie: string;
+    quota_hebdomadaire: number;
+    derniere_veille: string | null;
+  };
+  mandat: Record<string, string[]>;
+  compteurs: { retenues: number; envoyees: number; entretiens: number };
+  derniere_veille: {
+    scanned?: number;
+    kept?: number;
+    discarded?: number;
+    top_reasons?: Record<string, number>;
+  };
+  journal: { quand: string; quoi: string }[];
+}
+
 export type UiBlock =
   | { type: "jobs"; data: JobCardData[] }
   | { type: "applications"; data: { applications: ApplicationData[]; counts: Record<string, number> } }
   | { type: "cv_audit"; data: CvAuditData }
+  | { type: "mission"; data: MissionReportData }
   | { type: "action"; action: string; data?: any };
 
 export interface AliceResponse {

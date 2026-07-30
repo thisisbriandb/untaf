@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Settings } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "@/lib/config";
 import { AlicePresence } from "../onboarding/components/AlicePresence";
-import { DashboardSidebar, TabType } from "./components/DashboardSidebar";
+import { TabType } from "./components/DashboardSidebar";
+import { DashboardHeader } from "./components/DashboardHeader";
 import { AliceView } from "./components/AliceView";
 import { MissionView } from "./components/MissionView";
 import { CandidaturesView } from "./components/CandidaturesView";
 import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
-import { CanvasPanel, CanvasMode } from "./components/CanvasPanel";
+import { CanvasPanel } from "./components/CanvasPanel";
+import { AliceProvider, useAlice } from "./alice-context";
+import type { ReactNode } from "react";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -34,15 +36,28 @@ interface Candidate {
   skills: string[];
 }
 
+/**
+ * Largeur de lecture de la conversation. Resserrée quand le Canvas est ouvert
+ * pour qu'aucune gouttière morte ne s'installe entre les deux panneaux.
+ */
+function ConversationColumn({ children }: { children: ReactNode }) {
+  const { isCanvasOpen } = useAlice();
+  return (
+    <div
+      className={`flex-1 min-w-0 flex flex-col overflow-hidden ${
+        isCanvasOpen ? "max-w-3xl lg:max-w-[44rem]" : "max-w-3xl"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<TabType>("alice");
-
-  // Notifications State (Open by default when notifications exist)
-  const [unreadCount, setUnreadCount] = useState(3);
-  const [showNotifs, setShowNotifs] = useState(true);
 
   // Data States
   const [candidateId, setCandidateId] = useState<string | null>(null);
@@ -50,17 +65,6 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingAppId, setUpdatingAppId] = useState<string | null>(null);
-
-  // Canvas State (Side Panel for CV / Cover Letter editing)
-  const [isCanvasOpen, setIsCanvasOpen] = useState(false);
-  const [canvasMode, setCanvasMode] = useState<CanvasMode>(null);
-  const [coverLetterData, setCoverLetterData] = useState<{ companyName?: string; content?: string } | undefined>(undefined);
-
-  const handleOpenCanvas = (mode: CanvasMode, data?: any) => {
-    setCanvasMode(mode);
-    if (data) setCoverLetterData(data);
-    setIsCanvasOpen(true);
-  };
 
   // 1. Load Candidate ID from localStorage or fallback
   useEffect(() => {
@@ -79,8 +83,10 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const [candRes, appsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/candidates/${candidateId}`).catch(() => null),
-          fetch(`${API_BASE_URL}/candidates/${candidateId}/applications`).catch(() => null),
+          fetch(`${API_BASE_URL}/api/candidates/${candidateId}`).catch(() => null),
+          fetch(`${API_BASE_URL}/api/applications/?candidate_id=${candidateId}`).catch(
+            () => null
+          ),
         ]);
 
         if (candRes && candRes.ok) {
@@ -114,7 +120,7 @@ export default function DashboardPage() {
   const handleUpdateStatus = async (appId: string, newStatus: string) => {
     setUpdatingAppId(appId);
     try {
-      const res = await fetch(`${API_BASE_URL}/applications/${appId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/applications/${appId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -147,132 +153,52 @@ export default function DashboardPage() {
   const userEmail = candidate?.email || "";
 
   return (
-    <main className="min-h-screen bg-[#FAFAF8] text-[#1A1918] flex relative">
-      {/* ═══ Top Left Header App Title ("alice") ═══ */}
-      <div className="fixed top-5 left-6 md:left-10 z-50 select-none">
-        <button
-          type="button"
-          onClick={() => setActiveTab("alice")}
-          className="text-base md:text-lg font-medium text-[#1A1918] tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          alice
-        </button>
+    <AliceProvider
+      candidateId={candidateId}
+      onGoToConversation={() => setActiveTab("alice")}
+    >
+      <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex flex-col overflow-hidden">
+        {/* ═══ Barre d'application, pleine largeur ═══ */}
+        <DashboardHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+
+        {/* ═══ Ligne principale : conversation + canvas (dès lg) ═══ */}
+        <main className="flex-1 min-h-0 flex justify-center overflow-hidden">
+          <ConversationColumn>
+            <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-4 md:px-8 pb-4 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {activeTab === "alice" && <AliceView key="alice" userName={userName} />}
+
+                {activeTab === "mission" && <MissionView key="mission" />}
+
+                {activeTab === "candidatures" && (
+                  <CandidaturesView
+                    key="candidatures"
+                    applications={applications}
+                    updatingAppId={updatingAppId}
+                    onUpdateStatus={handleUpdateStatus}
+                  />
+                )}
+
+                {activeTab === "messages" && (
+                  <MessagesView key="messages" userName={userName} />
+                )}
+
+                {activeTab === "parametres" && (
+                  <ParametresView
+                    key="parametres"
+                    userName={userName}
+                    userEmail={userEmail}
+                    onLogout={handleLogout}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+          </ConversationColumn>
+
+          {/* ═══ Colonne canvas (CV / Lettre) ═══ */}
+          <CanvasPanel candidateId={candidateId} />
+        </main>
       </div>
-
-      {/* ═══ Discreet Top-Right Action Icons (Settings + Notification Bell) ═══ */}
-      <div className="fixed top-5 right-6 md:right-10 z-50 flex items-center gap-1">
-        {/* Notification Bell */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowNotifs(!showNotifs)}
-            aria-label="Notifications"
-            className="relative p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
-          >
-            <Bell className="w-4 h-4 stroke-[1.4]" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* Discreet Notification Popover */}
-          <AnimatePresence>
-            {showNotifs && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="absolute right-0 mt-2 w-72 bg-white border border-[#EDECEA] rounded-2xl shadow-lg p-3.5 space-y-2.5 text-xs font-light text-[#1A1918] tracking-tight"
-              >
-                <div className="flex items-center justify-between pb-2 border-b border-[#1A1918]/8">
-                  <span className="font-medium text-[#1A1918]">Notifications</span>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={() => {
-                        setUnreadCount(0);
-                        setShowNotifs(false);
-                      }}
-                      className="text-[10px] text-[#006045] hover:underline cursor-pointer"
-                    >
-                      Tout marquer comme lu
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <div className="p-2.5 rounded-xl bg-[#FAFAF8] space-y-0.5 border border-[#1A1918]/4">
-                    <p className="font-normal text-[#006045]">Doctolib — Entretien</p>
-                    <p className="text-[#1A1918]/60 text-[11px]">Consultation de ton CV à 09:41</p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-[#FAFAF8] space-y-0.5 border border-[#1A1918]/4">
-                    <p className="font-normal text-[#1A1918]">Alice</p>
-                    <p className="text-[#1A1918]/60 text-[11px]">8 candidatures adaptées ce matin</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Settings Icon Button */}
-        <button
-          type="button"
-          onClick={() => setActiveTab("parametres")}
-          aria-label="Paramètres"
-          className={`p-2 rounded-full transition-colors cursor-pointer ${
-            activeTab === "parametres"
-              ? "text-[#006045] bg-[#006045]/10"
-              : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5"
-          }`}
-        >
-          <Settings className="w-4 h-4 stroke-[1.4]" />
-        </button>
-      </div>
-
-      {/* ═══ Main Center Canvas (Viewport Height Contained) ═══ */}
-      <div className="flex-1 h-[calc(100vh-64px)] max-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-4 px-4 md:px-8 w-full overflow-hidden">
-        <AnimatePresence mode="wait">
-          {activeTab === "alice" && (
-            <AliceView key="alice" userName={userName} onOpenCanvas={handleOpenCanvas} />
-          )}
-
-          {activeTab === "mission" && (
-            <MissionView key="mission" headline={candidate?.headline} />
-          )}
-
-          {activeTab === "candidatures" && (
-            <CandidaturesView
-              key="candidatures"
-              applications={applications}
-              updatingAppId={updatingAppId}
-              onUpdateStatus={handleUpdateStatus}
-            />
-          )}
-
-          {activeTab === "messages" && (
-            <MessagesView key="messages" userName={userName} />
-          )}
-
-          {activeTab === "parametres" && (
-            <ParametresView
-              key="parametres"
-              userName={userName}
-              userEmail={userEmail}
-              onLogout={handleLogout}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ═══ Lateral Canvas Slide-Over (CV Editor / Cover Letter) ═══ */}
-      <CanvasPanel
-        isOpen={isCanvasOpen}
-        onClose={() => setIsCanvasOpen(false)}
-        mode={canvasMode}
-        coverLetterData={coverLetterData}
-      />
-    </main>
+    </AliceProvider>
   );
 }

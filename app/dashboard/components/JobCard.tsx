@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { JobCardData } from "@/lib/alice-client";
+import { useAlice } from "../alice-context";
 
 const CONTRACT_LABELS: Record<string, string> = {
   cdi: "CDI",
@@ -20,18 +21,24 @@ const REMOTE_LABELS: Record<string, string> = {
 };
 
 export function JobCard({ job }: { job: JobCardData }) {
+  const { openCanvas, canvas } = useAlice();
   const contract = CONTRACT_LABELS[job.contract_type] || "";
   const remote = REMOTE_LABELS[job.remote_policy] || "";
   const tags = [contract, remote].filter(Boolean).join(" · ");
+  const isOpen = canvas?.mode === "job_detail" && canvas.job.id === job.id;
 
   return (
-    <motion.a
-      href={job.source_url}
-      target="_blank"
-      rel="noopener noreferrer"
+    <motion.button
+      type="button"
+      onClick={() => openCanvas({ mode: "job_detail", job })}
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="block p-4 rounded-xl border border-[#1A1918]/8 hover:border-[#006045]/30 bg-white transition-colors group cursor-pointer"
+      aria-label={`Ouvrir le détail de l'offre ${job.title}`}
+      className={`block w-full text-left p-4 rounded-xl border bg-white transition-colors cursor-pointer ${
+        isOpen
+          ? "border-[#006045]/45 bg-[#006045]/4"
+          : "border-[#1A1918]/8 hover:border-[#006045]/30"
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-0.5 min-w-0">
@@ -51,7 +58,7 @@ export function JobCard({ job }: { job: JobCardData }) {
           {job.match_score}%
         </span>
       </div>
-    </motion.a>
+    </motion.button>
   );
 }
 

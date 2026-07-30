@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, Link as LinkIcon, Check, ArrowRight } from "lucide-react";
+import { UploadCloud, Link as LinkIcon, ArrowRight, Loader2 } from "lucide-react";
 import { cvTemplates } from "../types";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/config";
 import { AlicePresence, AliceEmotion } from "./AlicePresence";
+import {
+  CriteriaStep,
+  DEFAULT_CRITERIA,
+  ZONE_COUNTRIES,
+  type CriteriaDraft,
+} from "./CriteriaStep";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -16,6 +24,7 @@ interface CandidateProfile {
   phone: string;
   summary: string;
   skills: string[];
+  experienceYears: number | null;
   experiences: any[];
   education: any[];
   languages: any[];
@@ -23,11 +32,18 @@ interface CandidateProfile {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const TOTAL_PHASES = 7;
+/** L'objectif choisi en phase 1 est déjà un filtre dur sur le contrat. */
+const ROLE_TO_CONTRACTS: Record<string, string[]> = {
+  alternance: ["alternance"],
+  stage: ["stage"],
+  "CDI / CDD": ["cdi", "cdd"],
+  "Poste ouvert": [],
+};
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function AliceExperience() {
+  const router = useRouter();
   const [phase, setPhase] = useState(0);
   const [aliceText, setAliceText] = useState<string[]>([]);
   const [emotion, setEmotion] = useState<AliceEmotion>("idle");
@@ -44,10 +60,20 @@ export function AliceExperience() {
     phone: "",
     summary: "",
     skills: [],
+    experienceYears: null,
     experiences: [],
     education: [],
     languages: [],
   });
+
+  // Mandat de recherche (phase 6)
+  const [criteria, setCriteria] = useState<CriteriaDraft>(DEFAULT_CRITERIA);
+  const [cityInput, setCityInput] = useState("");
+
+  // Activation (phase 7)
+  const [emailInput, setEmailInput] = useState("");
+  const [isActivating, setIsActivating] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
   const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
   const [selectedTemplateIdx, setSelectedTemplateIdx] = useState(0);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -142,7 +168,7 @@ export function AliceExperience() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("http://localhost:8000/api/candidates/parse-resume", {
+      const res = await fetch(`${API_BASE_URL}/api/candidates/parse-resume`, {
         method: "POST",
         body: formData,
       });
@@ -172,9 +198,19 @@ export function AliceExperience() {
         phone: parsedData.phone || prev.phone,
         summary: parsedData.summary || prev.summary,
         skills: parsedData.skills?.length > 0 ? parsedData.skills : prev.skills,
+        experienceYears: parsedData.experience_years ?? prev.experienceYears,
         experiences: parsedData.experiences || prev.experiences,
         education: parsedData.education || prev.education,
       }));
+
+      // Le parseur remonte parfois des localisations : elles pré-remplissent
+      // le mandat sans jamais l'imposer.
+      if (parsedData.preferred_locations?.length) {
+        setCriteria((prev) => ({
+          ...prev,
+          locations: prev.locations.length ? prev.locations : parsedData.preferred_locations,
+        }));
+      }
     }
 
     await delay(600);
@@ -196,15 +232,21 @@ export function AliceExperience() {
     setPhase(4);
   }, [linkedinUrl, read, say]);
 
+  /** Passerelle unique vers le mandat — les deux branches CV y convergent. */
+  const goToCriteria = useCallback(async () => {
+    setShowComponent(false);
+    await say(["Où, et à quelles conditions ?"], "listening", 400);
+    setShowComponent(true);
+    setPhase(6);
+  }, [say]);
+
   const handleKeepOriginalCv = useCallback(async () => {
     const firstName = profile.fullName.split(" ")[0] || "Candidat";
     setShowComponent(false);
     await think(["Entendu, " + firstName + "."], 950);
     await say(["Je garde ton CV original."], "listening", 1200);
-    await say(["Je peux faire tout ça pour toi :"], "listening", 400);
-    setShowComponent(true);
-    setPhase(6);
-  }, [profile.fullName, think, say]);
+    await goToCriteria();
+  }, [profile.fullName, think, say, goToCriteria]);
 
   const handleValidateProfile = useCallback(async () => {
     setShowComponent(false);
@@ -219,10 +261,22 @@ export function AliceExperience() {
     setShowComponent(false);
     await think(["Parfait, " + firstName + "."], 900);
     await say(["Style sélectionné."], "happy", 1100);
-    await say(["Je peux faire tout ça pour toi :"], "listening", 400);
+    await goToCriteria();
+  }, [profile.fullName, think, say, goToCriteria]);
+
+  const handleCriteriaSubmit = useCallback(async () => {
+    setShowComponent(false);
+    const zoneLabel =
+      criteria.zone === "france" ? "En France" :
+      criteria.zone === "europe" ? "En Europe" : "Sans limite de zone";
+    const detail = criteria.locations.length
+      ? `${zoneLabel}, autour de ${criteria.locations.slice(0, 3).join(", ")}.`
+      : `${zoneLabel}.`;
+    await think([detail], 900);
+    await say([detail, "Je peux faire tout ça pour toi :"], "listening", 400);
     setShowComponent(true);
-    setPhase(6);
-  }, [profile.fullName, think, say]);
+    setPhase(7);
+  }, [criteria, think, say]);
 
   const handleBypassCv = useCallback(async () => {
     setShowComponent(false);
@@ -231,11 +285,98 @@ export function AliceExperience() {
     setPhase(4);
   }, [say]);
 
+  /**
+   * Crée (ou retrouve) le profil, enregistre le mandat, puis bascule sur le
+   * dashboard. Idempotent : relancer l'onboarding avec le même email reprend
+   * le profil existant au lieu de buter sur le conflit d'unicité.
+   */
   const handleActivateAlice = useCallback(async () => {
-    setShowComponent(false);
-    setEmotion("happy");
-    setAliceText(["C'est parti.", "Je travaille pour toi."]);
-  }, []);
+    const email = (profile.email || emailInput).trim();
+    if (!email) {
+      setActivationError("J'ai besoin de ton email pour te suivre.");
+      return;
+    }
+
+    setActivationError(null);
+    setIsActivating(true);
+
+    const matchingCriteria = {
+      languages: criteria.languages,
+      countries: ZONE_COUNTRIES[criteria.zone],
+      remote_policies: criteria.remotePolicies,
+      contract_types: ROLE_TO_CONTRACTS[targetRole] ?? [],
+      locations: criteria.locations,
+      ...(criteria.jobFamilies.length ? { job_families: criteria.jobFamilies } : {}),
+    };
+
+    const payload = {
+      full_name: profile.fullName || "Candidat",
+      email,
+      phone: profile.phone || null,
+      linkedin_url: linkedinUrl || null,
+      headline: profile.headline || null,
+      skills: profile.skills,
+      experience_years: profile.experienceYears,
+      preferred_locations: criteria.locations,
+      preferred_remote_policies: criteria.remotePolicies,
+      preferred_contract_types: ROLE_TO_CONTRACTS[targetRole] ?? [],
+      resume_raw: profile.summary || null,
+      matching_criteria: matchingCriteria,
+    };
+
+    try {
+      let res = await fetch(`${API_BASE_URL}/api/candidates/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      let candidate: { id: string; full_name: string; email: string } | null = null;
+
+      if (res.ok) {
+        candidate = await res.json();
+      } else if (res.status === 409) {
+        // Profil déjà connu : on le récupère et on réécrit tout — profil *et*
+        // mandat. Ne mettre à jour que le mandat laisserait un CV périmé
+        // derrière, et c'est le profil qui sert à déduire ce que le mandat ne
+        // dit pas. Le PUT relance le matching côté serveur.
+        const lookup = await fetch(
+          `${API_BASE_URL}/api/candidates/?email=${encodeURIComponent(email)}`
+        );
+        const found = lookup.ok ? await lookup.json() : [];
+        const existing = found[0] ?? null;
+
+        if (existing) {
+          const updated = await fetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          candidate = updated.ok ? await updated.json() : existing;
+        }
+      }
+
+      if (!candidate) {
+        throw new Error(`Création impossible (${res.status})`);
+      }
+
+      localStorage.setItem("candidate_id", candidate.id);
+      localStorage.setItem("candidate_email", candidate.email);
+      localStorage.setItem("candidate_name", candidate.full_name);
+
+      setShowComponent(false);
+      setEmotion("happy");
+      setAliceText(["C'est parti.", "Je travaille pour toi."]);
+      await delay(1400);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Activation error:", err);
+      setActivationError(
+        "Je n'ai pas réussi à ouvrir ton espace. Vérifie ta connexion et réessaie."
+      );
+      setIsActivating(false);
+    }
+  }, [profile, emailInput, criteria, targetRole, linkedinUrl, router]);
 
   // ─── Render Canvas ────────────────────────────────────────────────────────
 
@@ -264,6 +405,7 @@ export function AliceExperience() {
                 const isLastLine = i === aliceText.length - 1;
                 const isPrompt =
                   line === "Qu'est-ce qu'on cherche ?" ||
+                  line === "Où, et à quelles conditions ?" ||
                   line.startsWith("Je peux") ||
                   line.startsWith("Sélectionne");
 
@@ -552,8 +694,19 @@ export function AliceExperience() {
                 </div>
               )}
 
-              {/* ── Phase 6: Final Pact & Task Checklist (Cardless) ── */}
+              {/* ── Phase 6: Mandat de recherche ── */}
               {phase === 6 && (
+                <CriteriaStep
+                  value={criteria}
+                  onChange={setCriteria}
+                  onSubmit={handleCriteriaSubmit}
+                  cityInput={cityInput}
+                  setCityInput={setCityInput}
+                />
+              )}
+
+              {/* ── Phase 7: Final Pact & Task Checklist (Cardless) ── */}
+              {phase === 7 && (
                 <div className="space-y-8 w-full">
                   <div className="w-full max-w-[440px] mx-auto text-left border-t border-b border-[#1A1918]/10 divide-y divide-[#1A1918]/8">
                     {[
@@ -594,14 +747,44 @@ export function AliceExperience() {
                     })}
                   </div>
 
+                  {/* L'email conditionne la création du profil : demandé ici
+                      seulement si le CV ne l'a pas livré. */}
+                  {!profile.email && (
+                    <div className="w-full max-w-[440px] mx-auto space-y-2">
+                      <label
+                        htmlFor="onboarding-email"
+                        className="text-xs text-[#1A1918]/35 uppercase tracking-wider font-medium"
+                      >
+                        Ton email
+                      </label>
+                      <input
+                        id="onboarding-email"
+                        type="email"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        placeholder="pour te tenir au courant"
+                        className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+                      />
+                    </div>
+                  )}
+
+                  {activationError && (
+                    <p className="text-center text-xs text-red-600/80">{activationError}</p>
+                  )}
+
                   <div className="flex justify-center pt-2">
                     <button
                       type="button"
                       onClick={handleActivateAlice}
-                      className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#006045] hover:text-[#004d37] font-medium text-base md:text-lg transition-all cursor-pointer bg-transparent"
+                      disabled={isActivating}
+                      className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#006045] hover:text-[#004d37] font-medium text-base md:text-lg transition-all cursor-pointer bg-transparent disabled:opacity-40"
                     >
                       <span>Oui, occupe-toi de tout</span>
-                      <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1.5" />
+                      {isActivating ? (
+                        <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1.5" />
+                      )}
                     </button>
                   </div>
                 </div>

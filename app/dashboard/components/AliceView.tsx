@@ -2,25 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUp, ArrowUpRight, Plus, Mic } from "lucide-react";
-import { AlicePresence, AliceEmotion } from "../../onboarding/components/AlicePresence";
-import { sendMessageToAlice, type UiBlock, type JobCardData, type CvAuditData, type ApplicationData } from "@/lib/alice-client";
+import { ArrowUp, ArrowUpRight, Plus, Mic, PanelRight } from "lucide-react";
+import { AlicePresence } from "../../onboarding/components/AlicePresence";
+import type {
+  UiBlock, JobCardData, CvAuditData, ApplicationData, MissionReportData,
+} from "@/lib/alice-client";
 import { JobCardList } from "./JobCard";
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface AliceViewProps {
-  userName: string;
-  onOpenCanvas?: (mode: "cv_editor" | "cover_letter", data?: any) => void;
-}
-
-interface ChatMessage {
-  id: string;
-  sender: "alice" | "user";
-  text: string;
-  timestamp?: string;
-  uiBlocks?: UiBlock[];
-}
+import { Markdown } from "./Markdown";
+import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../alice-context";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -30,21 +19,6 @@ const METRICS = [
   { label: "Auditer mon CV", query: "Audite mon CV" },
   { label: "Rédiger une lettre", query: "Rédige-moi une lettre de motivation" },
 ];
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "seed-1",
-    sender: "alice",
-    timestamp: "09:41",
-    text: "J'ai terminé ma veille de ce matin. Demande-moi ce que tu veux savoir.",
-  },
-];
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
 
 // ── Inline UI Blocks ───────────────────────────────────────────────────────
 
@@ -121,17 +95,90 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
   );
 }
 
+/** Bilan de mission — les chiffres, et surtout ce qui a été écarté et pourquoi. */
+function MissionBlock({ data }: { data: MissionReportData }) {
+  const scan = data.derniere_veille ?? {};
+  const reasons = Object.entries(scan.top_reasons ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  return (
+    <div className="w-full p-4 rounded-xl border border-[#1A1918]/8 bg-white space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-normal text-[#1A1918] tracking-tight">
+          {data.mission.titre}
+        </span>
+        <span className="text-[11px] font-light text-[#1A1918]/45 tracking-tight">
+          {data.mission.statut === "paused" ? "en pause" : data.mission.autonomie}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          [scan.scanned ?? 0, "vues"],
+          [data.compteurs.retenues, "retenues"],
+          [data.compteurs.envoyees, "envoyées"],
+          [data.compteurs.entretiens, "entretiens"],
+        ].map(([value, label]) => (
+          <div key={label as string}>
+            <p className="text-lg font-light text-[#1A1918] tabular-nums leading-none">
+              {value}
+            </p>
+            <p className="text-[10px] font-light text-[#1A1918]/45 tracking-tight pt-0.5">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {reasons.length > 0 && (
+        <div className="space-y-1 pt-1 border-t border-[#1A1918]/6">
+          {reasons.map(([motif, n]) => (
+            <p key={motif} className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+              <span className="tabular-nums text-[#1A1918]/70">{n}</span> écartées — {motif}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UiBlockRenderer({ block }: { block: UiBlock }) {
   switch (block.type) {
     case "jobs":
       return <JobCardList jobs={block.data as JobCardData[]} />;
     case "cv_audit":
       return <AuditBlock data={block.data as CvAuditData} />;
+    case "mission":
+      return <MissionBlock data={block.data as MissionReportData} />;
     case "applications":
       return <ApplicationsBlock data={block.data as { applications: ApplicationData[]; counts: Record<string, number> }} />;
     default:
       return null;
   }
+}
+
+/** Persistent handle on a Canvas artifact, left inline in the thread. */
+function CanvasRefChip({ canvasRef }: { canvasRef: CanvasPayload }) {
+  const { openCanvas, canvas } = useAlice();
+  const isActive = canvas?.mode === canvasRef.mode;
+
+  return (
+    <button
+      type="button"
+      onClick={() => openCanvas(canvasRef)}
+      className="group flex items-center gap-2.5 w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-[#1A1918]/10 bg-white hover:border-[#006045]/45 transition-colors cursor-pointer text-left"
+    >
+      <PanelRight className="w-3.5 h-3.5 stroke-[1.5] text-[#006045] shrink-0" />
+      <span className="flex-1 min-w-0 text-xs font-normal text-[#1A1918] tracking-tight truncate">
+        {canvasLabel(canvasRef)}
+      </span>
+      <span className="text-[10px] font-light text-[#1A1918]/40 group-hover:text-[#006045] tracking-tight shrink-0">
+        {isActive ? "ouvert" : "rouvrir"}
+      </span>
+    </button>
+  );
 }
 
 // ── Chat Bubble ────────────────────────────────────────────────────────────
@@ -145,12 +192,14 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
             {msg.timestamp}
           </span>
         )}
-        <p className="text-sm md:text-base font-light text-[#1A1918]/60 leading-relaxed tracking-tight">
-          {msg.text}
-        </p>
+        <Markdown
+          source={msg.text}
+          className="text-sm md:text-base text-[#1A1918]/60"
+        />
         {msg.uiBlocks?.map((block, idx) => (
           <UiBlockRenderer key={idx} block={block} />
         ))}
+        {msg.canvasRef && <CanvasRefChip canvasRef={msg.canvasRef} />}
       </div>
     );
   }
@@ -163,176 +212,106 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────
 
-export function AliceView({ userName, onOpenCanvas }: AliceViewProps) {
+export function AliceView({ userName }: { userName: string }) {
   const firstName = userName.split(" ")[0] || "Briand";
   const [prompt, setPrompt] = useState("");
-  const [emotion, setEmotion] = useState<AliceEmotion>("idle");
-  const [isThinking, setIsThinking] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const { messages, isThinking, emotion, hasConversation, submitQuery } = useAlice();
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const didMountRef = useRef(false);
 
-  const scrollToBottom = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-    }
-  };
-
+  // The thread grows downward and is anchored to the composer, so the newest
+  // message always sits just above the input — jump on mount, glide after.
   useEffect(() => {
-    scrollToBottom();
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: didMountRef.current ? "smooth" : "auto",
+    });
+    didMountRef.current = true;
   }, [messages, isThinking]);
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, []);
-
-  const submitQuery = async (userText: string) => {
-    const trimmed = userText.trim();
-    if (!trimmed || isThinking) return;
-
-    setEmotion("thinking");
-    setIsThinking(true);
+  const send = (text: string) => {
     setPrompt("");
-
-    // Append user message chronologically
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), sender: "user", text: trimmed },
-    ]);
-
-    // Call real backend
-    const candidateId = localStorage.getItem("candidate_id");
-
-    if (!candidateId) {
-      // Fallback if no candidate_id (not logged in)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: "alice",
-          timestamp: formatTime(new Date()),
-          text: "Je ne trouve pas ton profil. Essaie de te reconnecter.",
-        },
-      ]);
-      setEmotion("idle");
-      setIsThinking(false);
-      return;
-    }
-
-    try {
-      const response = await sendMessageToAlice(candidateId, trimmed);
-
-      // Check if any UI block triggers a Canvas opening action
-      for (const block of response.ui_blocks) {
-        if (block.type === "action") {
-          if (block.action === "open_cv_editor") {
-            onOpenCanvas?.("cv_editor");
-          } else if (block.action === "open_cover_letter") {
-            onOpenCanvas?.("cover_letter", block.data);
-          }
-        }
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: "alice",
-          timestamp: formatTime(new Date()),
-          text: response.reply,
-          uiBlocks: response.ui_blocks.length > 0 ? response.ui_blocks : undefined,
-        },
-      ]);
-    } catch (err) {
-      console.error("Alice error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: "alice",
-          timestamp: formatTime(new Date()),
-          text: "Désolée, j'ai rencontré un problème. Réessaie.",
-        },
-      ]);
-    } finally {
-      setEmotion("idle");
-      setIsThinking(false);
-    }
+    void submitQuery(text);
   };
 
+  // La largeur de lecture est portée par la colonne (page.tsx) : ici on la remplit.
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.35 }}
-      className="w-full max-w-xl mx-auto h-full flex flex-col select-none font-light tracking-tight overflow-hidden"
+      className="w-full h-full flex flex-col select-none font-light tracking-tight overflow-hidden"
     >
-      {/* ═══ Zone scrollable : Alice, salutation, métriques, historique ═══ */}
+      {/* ═══ Zone scrollable : contenu ancré en bas, comme une messagerie ═══ */}
       <div
         ref={scrollContainerRef}
-        className="w-full flex-1 min-h-0 overflow-y-auto space-y-7 py-6 pr-1"
+        className="scroll-discreet w-full flex-1 min-h-0 overflow-y-auto pr-1"
         role="log"
         aria-live="polite"
         aria-label="Historique des échanges avec Alice"
       >
-        <div className="flex flex-col items-center text-center gap-3">
-          <AlicePresence emotion={emotion} size="lg" />
-          <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
-            Bonjour {firstName}.
-          </h1>
-        </div>
+        <div
+          className={`min-h-full flex flex-col gap-7 py-6 ${
+            hasConversation ? "justify-end" : "justify-center"
+          }`}
+        >
+          {/* Hero — remonte et sort du champ au fil de la conversation */}
+          <div className="flex flex-col items-center text-center gap-3 shrink-0">
+            <AlicePresence emotion={emotion} size="lg" />
+            <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
+              Bonjour {firstName}.
+            </h1>
+          </div>
 
-        <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          {METRICS.map((m) => (
-            <button
-              key={m.label}
-              type="button"
-              onClick={() => submitQuery(m.query)}
-              disabled={isThinking}
-              className="flex items-center gap-1.5 text-xs md:text-sm font-light text-[#1A1918]/70 hover:text-[#006045] transition-colors cursor-pointer group py-1 tracking-tight disabled:opacity-40"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5 text-[#006045] stroke-[2] shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              <span className="font-light">{m.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6">
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.25 }}
-                className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+          <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2 shrink-0">
+            {METRICS.map((m) => (
+              <button
+                key={m.label}
+                type="button"
+                onClick={() => send(m.query)}
+                disabled={isThinking}
+                className="flex items-center gap-1.5 text-xs md:text-sm font-light text-[#1A1918]/70 hover:text-[#006045] transition-colors cursor-pointer group py-1 tracking-tight disabled:opacity-40"
               >
-                <ChatBubble msg={msg} />
-              </motion.div>
+                <ArrowUpRight className="w-3.5 h-3.5 text-[#006045] stroke-[2] shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                <span className="font-light">{m.label}</span>
+              </button>
             ))}
-          </AnimatePresence>
-          {isThinking && (
-            <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
-              <span className="animate-pulse">Alice réfléchit…</span>
-            </div>
-          )}
+          </div>
+
+          <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6 shrink-0">
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.25 }}
+                  className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                >
+                  <ChatBubble msg={msg} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {isThinking && (
+              <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
+                <span className="animate-pulse">Alice réfléchit…</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ═══ Bloc fixe en bas : input ═══ */}
-      <div className="w-full shrink-0 pt-3 pb-2 bg-white/80 backdrop-blur-sm">
+      <div className="w-full shrink-0 pt-3 pb-2 bg-[#FAFAF8]/90 backdrop-blur-sm">
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            submitQuery(prompt);
+            send(prompt);
           }}
           className="relative flex items-center bg-white border border-[#EDECEA] hover:border-[#1A1918]/25 focus-within:border-[#006045] rounded-full px-4.5 py-3 shadow-sm transition-all"
         >

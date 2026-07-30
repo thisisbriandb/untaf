@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { cvTemplates, ExperienceEntry, EducationEntry, LanguageEntry } from "../types";
 import { Loader2 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/config";
 
 interface CandidateCvPreviewProps {
   fullName: string;
@@ -20,6 +21,12 @@ interface CandidateCvPreviewProps {
   education?: EducationEntry[];
   languages?: LanguageEntry[];
   phone?: string;
+  /**
+   * Size the sheet from its container (A4 aspect ratio) instead of the fixed
+   * 780px frame, and drop the chrome. Used inside the Canvas, where the panel
+   * width is a fraction of the viewport.
+   */
+  fluid?: boolean;
 }
 
 export function CandidateCvPreview({
@@ -38,6 +45,7 @@ export function CandidateCvPreview({
   education = [],
   languages = [],
   phone,
+  fluid = false,
 }: CandidateCvPreviewProps) {
   const tpl = cvTemplates.find((t) => t.id === templateId) || cvTemplates[0];
   const photoToDisplay = userPhotoUrl || tpl.photo;
@@ -87,7 +95,7 @@ export function CandidateCvPreview({
           })),
         };
 
-        const res = await fetch("http://localhost:8000/api/candidates/render-preview-svg", {
+        const res = await fetch(`${API_BASE_URL}/api/candidates/render-preview-svg`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -132,6 +140,31 @@ export function CandidateCvPreview({
     languages,
     phone,
   ]);
+
+  if (fluid) {
+    return (
+      <div className="w-full aspect-[1/1.4142] bg-white rounded-lg border border-[#1A1918]/10 shadow-sm overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-[#006045]" />
+            <span className="text-[11px] font-light text-[#1A1918]/55 tracking-tight">
+              Rendu en cours…
+            </span>
+          </div>
+        )}
+        {error && !svgContent ? (
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-xs font-light text-[#1A1918]/45 tracking-tight">
+            {error}
+          </div>
+        ) : svgContent ? (
+          <div
+            className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:block"
+            dangerouslySetInnerHTML={{ __html: svgContent }}
+          />
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[600px] mx-auto min-h-[780px] bg-white shadow-2xl rounded-lg border border-slate-200 overflow-hidden flex flex-col justify-between relative ring-1 ring-slate-900/5 transition-all">
