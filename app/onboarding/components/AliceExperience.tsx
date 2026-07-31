@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, Link as LinkIcon, ArrowRight, Loader2 } from "lucide-react";
-import { cvTemplates } from "../types";
+import { UploadCloud, Link as LinkIcon, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from "@/lib/config";
 import { AlicePresence, AliceEmotion } from "./AlicePresence";
@@ -32,6 +31,9 @@ interface CandidateProfile {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Une question appelle une réponse : elle s'affiche plus discrètement. */
+const isPrompt = (line: string) => line.trim().endsWith("?");
+
 /** L'objectif choisi en phase 1 est déjà un filtre dur sur le contrat. */
 const ROLE_TO_CONTRACTS: Record<string, string[]> = {
   alternance: ["alternance"],
@@ -45,7 +47,7 @@ const ROLE_TO_CONTRACTS: Record<string, string[]> = {
 export function AliceExperience() {
   const router = useRouter();
   const [phase, setPhase] = useState(0);
-  const [aliceText, setAliceText] = useState<string[]>([]);
+  const [aliceLine, setAliceLine] = useState("");
   const [emotion, setEmotion] = useState<AliceEmotion>("idle");
   const [showComponent, setShowComponent] = useState(false);
 
@@ -66,54 +68,42 @@ export function AliceExperience() {
     languages: [],
   });
 
-  // Mandat de recherche (phase 6)
+  // Mandat de recherche — dernière étape du parcours (phase 5)
   const [criteria, setCriteria] = useState<CriteriaDraft>(DEFAULT_CRITERIA);
   const [cityInput, setCityInput] = useState("");
-
-  // Activation (phase 7)
   const [emailInput, setEmailInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [activationError, setActivationError] = useState<string | null>(null);
-  const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
-  const [selectedTemplateIdx, setSelectedTemplateIdx] = useState(0);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // Phase 6 Task Selection (Default all active)
-  const [activeTasks, setActiveTasks] = useState<{ [key: string]: boolean }>({
-    scan: true,
-    adapt_cv: true,
-    cover_letter: true,
-    apply: true,
-  });
+  const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll smooth
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [aliceText, showComponent, detectedSkills]);
-
-  const toggleTask = (id: string) => {
-    setActiveTasks((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  }, [aliceLine, showComponent, detectedSkills]);
 
   // ─── Scenario API Helpers ────────────────────────────────────────────────
 
-  const say = useCallback(async (text: string[], em: AliceEmotion = "listening", pauseMs = 600) => {
+  // Alice ne dit qu'une phrase à la fois : la suivante remplace la précédente
+  // en fondu, au lieu de s'empiler. Une seule ligne à l'écran, toujours.
+  const say = useCallback(async (line: string, em: AliceEmotion = "listening", pauseMs = 600) => {
     setEmotion(em);
-    setAliceText(text);
+    setAliceLine(line);
     await delay(pauseMs);
   }, []);
 
-  const think = useCallback(async (text: string[], pauseMs = 800) => {
+  const think = useCallback(async (line: string, pauseMs = 800) => {
     setEmotion("thinking");
-    setAliceText(text);
+    setAliceLine(line);
     await delay(pauseMs);
   }, []);
 
-  const read = useCallback(async (text: string[], pauseMs = 700) => {
+  const read = useCallback(async (line: string, pauseMs = 700) => {
     setEmotion("reading");
-    setAliceText(text);
+    setAliceLine(line);
     await delay(pauseMs);
   }, []);
 
@@ -124,13 +114,13 @@ export function AliceExperience() {
     const runIntro = async () => {
       await delay(400);
       if (!active) return;
-      await say(["Salut."], "idle", 900);
+      await say("Salut.", "idle", 1000);
       if (!active) return;
-      await say(["Salut.", "Je suis Alice."], "listening", 950);
+      await say("Je suis Alice.", "listening", 1050);
       if (!active) return;
-      await say(["Salut.", "Je suis Alice.", "Je vais postuler pour toi."], "listening", 1100);
+      await say("Je vais postuler pour toi.", "listening", 1250);
       if (!active) return;
-      await think(["Qu'est-ce qu'on cherche ?"], 650);
+      await think("Qu'est-ce qu'on cherche ?", 700);
       if (!active) return;
       setEmotion("listening");
       setShowComponent(true);
@@ -144,11 +134,35 @@ export function AliceExperience() {
 
   // ─── Step Handlers ────────────────────────────────────────────────────────
 
+  /** Remplissage du profil, partagé par l'import CV et l'import LinkedIn. */
+  const applyParsedProfile = useCallback((parsed: any) => {
+    setProfile((prev) => ({
+      ...prev,
+      fullName: parsed.full_name || parsed.name || prev.fullName,
+      headline: parsed.headline || parsed.title || prev.headline,
+      email: parsed.email || prev.email,
+      phone: parsed.phone || prev.phone,
+      summary: parsed.summary || prev.summary,
+      skills: parsed.skills?.length > 0 ? parsed.skills : prev.skills,
+      experienceYears: parsed.experience_years ?? prev.experienceYears,
+      experiences: parsed.experiences || prev.experiences,
+      education: parsed.education || prev.education,
+    }));
+
+    // Les localisations extraites pré-remplissent le mandat sans l'imposer.
+    if (parsed.preferred_locations?.length) {
+      setCriteria((prev) => ({
+        ...prev,
+        locations: prev.locations.length ? prev.locations : parsed.preferred_locations,
+      }));
+    }
+  }, []);
+
   const handleRoleSelect = useCallback(async (role: string) => {
     setTargetRole(role);
     setShowComponent(false);
-    await think([role + "."], 500);
-    await say([role + ".", "Ton CV ?"], "listening", 400);
+    await think(role + ".", 700);
+    await say("Ton CV ?", "listening", 350);
     setShowComponent(true);
     setPhase(2);
   }, [say, think]);
@@ -160,8 +174,8 @@ export function AliceExperience() {
     setShowComponent(true);
     setDetectedSkills([]);
 
-    await read(["Lecture du CV..."], 800);
-    await read(["Extraction du parcours..."], 700);
+    await read("Je lis ton CV...", 850);
+    await read("Je découvre ton parcours...", 750);
 
     // Call parse-resume API
     let parsedData: any = null;
@@ -177,7 +191,7 @@ export function AliceExperience() {
       console.error("CV parse error:", err);
     }
 
-    await read(["Analyse des compétences..."], 600);
+    await read("Je rassemble ce qui compte...", 650);
 
     // Reveal detected skills
     const skills = parsedData?.skills?.length > 0
@@ -189,35 +203,13 @@ export function AliceExperience() {
       setDetectedSkills((prev) => [...prev, skills[i]]);
     }
 
-    if (parsedData) {
-      setProfile((prev) => ({
-        ...prev,
-        fullName: parsedData.full_name || parsedData.name || prev.fullName,
-        headline: parsedData.headline || parsedData.title || prev.headline,
-        email: parsedData.email || prev.email,
-        phone: parsedData.phone || prev.phone,
-        summary: parsedData.summary || prev.summary,
-        skills: parsedData.skills?.length > 0 ? parsedData.skills : prev.skills,
-        experienceYears: parsedData.experience_years ?? prev.experienceYears,
-        experiences: parsedData.experiences || prev.experiences,
-        education: parsedData.education || prev.education,
-      }));
-
-      // Le parseur remonte parfois des localisations : elles pré-remplissent
-      // le mandat sans jamais l'imposer.
-      if (parsedData.preferred_locations?.length) {
-        setCriteria((prev) => ({
-          ...prev,
-          locations: prev.locations.length ? prev.locations : parsedData.preferred_locations,
-        }));
-      }
-    }
+    if (parsedData) applyParsedProfile(parsedData);
 
     await delay(600);
     const firstName = (parsedData?.full_name || parsedData?.name || "").split(" ")[0] || "Candidat";
-    await say([firstName + ", voici ton profil."], "happy", 400);
+    await say(firstName + ", voici ton profil.", "happy", 400);
     setPhase(4);
-  }, [read, say]);
+  }, [read, say, applyParsedProfile]);
 
   const handleLinkedinSubmit = useCallback(async () => {
     if (!linkedinUrl.trim()) return;
@@ -226,69 +218,74 @@ export function AliceExperience() {
     setPhase(3);
     setShowComponent(true);
 
-    await read(["Analyse du profil LinkedIn..."], 1000);
-    await read(["Extraction du parcours..."], 800);
-    await say(["Voici ton profil."], "happy", 400);
+    await read("Je regarde ton profil LinkedIn...", 900);
+
+    let parsedData: any = null;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/candidates/parse-linkedin?linkedin_url=${encodeURIComponent(linkedinUrl.trim())}`,
+        { method: "POST" }
+      );
+      if (res.ok) parsedData = await res.json();
+    } catch (err) {
+      console.error("LinkedIn parse error:", err);
+    }
+
+    await read("Je rassemble ce qui compte...", 650);
+
+    // LinkedIn bloque les lectures anonymes : on ne récupère au mieux qu'un nom
+    // deviné depuis l'URL. Tout dire plutôt que de mimer une extraction réussie.
+    const isUsable = Boolean(parsedData?.headline || parsedData?.skills?.length);
+
+    if (parsedData) applyParsedProfile(parsedData);
+
+    if (isUsable) {
+      const skills = (parsedData.skills || []).slice(0, 8);
+      for (const skill of skills) {
+        await delay(180);
+        setDetectedSkills((prev) => [...prev, skill]);
+      }
+      await delay(500);
+      const firstName = (parsedData.full_name || "").split(" ")[0];
+      await say(firstName ? `${firstName}, voici ton profil.` : "Voici ton profil.", "happy", 400);
+    } else {
+      await say("LinkedIn ne me laisse pas lire ton profil.", "idle", 1100);
+      await say("Complète-le ici, ou reviens avec ton CV.", "listening", 700);
+    }
+
     setPhase(4);
-  }, [linkedinUrl, read, say]);
+  }, [linkedinUrl, read, say, applyParsedProfile]);
 
-  /** Passerelle unique vers le mandat — les deux branches CV y convergent. */
-  const goToCriteria = useCallback(async () => {
+  /**
+   * Sortie unique de la phase profil.
+   *
+   * Le choix d'un modèle de CV ne fait pas partie de l'onboarding : il se fera
+   * plus tard, avec Alice, dans le Canvas. Annoncer ici « j'ai préparé quelques
+   * styles » promettait une étape qui n'existe pas à ce moment du parcours.
+   */
+  const handleProfileValidated = useCallback(async () => {
     setShowComponent(false);
-    await say(["Où, et à quelles conditions ?"], "listening", 400);
-    setShowComponent(true);
-    setPhase(6);
-  }, [say]);
-
-  const handleKeepOriginalCv = useCallback(async () => {
-    const firstName = profile.fullName.split(" ")[0] || "Candidat";
-    setShowComponent(false);
-    await think(["Entendu, " + firstName + "."], 950);
-    await say(["Je garde ton CV original."], "listening", 1200);
-    await goToCriteria();
-  }, [profile.fullName, think, say, goToCriteria]);
-
-  const handleValidateProfile = useCallback(async () => {
-    setShowComponent(false);
-    await say(["J'ai préparé quelques styles."], "happy", 400);
+    await say("Ton CV est prêt.", "happy", 950);
+    await say("Tu pourras le modifier avec moi à tout moment.", "listening", 1250);
+    await think("Où, et à quelles conditions ?", 700);
+    setEmotion("listening");
     setShowComponent(true);
     setPhase(5);
-  }, [say]);
-
-  const handleTemplateSelect = useCallback(async (idx: number) => {
-    setSelectedTemplateIdx(idx);
-    const firstName = profile.fullName.split(" ")[0] || "Candidat";
-    setShowComponent(false);
-    await think(["Parfait, " + firstName + "."], 900);
-    await say(["Style sélectionné."], "happy", 1100);
-    await goToCriteria();
-  }, [profile.fullName, think, say, goToCriteria]);
-
-  const handleCriteriaSubmit = useCallback(async () => {
-    setShowComponent(false);
-    const zoneLabel =
-      criteria.zone === "france" ? "En France" :
-      criteria.zone === "europe" ? "En Europe" : "Sans limite de zone";
-    const detail = criteria.locations.length
-      ? `${zoneLabel}, autour de ${criteria.locations.slice(0, 3).join(", ")}.`
-      : `${zoneLabel}.`;
-    await think([detail], 900);
-    await say([detail, "Je peux faire tout ça pour toi :"], "listening", 400);
-    setShowComponent(true);
-    setPhase(7);
-  }, [criteria, think, say]);
+  }, [say, think]);
 
   const handleBypassCv = useCallback(async () => {
     setShowComponent(false);
-    await say(["Voici ton profil."], "listening", 300);
+    await say("Pas de souci, on part de zéro.", "listening", 800);
     setShowComponent(true);
     setPhase(4);
   }, [say]);
 
   /**
-   * Crée (ou retrouve) le profil, enregistre le mandat, puis bascule sur le
-   * dashboard. Idempotent : relancer l'onboarding avec le même email reprend
-   * le profil existant au lieu de buter sur le conflit d'unicité.
+   * Dernière étape du parcours : le mandat renseigné crée (ou retrouve) le
+   * profil, puis bascule sur le dashboard — sans écran intermédiaire.
+   *
+   * Idempotent : relancer l'onboarding avec le même email reprend le profil
+   * existant au lieu de buter sur le conflit d'unicité.
    */
   const handleActivateAlice = useCallback(async () => {
     const email = (profile.email || emailInput).trim();
@@ -364,10 +361,25 @@ export function AliceExperience() {
       localStorage.setItem("candidate_email", candidate.email);
       localStorage.setItem("candidate_name", candidate.full_name);
 
+      // Le CV d'origine est conservé tel quel : c'est lui qui s'ouvrira dans le
+      // Canvas tant que le candidat n'aura pas demandé un modèle. Un échec ici
+      // ne doit pas bloquer l'entrée dans l'application.
+      if (cvFile) {
+        try {
+          const form = new FormData();
+          form.append("file", cvFile);
+          await fetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
+            method: "POST",
+            body: form,
+          });
+        } catch (err) {
+          console.error("Resume upload failed:", err);
+        }
+      }
+
       setShowComponent(false);
-      setEmotion("happy");
-      setAliceText(["C'est parti.", "Je travaille pour toi."]);
-      await delay(1400);
+      await say("C'est parti.", "happy", 1000);
+      await say("Je travaille pour toi.", "happy", 1200);
       router.push("/dashboard");
     } catch (err) {
       console.error("Activation error:", err);
@@ -376,7 +388,7 @@ export function AliceExperience() {
       );
       setIsActivating(false);
     }
-  }, [profile, emailInput, criteria, targetRole, linkedinUrl, router]);
+  }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say]);
 
   // ─── Render Canvas ────────────────────────────────────────────────────────
 
@@ -390,47 +402,29 @@ export function AliceExperience() {
         {/* ═══ Alice Presence (Always visible abstract eyes & gaze) ═══ */}
         <AlicePresence emotion={emotion} className="shrink-0" />
 
-        {/* ═══ Alice Living Speech & Glowing Capsule Cursor ═══ */}
-        <AnimatePresence mode="wait">
-          {aliceText.length > 0 && (
-            <motion.div
-              key={aliceText.join("|")}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="text-center space-y-1.5"
-            >
-              {aliceText.map((line, i) => {
-                const isLastLine = i === aliceText.length - 1;
-                const isPrompt =
-                  line === "Qu'est-ce qu'on cherche ?" ||
-                  line === "Où, et à quelles conditions ?" ||
-                  line.startsWith("Je peux") ||
-                  line.startsWith("Sélectionne");
-
-                return (
-                  <p
-                    key={i}
-                    className={cn(
-                      "leading-snug tracking-tight",
-                      i === 0 && !isPrompt && "text-2xl md:text-3xl font-normal text-[#1A1918]",
-                      i === 1 && !isPrompt && "text-lg md:text-xl text-[#1A1918]/65",
-                      i >= 2 && !isPrompt && "pt-1 text-xl md:text-2xl font-normal text-[#1A1918]",
-                      isPrompt && "text-lg md:text-xl font-normal text-[#1A1918]/85 pt-1"
-                    )}
-                  >
-                    <span>{line}</span>
-                    {/* Alice's Presence = Glowing Capsule Cursor */}
-                    {isLastLine && emotion !== "thinking" && (
-                      <span className="alice-cursor-capsule" />
-                    )}
-                  </p>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* ═══ Parole d'Alice — une seule phrase, remplacée en fondu ═══ */}
+        <div className="min-h-[3.5rem] flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {aliceLine && (
+              <motion.p
+                key={aliceLine}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                className={cn(
+                  "text-center leading-snug tracking-tight",
+                  isPrompt(aliceLine)
+                    ? "text-lg md:text-xl font-normal text-[#1A1918]/85"
+                    : "text-2xl md:text-3xl font-normal text-[#1A1918]"
+                )}
+              >
+                <span>{aliceLine}</span>
+                {emotion !== "thinking" && <span className="alice-cursor-capsule" />}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* ═══ Active Scenario Controls ═══ */}
         <AnimatePresence mode="wait">
@@ -603,23 +597,16 @@ export function AliceExperience() {
                         </div>
                       )}
 
-                      {/* Clean line actions */}
-                      <div className="pt-4 space-y-2 border-t border-[#1A1918]/8">
+                      {/* Sortie unique : le style du CV se choisira plus tard,
+                          avec Alice, dans le Canvas. */}
+                      <div className="pt-4 border-t border-[#1A1918]/8">
                         <button
                           type="button"
-                          onClick={handleKeepOriginalCv}
+                          onClick={handleProfileValidated}
                           className="group w-full py-3.5 text-left text-sm text-[#1A1918] font-normal hover:text-[#006045] transition-colors cursor-pointer flex items-center justify-between"
                         >
-                          <span>garder mon CV PDF original tel quel</span>
+                          <span>c&apos;est bien moi, on continue</span>
                           <ArrowRight className="h-4 w-4 text-[#006045] transition-transform group-hover:translate-x-1" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleValidateProfile}
-                          className="group w-full py-3 text-left text-xs text-[#1A1918]/50 hover:text-[#006045] transition-colors cursor-pointer flex items-center justify-between"
-                        >
-                          <span>continuer avec un style recommandé par Alice</span>
-                          <ArrowRight className="h-3.5 w-3.5 text-[#006045] transition-transform group-hover:translate-x-1" />
                         </button>
                       </div>
                     </>
@@ -656,139 +643,22 @@ export function AliceExperience() {
                 </div>
               )}
 
-              {/* ── Phase 5: Template Carousel ── */}
+              {/* ── Phase 5: Mandat de recherche — dernière étape ── */}
               {phase === 5 && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-[#EDECEA] shadow-sm">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTemplateIdx((i) => Math.max(0, i - 1))}
-                      disabled={selectedTemplateIdx === 0}
-                      className="p-2 text-[#1A1918]/40 hover:text-[#006045] disabled:opacity-20 cursor-pointer"
-                    >
-                      ←
-                    </button>
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-[#1A1918]">{cvTemplates[selectedTemplateIdx].name}</p>
-                      <p className="text-xs text-[#1A1918]/45 mt-0.5">{cvTemplates[selectedTemplateIdx].description}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTemplateIdx((i) => Math.min(cvTemplates.length - 1, i + 1))}
-                      disabled={selectedTemplateIdx === cvTemplates.length - 1}
-                      className="p-2 text-[#1A1918]/40 hover:text-[#006045] disabled:opacity-20 cursor-pointer"
-                    >
-                      →
-                    </button>
-                  </div>
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateSelect(selectedTemplateIdx)}
-                      className="group inline-flex items-center justify-center gap-2 py-3.5 px-6 text-[#006045] hover:text-[#004d37] font-medium text-sm transition-all cursor-pointer bg-transparent"
-                    >
-                      <span>Sélectionner ce style</span>
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Phase 6: Mandat de recherche ── */}
-              {phase === 6 && (
                 <CriteriaStep
                   value={criteria}
                   onChange={setCriteria}
-                  onSubmit={handleCriteriaSubmit}
+                  onSubmit={handleActivateAlice}
                   cityInput={cityInput}
                   setCityInput={setCityInput}
+                  needsEmail={!profile.email}
+                  emailInput={emailInput}
+                  setEmailInput={setEmailInput}
+                  isSubmitting={isActivating}
+                  error={activationError}
                 />
               )}
 
-              {/* ── Phase 7: Final Pact & Task Checklist (Cardless) ── */}
-              {phase === 7 && (
-                <div className="space-y-8 w-full">
-                  <div className="w-full max-w-[440px] mx-auto text-left border-t border-b border-[#1A1918]/10 divide-y divide-[#1A1918]/8">
-                    {[
-                      { id: "scan", label: "Scanner 500+ offres par jour" },
-                      { id: "adapt_cv", label: "Adapter ton CV à chaque poste" },
-                      { id: "cover_letter", label: "Rédiger tes lettres de motivation" },
-                      { id: "apply", label: "Postuler automatiquement pour toi" },
-                    ].map((task) => {
-                      const isChecked = activeTasks[task.id];
-                      return (
-                        <div
-                          key={task.id}
-                          onClick={() => toggleTask(task.id)}
-                          className="flex items-center justify-between py-4 cursor-pointer group select-none transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={cn(
-                                "text-sm font-medium transition-all w-4 text-center shrink-0",
-                                isChecked ? "text-[#006045]" : "text-[#1A1918]/25"
-                              )}
-                            >
-                              {isChecked ? "✓" : "—"}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-sm md:text-base transition-all",
-                                isChecked
-                                  ? "text-[#1A1918] font-normal"
-                                  : "text-[#1A1918]/30 line-through"
-                              )}
-                            >
-                              {task.label}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* L'email conditionne la création du profil : demandé ici
-                      seulement si le CV ne l'a pas livré. */}
-                  {!profile.email && (
-                    <div className="w-full max-w-[440px] mx-auto space-y-2">
-                      <label
-                        htmlFor="onboarding-email"
-                        className="text-xs text-[#1A1918]/35 uppercase tracking-wider font-medium"
-                      >
-                        Ton email
-                      </label>
-                      <input
-                        id="onboarding-email"
-                        type="email"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        placeholder="pour te tenir au courant"
-                        className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
-                      />
-                    </div>
-                  )}
-
-                  {activationError && (
-                    <p className="text-center text-xs text-red-600/80">{activationError}</p>
-                  )}
-
-                  <div className="flex justify-center pt-2">
-                    <button
-                      type="button"
-                      onClick={handleActivateAlice}
-                      disabled={isActivating}
-                      className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#006045] hover:text-[#004d37] font-medium text-base md:text-lg transition-all cursor-pointer bg-transparent disabled:opacity-40"
-                    >
-                      <span>Oui, occupe-toi de tout</span>
-                      {isActivating ? (
-                        <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1.5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

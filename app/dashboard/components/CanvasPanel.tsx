@@ -77,9 +77,10 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
 
               {canvas.mode === "cover_letter" && (
                 <CoverLetterEditor
+                  candidateId={candidateId}
                   companyName={canvas.companyName}
                   jobTitle={canvas.jobTitle}
-                  initialContent={canvas.content}
+                  letter={canvas.letter}
                 />
               )}
             </div>

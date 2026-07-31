@@ -2,22 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUp, ArrowUpRight, Plus, Mic, PanelRight } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowUpRight, Mic, PanelRight, Plus, Radar } from "lucide-react";
 import { AlicePresence } from "../../onboarding/components/AlicePresence";
 import type {
   UiBlock, JobCardData, CvAuditData, ApplicationData, MissionReportData,
 } from "@/lib/alice-client";
 import { JobCardList } from "./JobCard";
 import { Markdown } from "./Markdown";
+import { ActiveMissionCard } from "./ActiveMissionCard";
+import { MissionLauncher } from "./MissionLauncher";
+import { fetchCurrentRun, type MissionRun } from "@/lib/mission-run-client";
 import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../alice-context";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
+/**
+ * Formulées comme des ordres, pas comme des rubriques.
+ *
+ * « Nouvelles offres » est un sujet de consultation ; « Trouve-moi des offres »
+ * est une mission confiée. La nuance porte tout le positionnement du produit.
+ */
 const METRICS = [
-  { label: "Nouvelles offres", query: "Montre-moi les nouvelles offres" },
-  { label: "Mes candidatures", query: "Où en sont mes candidatures ?" },
-  { label: "Auditer mon CV", query: "Audite mon CV" },
-  { label: "Rédiger une lettre", query: "Rédige-moi une lettre de motivation" },
+  { label: "Trouve-moi des offres", query: "Montre-moi les nouvelles offres" },
+  { label: "Occupe-toi de mon CV", query: "Audite mon CV et dis-moi ce que tu corriges" },
+  { label: "Écris ma lettre", query: "Rédige-moi une lettre de motivation" },
+  { label: "Fais le point", query: "Où en est ma recherche ? Fais-moi le bilan." },
 ];
 
 // ── Inline UI Blocks ───────────────────────────────────────────────────────
@@ -212,10 +221,38 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────
 
+/**
+ * Ce qu'Alice affiche pendant qu'elle travaille.
+ *
+ * « Alice réfléchit… » décrit une machine qui calcule. On annonce plutôt une
+ * action en cours, choisie d'après la demande — l'attente devient une mission
+ * en train de s'exécuter.
+ */
+function workingLabelFor(query: string): string {
+  const q = query.toLowerCase();
+  if (/offre|poste|opportunit|cherch|trouve/.test(q)) return "Je passe les offres en revue…";
+  if (/lettre|motivation/.test(q)) return "Je rédige ta lettre…";
+  if (/cv|audit|ats/.test(q)) return "Je reprends ton CV…";
+  if (/candidatur|postul/.test(q)) return "Je fais le tour de tes candidatures…";
+  if (/bilan|point|où en/.test(q)) return "Je rassemble mon compte rendu…";
+  return "Je m'en occupe…";
+}
+
 export function AliceView({ userName }: { userName: string }) {
   const firstName = userName.split(" ")[0] || "Briand";
   const [prompt, setPrompt] = useState("");
-  const { messages, isThinking, emotion, hasConversation, submitQuery } = useAlice();
+  const [workingLabel, setWorkingLabel] = useState("Je m'en occupe…");
+  const { messages, isThinking, emotion, hasConversation, submitQuery, candidateId } =
+    useAlice();
+
+  // Mission bornée en cours, s'il y en a une.
+  const [run, setRun] = useState<MissionRun | null>(null);
+  const [showLauncher, setShowLauncher] = useState(false);
+
+  useEffect(() => {
+    if (!candidateId) return;
+    fetchCurrentRun(candidateId).then(setRun);
+  }, [candidateId]);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
@@ -234,6 +271,7 @@ export function AliceView({ userName }: { userName: string }) {
 
   const send = (text: string) => {
     setPrompt("");
+    setWorkingLabel(workingLabelFor(text));
     void submitQuery(text);
   };
 
@@ -267,6 +305,22 @@ export function AliceView({ userName }: { userName: string }) {
             </h1>
           </div>
 
+          {/* Action principale : confier une mission. Le produit tient sur ce
+              geste — il ne peut pas être caché derrière une icône. */}
+          {!run || run.status === "completed" || run.status === "interrupted" ? (
+            <div className="w-full flex justify-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowLauncher(true)}
+                className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-[#006045]/30 bg-[#006045]/5 text-[#006045] text-sm tracking-tight hover:bg-[#006045]/10 hover:border-[#006045]/50 transition-all cursor-pointer"
+              >
+                <Radar className="w-4 h-4 stroke-[1.6]" />
+                <span>Confier une mission à Alice</span>
+                <ArrowRight className="w-3.5 h-3.5 stroke-[1.8] transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
+          ) : null}
+
           <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2 shrink-0">
             {METRICS.map((m) => (
               <button
@@ -281,6 +335,13 @@ export function AliceView({ userName }: { userName: string }) {
               </button>
             ))}
           </div>
+
+          {/* Mission en cours — visible en permanence pendant qu'elle tourne */}
+          {run && (run.status === "running" || run.status === "preparing" || !hasConversation) && candidateId && (
+            <div className="w-full shrink-0">
+              <ActiveMissionCard candidateId={candidateId} run={run} onChange={setRun} />
+            </div>
+          )}
 
           <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6 shrink-0">
             <AnimatePresence initial={false}>
@@ -299,7 +360,7 @@ export function AliceView({ userName }: { userName: string }) {
             </AnimatePresence>
             {isThinking && (
               <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
-                <span className="animate-pulse">Alice réfléchit…</span>
+                <span className="animate-pulse">{workingLabel}</span>
               </div>
             )}
           </div>
@@ -317,8 +378,10 @@ export function AliceView({ userName }: { userName: string }) {
         >
           <button
             type="button"
-            aria-label="Ajouter une pièce jointe"
-            className="text-[#1A1918]/35 hover:text-[#1A1918] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            onClick={() => setShowLauncher(true)}
+            aria-label="Confier une mission à Alice"
+            title="Confier une mission"
+            className="text-[#1A1918]/35 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <Plus className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -327,9 +390,9 @@ export function AliceView({ userName }: { userName: string }) {
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Demande quelque chose à Alice..."
+            placeholder="Confie une mission à Alice..."
             maxLength={500}
-            aria-label="Message à Alice"
+            aria-label="Confier une mission à Alice"
             className="flex-1 bg-transparent text-sm font-light placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none tracking-tight"
           />
 
@@ -352,6 +415,20 @@ export function AliceView({ userName }: { userName: string }) {
           </div>
         </form>
       </div>
+
+      {/* Confier une mission — Alice pose ses questions une par une */}
+      <AnimatePresence>
+        {showLauncher && candidateId && (
+          <MissionLauncher
+            candidateId={candidateId}
+            onClose={() => setShowLauncher(false)}
+            onLaunched={(r) => {
+              setRun(r);
+              setShowLauncher(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

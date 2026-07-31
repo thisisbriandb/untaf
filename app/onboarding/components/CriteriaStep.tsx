@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, MapPin, Plus, X } from "lucide-react";
+import { ArrowRight, Loader2, MapPin, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -87,6 +87,12 @@ interface CriteriaStepProps {
   onSubmit: () => void;
   cityInput: string;
   setCityInput: (v: string) => void;
+  /** L'email n'est demandé que si l'import du profil ne l'a pas livré. */
+  needsEmail?: boolean;
+  emailInput?: string;
+  setEmailInput?: (v: string) => void;
+  isSubmitting?: boolean;
+  error?: string | null;
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -134,6 +140,11 @@ export function CriteriaStep({
   onSubmit,
   cityInput,
   setCityInput,
+  needsEmail = false,
+  emailInput = "",
+  setEmailInput,
+  isSubmitting = false,
+  error = null,
 }: CriteriaStepProps) {
   const toggle = (key: "remotePolicies" | "languages" | "jobFamilies", v: string) => {
     const list = value[key];
@@ -289,14 +300,33 @@ export function CriteriaStep({
         </div>
       </Field>
 
+      {needsEmail && (
+        <Field label="Ton email" hint="pour te tenir au courant">
+          <input
+            type="email"
+            value={emailInput}
+            onChange={(e) => setEmailInput?.(e.target.value)}
+            placeholder="prenom@email.com"
+            className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+          />
+        </Field>
+      )}
+
+      {error && <p className="text-center text-xs text-red-600/80">{error}</p>}
+
       <div className="flex justify-center pt-1">
         <button
           type="button"
           onClick={onSubmit}
-          className="group inline-flex items-center justify-center gap-2 py-3.5 px-6 text-[#006045] hover:text-[#004d37] font-medium text-sm transition-all cursor-pointer bg-transparent"
+          disabled={isSubmitting}
+          className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#006045] hover:text-[#004d37] font-medium text-base transition-all cursor-pointer bg-transparent disabled:opacity-40"
         >
-          <span>C&apos;est mon cadre</span>
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          <span>Oui, occupe-toi de tout</span>
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          )}
         </button>
       </div>
     </motion.div>

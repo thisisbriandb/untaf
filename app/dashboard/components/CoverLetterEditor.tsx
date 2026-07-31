@@ -1,113 +1,100 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, Eye, PenLine, Sparkles } from "lucide-react";
+import { Check, Copy, Download, Eye, Loader2, PenLine, PenTool, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "./Markdown";
+import { SignaturePad } from "./SignaturePad";
+import {
+  downloadLetterPdf,
+  emptyLetter,
+  fetchSignature,
+  saveSignature,
+  type CoverLetter,
+} from "@/lib/letter-client";
 import { useAlice } from "../alice-context";
 
 interface CoverLetterEditorProps {
+  candidateId: string | null;
   companyName?: string;
   jobTitle?: string;
-  initialContent?: string;
+  letter?: CoverLetter;
 }
 
-const EMPTY_LETTER = `Madame, Monsieur,
-
-_Demande à Alice de rédiger cette lettre, ou écris-la ici._
-
-Cordialement,`;
-
 export function CoverLetterEditor({
+  candidateId,
   companyName = "Entreprise",
   jobTitle,
-  initialContent,
+  letter: incoming,
 }: CoverLetterEditorProps) {
   const { submitQuery, isThinking } = useAlice();
 
-  const [content, setContent] = useState(initialContent || EMPTY_LETTER);
-  const [pane, setPane] = useState<"edit" | "preview">(
-    initialContent ? "preview" : "edit"
+  const [letter, setLetter] = useState<CoverLetter>(
+    incoming ?? emptyLetter(companyName, jobTitle),
   );
+  const [pane, setPane] = useState<"edit" | "preview">(incoming ? "preview" : "edit");
   const [copied, setCopied] = useState(false);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  const previewRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef<HTMLDivElement>(null);
 
-  // Une nouvelle lettre rédigée par Alice doit remplacer celle affichée : sans
-  // ça, rouvrir le Canvas pour une autre offre garderait le texte précédent.
+  // Une lettre fraîchement rédigée remplace celle affichée.
   useEffect(() => {
-    if (initialContent) {
-      setContent(initialContent);
+    if (incoming) {
+      setLetter(incoming);
       setPane("preview");
     }
-  }, [initialContent]);
+  }, [incoming]);
+
+  // La signature enregistrée est appliquée sans rien redemander.
+  useEffect(() => {
+    if (!candidateId || letter.signature_image) return;
+    fetchSignature(candidateId).then((image) => {
+      if (image) setLetter((prev) => ({ ...prev, signature_image: image }));
+    });
+  }, [candidateId, letter.signature_image]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
+    const plain = [
+      letter.subject && `Objet : ${letter.subject}`,
+      "",
+      letter.salutation,
+      "",
+      letter.body,
+      "",
+      letter.closing,
+      "",
+      letter.signature_name,
+    ]
+      .filter((l) => l !== undefined)
+      .join("\n");
+    await navigator.clipboard.writeText(plain);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   /**
-   * Export : on imprime le rendu déjà à l'écran plutôt que de refaire un
-   * chemin Markdown → HTML. Un seul convertisseur, donc un seul comportement.
+   * Le PDF est compilé par le serveur et téléchargé directement — plus de
+   * boîte d'impression du navigateur, et un rendu identique partout.
    */
-  const handleDownloadPdf = () => {
-    const rendered = previewRef.current?.innerHTML;
-    if (!rendered) {
-      setPane("preview");
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const title = jobTitle ? `${jobTitle} — ${companyName}` : companyName;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="fr">
-        <head>
-          <meta charset="utf-8" />
-          <title>Lettre de motivation — ${title}</title>
-          <style>
-            body {
-              font-family: Georgia, 'Times New Roman', serif;
-              max-width: 17cm;
-              margin: 2.5cm auto;
-              color: #1A1918;
-              line-height: 1.7;
-              font-size: 12pt;
-            }
-            p { margin: 0 0 1em; }
-            ul, ol { margin: 0 0 1em; padding-left: 1.2em; }
-            li { margin-bottom: 0.4em; }
-            li > span:first-child { display: none; }
-            strong { font-weight: 600; }
-            a { color: #006045; }
-            blockquote {
-              border-left: 2px solid #006045;
-              padding-left: 1em;
-              margin-left: 0;
-              font-style: italic;
-            }
-          </style>
-        </head>
-        <body>${rendered}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    const ok = await downloadLetterPdf(letter);
+    setIsDownloading(false);
+    if (!ok) setDownloadError("Le PDF n'a pas pu être généré. Réessaie.");
+    else setDownloadError(null);
   };
 
   const suggestions = [
-    jobTitle
-      ? `Rends la lettre pour « ${jobTitle} » plus concise`
-      : "Rends cette lettre plus concise",
-    "Insiste davantage sur mes compétences techniques",
+    jobTitle ? `Rends la lettre pour « ${jobTitle} » plus concise` : "Rends cette lettre plus concise",
+    "Appuie-toi davantage sur mes réalisations chiffrées",
     "Adopte un ton plus direct",
   ];
+
+  const setField = <K extends keyof CoverLetter>(key: K, value: CoverLetter[K]) =>
+    setLetter((prev) => ({ ...prev, [key]: value }));
 
   return (
     <div className="h-full flex flex-col min-h-0 font-light tracking-tight text-[#1A1918]">
@@ -116,9 +103,14 @@ export function CoverLetterEditor({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-normal text-[#1A1918] truncate">
-              {jobTitle || "Lettre de motivation"}
+              {jobTitle || letter.subject || "Lettre de motivation"}
             </p>
-            <p className="text-xs text-[#1A1918]/50 truncate">{companyName}</p>
+            <p className="text-xs text-[#1A1918]/50 truncate">
+              {letter.recipient_company || companyName}
+              {letter.grounded_on_experiences === false && letter.source !== "empty" && (
+                <span className="text-amber-600/80"> · sans tes expériences</span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -127,63 +119,172 @@ export function CoverLetterEditor({
               aria-label="Copier la lettre"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 hover:border-[#1A1918]/30 text-xs transition-colors cursor-pointer"
             >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-[#006045]" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
+              {copied ? <Check className="w-3.5 h-3.5 text-[#006045]" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copié" : "Copier"}
             </button>
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#006045] hover:bg-[#004d37] text-white text-xs transition-colors cursor-pointer"
+              disabled={isDownloading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#006045] hover:bg-[#004d37] text-white text-xs transition-colors cursor-pointer disabled:opacity-40"
             >
-              <Download className="w-3.5 h-3.5" />
+              {isDownloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
               PDF
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#1A1918]/4 w-fit">
-          {(
-            [
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#1A1918]/4 w-fit">
+            {([
               { id: "edit", label: "Rédiger", icon: PenLine },
-              { id: "preview", label: "Aperçu", icon: Eye },
-            ] as const
-          ).map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setPane(id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-colors cursor-pointer",
-                pane === id
-                  ? "bg-white text-[#1A1918] shadow-sm"
-                  : "text-[#1A1918]/50 hover:text-[#1A1918]"
-              )}
-            >
-              <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
-              {label}
-            </button>
-          ))}
+              { id: "preview", label: "Document", icon: Eye },
+            ] as const).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPane(id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-colors cursor-pointer",
+                  pane === id ? "bg-white text-[#1A1918] shadow-sm" : "text-[#1A1918]/50 hover:text-[#1A1918]",
+                )}
+              >
+                <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowSignaturePad((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] transition-colors cursor-pointer",
+              letter.signature_image
+                ? "border-[#006045]/35 text-[#006045]"
+                : "border-[#1A1918]/12 text-[#1A1918]/55 hover:border-[#1A1918]/30",
+            )}
+          >
+            <PenTool className="w-3.5 h-3.5 stroke-[1.5]" />
+            {letter.signature_image ? "Signature enregistrée" : "Ajouter ma signature"}
+          </button>
         </div>
+
+        {downloadError && (
+          <p className="text-[11px] text-red-600/80 tracking-tight">{downloadError}</p>
+        )}
+
+        {showSignaturePad && candidateId && (
+          <div className="pt-1">
+            <SignaturePad
+              onCancel={() => setShowSignaturePad(false)}
+              onSave={async (dataUrl) => {
+                await saveSignature(candidateId, dataUrl);
+                setField("signature_image", dataUrl);
+                setShowSignaturePad(false);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Corps ── */}
       <div className="flex-1 min-h-0 p-5">
         {pane === "edit" ? (
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Rédige ta lettre en Markdown…"
-            spellCheck
-            className="scroll-discreet w-full h-full p-4 rounded-xl border border-[#EDECEA] focus:border-[#006045] focus:outline-none bg-[#FAFAF8] text-sm font-light text-[#1A1918] leading-relaxed resize-none tracking-tight font-mono"
-          />
+          <div className="scroll-discreet h-full overflow-y-auto space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono uppercase tracking-wider text-[#1A1918]/40">
+                Objet
+              </label>
+              <input
+                type="text"
+                value={letter.subject}
+                onChange={(e) => setField("subject", e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-[#EDECEA] focus:border-[#006045] focus:outline-none bg-white text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono uppercase tracking-wider text-[#1A1918]/40">
+                Corps de la lettre — Markdown
+              </label>
+              <textarea
+                value={letter.body}
+                onChange={(e) => setField("body", e.target.value)}
+                spellCheck
+                className="scroll-discreet w-full min-h-[22rem] p-4 rounded-xl border border-[#EDECEA] focus:border-[#006045] focus:outline-none bg-[#FAFAF8] text-sm leading-relaxed resize-none font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono uppercase tracking-wider text-[#1A1918]/40">
+                Formule de politesse
+              </label>
+              <textarea
+                rows={2}
+                value={letter.closing}
+                onChange={(e) => setField("closing", e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-[#EDECEA] focus:border-[#006045] focus:outline-none bg-white text-sm resize-none"
+              />
+            </div>
+          </div>
         ) : (
-          <div className="scroll-discreet h-full overflow-y-auto rounded-xl border border-[#EDECEA] bg-white p-6">
-            <div ref={previewRef}>
-              <Markdown source={content} className="text-[#1A1918]/85" />
+          /* ── Le document, mis en page selon les conventions ── */
+          <div className="scroll-discreet h-full overflow-y-auto rounded-xl border border-[#EDECEA] bg-white">
+            <div
+              ref={documentRef}
+              className="px-10 py-9 text-[13px] leading-[1.65] text-[#1A1918]"
+              style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+            >
+              <div className="lm-head flex justify-between gap-12 mb-9">
+                <div className="lm-block text-[11.5px] leading-[1.5]">
+                  <strong className="block text-[13px] mb-0.5 font-semibold">
+                    {letter.sender_name || "—"}
+                  </strong>
+                  {letter.sender_contact.map((c) => (
+                    <div key={c} className="lm-muted text-[#55524f]">{c}</div>
+                  ))}
+                </div>
+                <div className="lm-block text-[11.5px] leading-[1.5] text-right">
+                  <strong className="block text-[13px] mb-0.5 font-semibold">
+                    {letter.recipient_name}
+                  </strong>
+                  <div className="lm-muted text-[#55524f]">
+                    {letter.recipient_company || companyName}
+                  </div>
+                </div>
+              </div>
+
+              <div className="lm-date text-right mb-7 text-[12px]">
+                {letter.place ? `${letter.place}, le ${letter.date}` : `Le ${letter.date}`}
+              </div>
+
+              {letter.subject && (
+                <p className="lm-subject mb-6">
+                  <strong className="font-semibold">Objet :</strong> {letter.subject}
+                </p>
+              )}
+
+              <p className="lm-salutation mb-4">{letter.salutation}</p>
+
+              <div className="lm-body">
+                <Markdown source={letter.body} className="text-[13px] text-[#1A1918]" />
+              </div>
+
+              <p className="lm-closing my-6">{letter.closing}</p>
+
+              <div className="lm-sign text-right">
+                {letter.signature_image && (
+                  <img
+                    src={letter.signature_image}
+                    alt="Signature"
+                    className="max-h-[68px] ml-auto mb-1"
+                  />
+                )}
+                <span>{letter.signature_name || letter.sender_name}</span>
+              </div>
             </div>
           </div>
         )}

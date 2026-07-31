@@ -114,6 +114,23 @@ export async function saveCvProfile(
 ): Promise<boolean> {
   writeLocalCvProfile(candidateId, profile);
 
+  // Le parcours détaillé part aussi au serveur : Alice rédige côté backend et
+  // ne peut argumenter à partir d'expériences restées dans le navigateur.
+  try {
+    await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-content`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary: profile.summary,
+        experiences: profile.experiences,
+        education: profile.education,
+        languages: profile.languages,
+      }),
+    });
+  } catch {
+    // Non bloquant : la copie locale reste la source de l'éditeur.
+  }
+
   try {
     const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}`, {
       method: "PUT",
@@ -131,6 +148,90 @@ export async function saveCvProfile(
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// ── Présentation : original ou modèle ──────────────────────────────────────
+
+export type CvMode = "original" | "template";
+
+export interface CvDesign {
+  mode: CvMode;
+  template_id: string | null;
+  color_hex: string | null;
+  show_photo: boolean;
+  has_original: boolean;
+  original_filename: string | null;
+  /** False tant que le candidat n'a rien choisi : on est sur le défaut. */
+  is_explicit: boolean;
+}
+
+export function resumeUrl(candidateId: string): string {
+  return `${API_BASE_URL}/api/candidates/${candidateId}/resume`;
+}
+
+export async function fetchCvDesign(candidateId: string): Promise<CvDesign | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCvDesign(
+  candidateId: string,
+  patch: Partial<Pick<CvDesign, "mode" | "template_id" | "color_hex" | "show_photo">>,
+): Promise<CvDesign | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Rédaction par Alice ────────────────────────────────────────────────────
+
+export interface CvContent {
+  headline: string;
+  summary: string;
+  differentiators: string[];
+  /** "fallback" = rédigé sans LLM ; "llm_generic" = retombé dans le passe-partout. */
+  source: "llm" | "llm_generic" | "fallback";
+}
+
+/**
+ * Fait rédiger l'accroche et la synthèse à partir du parcours COMPLET.
+ * Les expériences ne vivent pas en base : c'est le client qui les fournit.
+ */
+export async function writeCvContent(
+  profile: CvProfile,
+  targetRole?: string,
+): Promise<CvContent | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/candidates/cv-content`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: profile.fullName,
+        headline: profile.headline,
+        summary: profile.summary,
+        skills: profile.skills,
+        experience_years: profile.experienceYears,
+        experiences: profile.experiences,
+        education: profile.education,
+        languages: profile.languages,
+        target_role: targetRole || null,
+      }),
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
   }
 }
 
