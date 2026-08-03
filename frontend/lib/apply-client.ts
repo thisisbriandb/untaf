@@ -1,0 +1,138 @@
+/**
+ * Candidature depuis le Canvas.
+ *
+ * L'envoi arrive en flux : chaque étape est annoncée avant d'être exécutée,
+ * puis confirmée avec son résultat réel.
+ */
+
+import { API_BASE_URL } from "./config";
+
+export type RequirementStatus = "satisfied" | "generate" | "missing";
+
+export interface Requirement {
+  key: string;
+  label: string;
+  status: RequirementStatus;
+  detail: string;
+}
+
+export type Complexity = "simple" | "medium" | "complex" | "impossible" | "unknown";
+
+export interface ApplyPlan {
+  job_id: string;
+  job_title: string;
+  company_name: string;
+  channel: string;
+  destination: string | null;
+  can_apply: boolean;
+  blocked_reason: string | null;
+  /** Évalué par le service de faisabilité, côté serveur. */
+  complexity: Complexity;
+  summary: string;
+  fallback_url: string | null;
+  requirements: Requirement[];
+}
+
+export const COMPLEXITY_LABEL: Record<Complexity, string> = {
+  simple: "Automatisable",
+  medium: "Presque automatisable",
+  complex: "Formulaire à remplir",
+  impossible: "À faire toi-même",
+  unknown: "À vérifier",
+};
+
+export type ApplyEvent =
+  | { type: "step"; key: string; label: string; status: "running" | "done"; detail?: string }
+  | { type: "blocked"; message: string; missing: { label: string; detail: string }[] }
+  | { type: "awaiting"; dispatch_id: string; message: string; destination?: string }
+  | { type: "unsupported"; complexity: Complexity; message: string; reason: string | null; fallback_url: string | null }
+  | { type: "done"; dispatch_id: string | null; status: string; real: boolean; message: string }
+  | { type: "error"; message: string };
+
+export async function fetchApplyPlan(
+  candidateId: string,
+  jobId: string,
+): Promise<ApplyPlan | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/plan`,
+    );
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lance la candidature et rappelle `onEvent` à chaque étape.
+ *
+ * On lit le flux à la main plutôt qu'avec EventSource : celui-ci ne sait pas
+ * faire de POST, et l'envoi ne doit pas être déclenchable par un simple GET.
+ */
+export async function streamApply(
+  candidateId: string,
+  jobId: string,
+  onEvent: (event: ApplyEvent) => void,
+): Promise<void> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/stream`,
+    { method: "POST" },
+  );
+
+  if (!res.ok || !res.body) {
+    onEvent({ type: "error", message: "La candidature n'a pas pu démarrer." });
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Les messages SSE sont séparés par une ligne vide.
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() ?? "";
+
+    for (const chunk of chunks) {
+      let eventName = "message";
+      const dataLines: string[] = [];
+
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+      }
+
+      if (!dataLines.length) continue;
+      try {
+        onEvent({ type: eventName, ...JSON.parse(dataLines.join("")) } as ApplyEvent);
+      } catch {
+        // Un fragment illisible ne doit pas interrompre le flux.
+      }
+    }
+  }
+}
+
+// ── Préférence « ne plus afficher » ────────────────────────────────────────
+
+const SKIP_KEY = "apply_confirm_skipped";
+
+export function shouldConfirmApply(): boolean {
+  try {
+    return localStorage.getItem(SKIP_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+
+export function rememberSkipConfirm(): void {
+  try {
+    localStorage.setItem(SKIP_KEY, "1");
+  } catch {
+    // Mode privé : on redemandera, ce n'est pas grave.
+  }
+}

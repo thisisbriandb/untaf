@@ -1,0 +1,33 @@
+[project]
+name = "cv-engine"
+version = "0.1.0"
+description = "CV generation engine — JSON/dict to professional PDF via Typst"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = [
+    "jinja2>=3.1",
+    "markdown>=3.5",
+    "typst>=0.12",
+]
+
+[project.optional-dependencies]
+fonts = [
+    "rendercv-fonts>=1.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100

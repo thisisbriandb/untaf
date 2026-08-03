@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(.venv/bin/python -W ignore -c \"import app.main; print\\('backend OK'\\)\")",
+      "Bash(python3 -)",
+      "Bash(.venv/bin/python -W ignore -c \"import app.models; print\\('models OK'\\)\")"
+    ]
+  }
+}

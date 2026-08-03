@@ -1,0 +1,7 @@
+[package]
+name = "cv-engine"
+version = "0.1.0"
+entrypoint = "lib.typ"
+authors = ["cv-engine"]
+license = "MIT"
+description = "CV generation engine - Typst design system"
