@@ -1,0 +1,56 @@
+# Services de fond.
+#
+# Sans eux, les déclencheurs journaliers et les missions ne sont que de la
+# configuration : le beat_schedule existe depuis le début, mais rien ne
+# l'exécute tant qu'aucun worker ne tourne.
+#
+#   docker compose up -d
+#
+# Postgres n'est pas ici : en local il tourne déjà sur la machine, et en
+# production c'est Supabase qui l'héberge. Seul DATABASE_URL change.
+
+services:
+  redis:
+    # Nom pleinement qualifié : Podman refuse les noms courts, Docker s'en
+    # accommode. Une seule écriture fonctionne avec les deux.
+    image: docker.io/library/redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: ./backend/job-discovery
+    command: celery -A app.celery_app worker -l info --concurrency=2
+    restart: unless-stopped
+    env_file: ./backend/job-discovery/.env
+    environment:
+      # Les services se parlent par leur nom ; « localhost » désignerait le
+      # conteneur lui-même.
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql+asyncpg://postgres:postgres@host.docker.internal:5432/job_discovery}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: ./backend/job-discovery
+    command: celery -A app.celery_app beat -l info
+    restart: unless-stopped
+    env_file: ./backend/job-discovery/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql+asyncpg://postgres:postgres@host.docker.internal:5432/job_discovery}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy

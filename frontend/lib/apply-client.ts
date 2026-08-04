@@ -49,6 +49,51 @@ export type ApplyEvent =
   | { type: "done"; dispatch_id: string | null; status: string; real: boolean; message: string }
   | { type: "error"; message: string };
 
+/**
+ * Ce qu'il reste après une tentative — réussie ou non.
+ *
+ * Les pièces sont celles qui ont réellement été assemblées, pas une
+ * régénération : un échec ne doit pas obliger à tout refaire.
+ */
+export interface ApplyOutcome {
+  dispatch_id: string;
+  status: string;
+  /** Vrai uniquement si quelque chose est parti pour de bon. */
+  sent: boolean;
+  headline: string;
+  detail: string | null;
+  job_url: string | null;
+  has_resume: boolean;
+  has_letter: boolean;
+  resume_name: string | null;
+  steps: string[];
+  /** Brouillon d'e-mail pré-rempli, absent quand l'envoi a abouti. */
+  mailto: string | null;
+}
+
+const dispatchBase = (candidateId: string, dispatchId: string) =>
+  `${API_BASE_URL}/api/candidates/${candidateId}/apply/dispatches/${dispatchId}`;
+
+export async function fetchApplyOutcome(
+  candidateId: string,
+  dispatchId: string,
+): Promise<ApplyOutcome | null> {
+  try {
+    const res = await fetch(dispatchBase(candidateId, dispatchId));
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function dispatchResumeUrl(candidateId: string, dispatchId: string): string {
+  return `${dispatchBase(candidateId, dispatchId)}/resume`;
+}
+
+export function dispatchLetterUrl(candidateId: string, dispatchId: string): string {
+  return `${dispatchBase(candidateId, dispatchId)}/letter`;
+}
+
 export async function fetchApplyPlan(
   candidateId: string,
   jobId: string,

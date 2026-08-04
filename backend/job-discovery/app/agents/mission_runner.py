@@ -24,7 +24,7 @@ from app.models.company import ATSType
 from app.models.job_posting import JobPosting, PostingStatus
 from app.models.application import Application, ApplicationStatus
 from app.models.mission import (
-    MissionEvent, MissionEventKind, MissionRun, RunStatus, RunStep,
+    Mission, MissionEvent, MissionEventKind, MissionRun, RunStatus, RunStep,
 )
 
 logger = logging.getLogger(__name__)
@@ -279,6 +279,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
             return
         run.status = RunStatus.RUNNING
         run.started_at = datetime.now(timezone.utc)
+        run.heartbeat_at = run.started_at
         run.ends_at = run.started_at + timedelta(minutes=run.duration_minutes)
         run.stats = {}
         await _log(
@@ -298,6 +299,10 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                 run = await session.get(MissionRun, run_id)
                 if not run or run.status != RunStatus.RUNNING:
                     return
+                # Signe de vie à chaque tour : c'est ce qui distingue une
+                # mission qui travaille d'une mission dont le worker est mort.
+                run.heartbeat_at = datetime.now(timezone.utc)
+                await session.commit()
 
             for step, coro in (
                 (RunStep.SCAN, lambda: _step_scan(run_id, candidate_id)),
@@ -309,6 +314,12 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                     if not r or r.status != RunStatus.RUNNING:
                         return
                     r.current_step = step
+                    # Un cycle complet peut durer bien plus longtemps qu'un
+                    # seuil de péremption : qualifier plusieurs centaines
+                    # d'annonces prend des minutes. Sans battement à chaque
+                    # étape, le balayage conclurait à la mort d'une mission
+                    # en plein travail.
+                    r.heartbeat_at = datetime.now(timezone.utc)
                     await s.commit()
                 await coro()
 
@@ -424,3 +435,67 @@ Pas de titre, pas de liste : un paragraphe parlé."""
     except Exception as e:  # noqa: BLE001
         logger.error("Report generation failed: %s", e)
         return fallback
+
+
+# ── Runs orphelins ─────────────────────────────────────────────────────────
+
+#: Délai au-delà duquel un run sans battement est considéré mort.
+#:
+#: Généreux à dessein. Le battement est écrit à chaque étape, mais une seule
+#: étape peut durer longtemps — qualifier plusieurs centaines d'annonces
+#: enchaîne autant d'appels au modèle. Déclarer morte une mission qui travaille
+#: est bien pire que d'attendre un quart d'heure avant de clore une mission qui
+#: l'est vraiment : dans un cas on détruit du travail, dans l'autre on affiche
+#: un état périmé quelques minutes de plus.
+STALE_AFTER_SECONDS = 15 * 60
+
+
+async def sweep_stale_runs() -> int:
+    """
+    Clôt les missions dont plus personne ne s'occupe.
+
+    Un processus tué net — redéploiement, plantage, conteneur arrêté — n'a
+    aucune chance d'exécuter son `except` : le run reste `RUNNING` en base
+    indéfiniment. Sans ce balayage, Alice rapporterait une mission en cours
+    qui n'existe plus, ce qu'elle ne doit jamais faire.
+
+    Retourne le nombre de runs clos.
+    """
+    now = datetime.now(timezone.utc)
+    stale_before = now - timedelta(seconds=STALE_AFTER_SECONDS)
+
+    async with async_session() as session:
+        candidates = (await session.execute(
+            select(MissionRun).where(
+                MissionRun.status.in_([RunStatus.PREPARING, RunStatus.RUNNING])
+            )
+        )).scalars().all()
+
+        orphans = []
+        for run in candidates:
+            # Avant le premier battement, c'est la date de création qui fait
+            # foi : un run resté « en préparation » n'a jamais démarré.
+            last_sign = run.heartbeat_at or run.started_at or run.created_at
+            expired = run.ends_at is not None and run.ends_at < now
+            if expired or (last_sign and last_sign < stale_before):
+                orphans.append((run.id, run.mission_id))
+
+    for run_id, _ in orphans:
+        async with async_session() as session:
+            run = await session.get(MissionRun, run_id)
+            if not run or run.status not in (RunStatus.PREPARING, RunStatus.RUNNING):
+                continue
+            candidate_id = (
+                await session.execute(
+                    select(Mission.candidate_id).where(Mission.id == run.mission_id)
+                )
+            ).scalar_one_or_none()
+
+        if candidate_id:
+            # Passe par la clôture normale : le compte rendu doit exister même
+            # quand la mission s'est arrêtée toute seule.
+            await finalize_run(run_id, candidate_id, RunStatus.INTERRUPTED)
+
+    if orphans:
+        logger.warning("Balayage : %d mission(s) orpheline(s) close(s)", len(orphans))
+    return len(orphans)

@@ -11,17 +11,19 @@ import json
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.application.outcome import build_outcome
 from app.agents.application.requirements import detect_requirements
 from app.database import async_session, get_db
 from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.company import Company
+from app.models.dispatch import ApplicationDispatch
 from app.models.job_posting import JobPosting
 
 logger = logging.getLogger(__name__)
@@ -262,4 +264,92 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
         steps(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── Issue d'une candidature ────────────────────────────────────────────────
+#
+# Réussie ou non, une candidature laisse des pièces et un chemin à suivre.
+# Ces routes rendent l'un et l'autre récupérables après coup — le Canvas peut
+# être fermé, la conversation reprise plus tard.
+
+
+async def _load_dispatch(session, candidate_id: UUID, dispatch_id: UUID):
+    """
+    Charge un envoi en vérifiant qu'il appartient bien à ce candidat.
+
+    Le filtre sur `candidate_id` n'est pas décoratif : sans lui, connaître un
+    identifiant d'envoi suffirait à télécharger le CV de quelqu'un d'autre.
+    """
+    dispatch = (await session.execute(
+        select(ApplicationDispatch)
+        .where(ApplicationDispatch.id == dispatch_id)
+        .where(ApplicationDispatch.candidate_id == candidate_id)
+    )).scalar_one_or_none()
+    if not dispatch:
+        raise HTTPException(status_code=404, detail="Candidature introuvable")
+    return dispatch
+
+
+async def _job_url(session, dispatch) -> str | None:
+    """URL de l'annonce d'origine, quand elle est encore connue."""
+    row = (await session.execute(
+        select(JobPosting.apply_url, JobPosting.source_url)
+        .join(Application, Application.job_posting_id == JobPosting.id)
+        .where(Application.id == dispatch.application_id)
+    )).first()
+    if not row:
+        return None
+    apply_url, source_url = row
+    return apply_url or source_url or None
+
+
+@router.get("/dispatches/{dispatch_id}")
+async def get_dispatch_outcome(
+    candidate_id: UUID,
+    dispatch_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Issue exploitable d'une candidature : pièces, annonce, gestes restants."""
+    dispatch = await _load_dispatch(db, candidate_id, dispatch_id)
+    return build_outcome(dispatch, await _job_url(db, dispatch)).as_dict()
+
+
+@router.get("/dispatches/{dispatch_id}/resume")
+async def download_dispatch_resume(
+    candidate_id: UUID,
+    dispatch_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Le CV tel qu'il a été joint — l'instantané, pas une régénération."""
+    dispatch = await _load_dispatch(db, candidate_id, dispatch_id)
+    if not dispatch.resume_blob:
+        raise HTTPException(status_code=404, detail="Aucun CV joint à cette candidature")
+
+    name = dispatch.resume_name or "CV.pdf"
+    return Response(
+        content=dispatch.resume_blob,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.get("/dispatches/{dispatch_id}/letter")
+async def download_dispatch_letter(
+    candidate_id: UUID,
+    dispatch_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """La lettre telle qu'elle a été rédigée, objet compris."""
+    dispatch = await _load_dispatch(db, candidate_id, dispatch_id)
+    if not dispatch.letter_body:
+        raise HTTPException(status_code=404, detail="Aucune lettre pour cette candidature")
+
+    subject = dispatch.letter_subject or f"Candidature — {dispatch.job_title}"
+    body = f"{subject}\n\n{dispatch.letter_body}\n"
+    slug = "".join(c if c.isalnum() else "_" for c in dispatch.company_name)[:40] or "lettre"
+    return Response(
+        content=body.encode("utf-8"),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="Lettre_{slug}.txt"'},
     )

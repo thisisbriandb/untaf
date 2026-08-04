@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.celery_app import celery_app
-from app.database import async_session
+from app.database import async_session, engine
 from app.models.company import Company, ATSType, CompanyStatus
 from app.models.job_posting import (
     JobPosting, ApplyChannel, ApplyComplexity, PostingStatus,
@@ -39,6 +39,41 @@ ATS_TO_CHANNEL = {
     ATSType.WORKABLE: ApplyChannel.WORKABLE_API,
     ATSType.ASHBY: ApplyChannel.ASHBY_API,
 }
+
+
+def _release(loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Ferme la boucle d'une tâche en rendant d'abord le pool SQLAlchemy.
+
+    Les connexions du moteur restent attachées à la boucle qui les a ouvertes.
+    Sans ce `dispose`, la tâche suivante exécutée par le même worker Celery
+    hérite de connexions rattachées à une boucle déjà fermée et meurt sur
+    « attached to a different loop » — le premier scrape passe, les suivants
+    jamais.
+    """
+    try:
+        loop.run_until_complete(engine.dispose())
+    except Exception:  # noqa: BLE001 — ne pas masquer le résultat de la tâche
+        logger.warning("Engine dispose failed", exc_info=True)
+    finally:
+        loop.close()
+
+
+def _hires_in_france(location: str | None) -> bool:
+    """
+    Garde une offre d'un board international.
+
+    Une localisation absente est conservée, contrairement à la règle qui
+    prévaut au scoring où l'inconnu ne reçoit jamais de laissez-passer. Les
+    asymétries sont inverses : ici, écarter à tort supprime définitivement une
+    offre qu'on ne reverra pas, alors qu'au scoring un faux positif ne coûte
+    qu'une ligne de plus à trier. Le matching tranchera ensuite.
+    """
+    from app.agents.discovery.board_registry import FRENCH_LOCATION
+
+    if not location or not location.strip():
+        return True
+    return bool(FRENCH_LOCATION.search(location))
 
 
 async def _persist_jobs(
@@ -130,14 +165,24 @@ async def _scrape_platform(ats_type: ATSType):
         try:
             jobs = await scraper.scrape(slug)
 
-            # If standard API returned 0 jobs, activate ScraperAgent (Playwright) fallback
-            if not jobs:
+            # Si l'API ne rend rien, on retombe sur Playwright — mais seulement
+            # quand on connaît le vrai domaine de l'entreprise. Les boards
+            # découverts via un index web portent un domaine synthétique
+            # (`<slug>.greenhouse.board`) : lancer un navigateur dessus ne
+            # ferait qu'ouvrir une URL inexistante, une fois par board mort.
+            if not jobs and not domain.endswith(".board"):
                 logger.info("⚡ API returned 0 jobs for %s. Injecting ScraperAgent fallback...", domain)
                 from app.agents.discovery.scraper_agent import ScraperAgent
                 agent = ScraperAgent()
                 careers_url = f"https://www.{domain}/careers"
                 res = await agent.run(domain.split(".")[0], careers_url)
                 jobs = res.jobs
+
+            # Un board est retenu parce qu'il recrute en France, pas parce que
+            # tout son catalogue nous concerne : Capco publie 713 postes dont 8
+            # ici. On filtre avant d'écrire, sinon 99 % des lignes stockées ne
+            # seront jamais proposées à personne.
+            jobs = [j for j in jobs if _hires_in_france(j.location)]
 
             if jobs:
                 channel = ATS_TO_CHANNEL.get(ats_type, ApplyChannel.UNKNOWN)
@@ -163,7 +208,7 @@ def scrape_all_greenhouse():
         logger.info("Greenhouse daily scrape complete: %d jobs", count)
         return count
     finally:
-        loop.close()
+        _release(loop)
 
 
 @celery_app.task(name="app.agents.discovery.tasks.scrape_all_lever")
@@ -175,7 +220,7 @@ def scrape_all_lever():
         logger.info("Lever daily scrape complete: %d jobs", count)
         return count
     finally:
-        loop.close()
+        _release(loop)
 
 
 @celery_app.task(name="app.agents.discovery.tasks.scrape_all_ashby")
@@ -187,7 +232,7 @@ def scrape_all_ashby():
         logger.info("Ashby daily scrape complete: %d jobs", count)
         return count
     finally:
-        loop.close()
+        _release(loop)
 
 
 @celery_app.task(name="app.agents.discovery.tasks.ingest_france_travail_daily")
@@ -203,7 +248,7 @@ def ingest_france_travail_daily(keywords: str | None = None):
         logger.info("France Travail daily ingest: %s", report)
         return report
     finally:
-        loop.close()
+        _release(loop)
 
 
 @celery_app.task(name="app.agents.discovery.tasks.scrape_company")
@@ -230,7 +275,7 @@ def scrape_company(company_id: str, domain: str, ats_type: str, ats_slug: str):
         )
         return count
     finally:
-        loop.close()
+        _release(loop)
 
 
 async def _qualify_and_match_all():
@@ -391,7 +436,7 @@ def qualify_and_match_jobs():
         logger.info("Qualification and matching complete. Qualified: %d, Matches: %d", q_count, a_count)
         return {"qualified": q_count, "matches": a_count}
     finally:
-        loop.close()
+        _release(loop)
 
 
 #: Statuses the candidate (or a recruiter) has already acted on — a re-match
@@ -555,6 +600,59 @@ def match_candidate_jobs(candidate_id_str: str):
         count = loop.run_until_complete(_match_candidate_to_existing_jobs(UUID(candidate_id_str)))
         return {"matches": count}
     finally:
-        loop.close()
+        _release(loop)
 
 
+
+@celery_app.task(name="app.agents.discovery.tasks.discover_ats_boards")
+def discover_ats_boards(platforms: list[str] | None = None, max_pages: int = 6):
+    """
+    Hebdomadaire : rafraîchit le registre des boards ATS à scraper.
+
+    Purement additif — un board déjà connu n'est jamais écrasé, et un échec
+    de l'index web laisse le registre existant intact.
+    """
+    from app.agents.discovery.board_registry import discover
+
+    loop = asyncio.new_event_loop()
+    try:
+        report = loop.run_until_complete(discover(platforms, max_pages=max_pages))
+        logger.info("ATS board discovery: %s", report)
+        return report
+    finally:
+        _release(loop)
+
+
+# `ignore_result` : l'état d'une mission vit dans `mission_runs`, pas dans
+# Redis. Sans ça, chaque enfilement interroge le magasin de résultats et
+# fait attendre l'API quand il est absent.
+@celery_app.task(name="app.agents.discovery.tasks.run_mission", ignore_result=True)
+def run_mission(run_id: str, candidate_id: str):
+    """
+    Exécute une mission dans un worker, et non dans le process web.
+
+    C'est la différence entre « la mission continue tant que le serveur
+    tourne » et une vraie délégation : un redéploiement de l'API ne doit pas
+    tuer le travail confié à Alice.
+    """
+    from uuid import UUID
+    from app.agents.mission_runner import execute_run
+
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(execute_run(UUID(run_id), UUID(candidate_id)))
+    finally:
+        _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.sweep_stale_missions")
+def sweep_stale_missions():
+    """Clôt périodiquement les missions dont le worker ne donne plus signe."""
+    from app.agents.mission_runner import sweep_stale_runs
+
+    loop = asyncio.new_event_loop()
+    try:
+        closed = loop.run_until_complete(sweep_stale_runs())
+        return {"closed": closed}
+    finally:
+        _release(loop)

@@ -43,6 +43,7 @@ class SeedSource(str, enum.Enum):
     ECOSYSTEM_NEXT40 = "ecosystem_next40"
     ECOSYSTEM_VC = "ecosystem_vc"
     SIRENE_API = "sirene_api"
+    ATS_INDEX = "ats_index"
     MANUAL = "manual"
 
 

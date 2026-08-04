@@ -188,6 +188,14 @@ class MissionRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+        comment=(
+            "Dernier signe de vie du worker. Un processus tué net ne peut pas "
+            "clore son run : c'est l'absence de battement, et non le statut en "
+            "base, qui permet de savoir qu'une mission n'existe plus."
+        ),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

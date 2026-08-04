@@ -196,9 +196,33 @@ async def start_run(
     await db.commit()
     await db.refresh(run)
 
-    # Tâche de fond : l'utilisateur peut fermer l'application, la mission
-    # continue tant que le serveur tourne.
-    asyncio.create_task(execute_run(run.id, candidate_id))
+    # La mission part dans un worker, pas dans le process web : c'est ce qui
+    # permet à l'utilisateur de fermer l'application — et à l'API d'être
+    # redéployée — sans interrompre le travail confié.
+    #
+    # `retry=False` : sans courtier joignable, Celery réessaie une vingtaine de
+    # secondes avant d'abandonner. Mieux vaut échouer tout de suite et le dire.
+    from app.agents.discovery.tasks import run_mission
+
+    try:
+        run_mission.apply_async(
+            args=[str(run.id), str(candidate_id)], retry=False
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Impossible de mettre la mission en file : %s", exc)
+        # Ne jamais laisser un run « en préparation » que personne ne prendra :
+        # Alice afficherait une mission en attente qui ne démarrera jamais.
+        run.status = RunStatus.INTERRUPTED
+        run.finished_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Le service de tâches de fond n'est pas disponible : la mission "
+                "ne peut pas être lancée. Vérifie que Redis et le worker Celery "
+                "tournent."
+            ),
+        ) from exc
 
     return _run_detail(run, [])
 
@@ -218,12 +242,17 @@ async def get_current_run(candidate_id: UUID, db: AsyncSession = Depends(get_db)
     if not run:
         return None
 
-    # Un redémarrage du serveur laisse un run « en cours » orphelin : on le
-    # clôt plutôt que d'afficher indéfiniment un travail qui n'a plus lieu.
-    if (
-        run.status == RunStatus.RUNNING
-        and run.ends_at
-        and run.ends_at < datetime.now(timezone.utc)
+    # Un worker mort laisse un run « en cours » orphelin. Le balayage
+    # périodique s'en charge, mais on ne peut pas afficher un travail fantôme
+    # en attendant son prochain passage : créneau écoulé ou battement de cœur
+    # périmé, on clôt ici aussi.
+    from app.agents.mission_runner import STALE_AFTER_SECONDS
+
+    now = datetime.now(timezone.utc)
+    last_sign = run.heartbeat_at or run.started_at or run.created_at
+    if run.status == RunStatus.RUNNING and (
+        (run.ends_at and run.ends_at < now)
+        or (last_sign and (now - last_sign).total_seconds() > STALE_AFTER_SECONDS)
     ):
         run.status = RunStatus.INTERRUPTED
         run.finished_at = datetime.now(timezone.utc)

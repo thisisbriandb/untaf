@@ -41,6 +41,14 @@ _PENDING_COLUMNS = (
     "ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS contact_json JSONB",
     "ALTER TABLE missions ADD COLUMN IF NOT EXISTS allowed_channels VARCHAR[]",
     "ALTER TABLE missions ADD COLUMN IF NOT EXISTS blocked_companies VARCHAR[]",
+    # Boards découverts via un index web public (voir board_registry).
+    "ALTER TYPE seedsource ADD VALUE IF NOT EXISTS 'ATS_INDEX'",
+    # Instantané des pièces jointes : ce qui a été envoyé doit rester
+    # téléchargeable tel quel, même si le candidat modifie son CV ensuite.
+    "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS resume_blob BYTEA",
+    "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS resume_name VARCHAR(255)",
+    "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_subject VARCHAR(500)",
+    "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_body TEXT",
 )
 
 

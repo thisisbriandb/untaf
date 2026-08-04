@@ -179,6 +179,16 @@ async def prepare_dispatch(
         else:
             status = DispatchStatus.PREPARED
 
+        # On fige les pièces ici, au moment de l'assemblage, et non à l'envoi :
+        # une candidature qui échoue doit laisser à l'utilisateur exactement
+        # les documents qu'Alice avait préparés, pour qu'il puisse finir à la
+        # main sans avoir à les refaire.
+        from app.agents.application.cv_resolver import resolve_cv
+        from app.agents.application.email_sender import _plain_text
+
+        cv_bytes, cv_name, cv_mode = resolve_cv(candidate)
+        letter_body = _plain_text(letter, candidate, job.title, company_name or "")
+
         dispatch = ApplicationDispatch(
             candidate_id=candidate_id,
             application_id=application_id,
@@ -192,9 +202,15 @@ async def prepare_dispatch(
             documents={
                 "has_cover_letter": bool(letter),
                 "cover_letter_subject": (letter or {}).get("subject"),
-                "has_resume": bool(candidate.resume_file),
-                "resume_filename": candidate.resume_filename,
+                "has_resume": bool(cv_bytes),
+                "resume_filename": cv_name if cv_bytes else None,
+                "resume_mode": cv_mode,
             },
+            resume_blob=cv_bytes,
+            resume_name=cv_name if cv_bytes else None,
+            letter_subject=(letter or {}).get("subject")
+            or f"Candidature — {job.title}"[:500],
+            letter_body=letter_body or None,
         )
         session.add(dispatch)
         await session.commit()

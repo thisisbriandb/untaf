@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, ExternalLink, Loader2, Send, X } from "lucide-react";
+import {
+  ArrowLeft, Check, Download, ExternalLink, Loader2, Mail, Send, X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
 import {
   COMPLEXITY_LABEL,
+  dispatchLetterUrl,
+  dispatchResumeUrl,
+  fetchApplyOutcome,
   fetchApplyPlan,
   rememberSkipConfirm,
   shouldConfirmApply,
   streamApply,
   type ApplyEvent,
+  type ApplyOutcome,
   type ApplyPlan,
   type Requirement,
 } from "@/lib/apply-client";
@@ -58,6 +64,7 @@ export function ApplyPanel({
   const [phase, setPhase] = useState<Phase>("confirm");
   const [steps, setSteps] = useState<StepLine[]>([]);
   const [outcome, setOutcome] = useState<ApplyEvent | null>(null);
+  const [result, setResult] = useState<ApplyOutcome | null>(null);
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
   useEffect(() => {
@@ -74,6 +81,7 @@ export function ApplyPanel({
     setPhase("running");
     setSteps([]);
     setOutcome(null);
+    setResult(null);
 
     await streamApply(candidateId, jobId, (event) => {
       if (event.type === "step") {
@@ -86,6 +94,13 @@ export function ApplyPanel({
       setOutcome(event);
       setPhase("settled");
       if (event.type === "done") sayAsAlice(event.message);
+
+      // Dès qu'un envoi existe en base, on récupère ce qu'il en reste :
+      // les pièces assemblées et les gestes qui restent. C'est vrai aussi
+      // quand ça a échoué — surtout quand ça a échoué.
+      const id =
+        "dispatch_id" in event && event.dispatch_id ? event.dispatch_id : null;
+      if (id) void fetchApplyOutcome(candidateId, id).then(setResult);
     });
   };
 
@@ -231,6 +246,83 @@ export function ApplyPanel({
               <p className="text-xs font-light text-amber-800 tracking-tight p-3.5 rounded-xl bg-amber-500/8">
                 {outcome.message}
               </p>
+            )}
+
+            {/* Ce qu'il reste : les pièces, l'annonce, et la suite */}
+            {result && (
+              <div className="space-y-5 pt-1">
+                {result.steps.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-[#1A1918]/40">
+                      Ce qu&apos;il reste à faire
+                    </p>
+                    <ol className="space-y-2">
+                      {result.steps.map((step, i) => (
+                        <li
+                          key={step}
+                          className="flex items-start gap-2.5 text-xs font-light text-[#1A1918]/70 tracking-tight leading-relaxed"
+                        >
+                          <span className="shrink-0 mt-px w-4 h-4 rounded-full bg-[#1A1918]/6 text-[10px] text-[#1A1918]/55 flex items-center justify-center tabular-nums">
+                            {i + 1}
+                          </span>
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {(result.has_resume || result.has_letter) && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-[#1A1918]/40">
+                      {result.sent ? "Documents envoyés" : "Documents préparés"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {result.has_resume && (
+                        <a
+                          href={dispatchResumeUrl(candidateId, result.dispatch_id)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+                        >
+                          <Download className="w-3 h-3 stroke-[1.6]" />
+                          CV
+                        </a>
+                      )}
+                      {result.has_letter && (
+                        <a
+                          href={dispatchLetterUrl(candidateId, result.dispatch_id)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+                        >
+                          <Download className="w-3 h-3 stroke-[1.6]" />
+                          Lettre
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {result.mailto && (
+                    <a
+                      href={result.mailto}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5 stroke-[1.6]" />
+                      Ouvrir l&apos;e-mail pré-rempli
+                    </a>
+                  )}
+                  {result.job_url && (
+                    <a
+                      href={result.job_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 w-full text-[11px] font-light text-[#1A1918]/45 hover:text-[#006045] tracking-tight transition-colors"
+                    >
+                      Voir l&apos;offre d&apos;origine
+                      <ExternalLink className="w-3 h-3 stroke-[1.5]" />
+                    </a>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

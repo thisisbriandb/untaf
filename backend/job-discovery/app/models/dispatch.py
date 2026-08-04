@@ -14,7 +14,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Index, String, Text, DateTime, Enum, ForeignKey
+from sqlalchemy import Index, LargeBinary, String, Text, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func, text
@@ -88,9 +88,17 @@ class ApplicationDispatch(Base):
     )
 
     # ── Contenu envoyé ────────────────────────────────────
-    # Copie figée des documents au moment de l'envoi : le CV et la lettre
-    # peuvent changer après coup, la trace ne doit pas bouger.
+    # Métadonnées lisibles (quel modèle de CV, quel objet de lettre).
     documents: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Copie figée des pièces elles-mêmes. Le CV et la lettre du candidat
+    # évoluent après coup ; sans cet instantané, « télécharger ce qui a été
+    # envoyé » ne pourrait que régénérer un document ressemblant, ce qui
+    # reviendrait à présenter une reconstitution comme une preuve.
+    resume_blob: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    resume_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    letter_subject: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    letter_body: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # ── Résultat ──────────────────────────────────────────
     status: Mapped[DispatchStatus] = mapped_column(
