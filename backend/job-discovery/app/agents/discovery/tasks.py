@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.celery_app import celery_app
@@ -112,13 +112,14 @@ async def _persist_jobs(
                     "apply_url": job.apply_url,
                     "description_raw": job.description_raw,
                 },
-            )
+            ).returning(text("(xmax = 0) AS inserted"))
 
             result = await session.execute(stmt)
-            if result.rowcount > 0:
-                # Check if it was truly new by trying to detect insert vs update
-                # For simplicity, count all as processed
+            row = result.first()
+            if row is not None and row[0]:
                 new_count += 1
+            else:
+                updated_count += 1
 
         # Update company's last_scraped_at
         await session.execute(

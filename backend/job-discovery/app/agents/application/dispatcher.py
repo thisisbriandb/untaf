@@ -43,7 +43,10 @@ CHANNEL_MAP = {
 
 #: Canaux réellement implémentés. Le reste est préparé mais pas envoyable —
 #: mieux vaut une file d'attente honnête qu'un échec silencieux.
-IMPLEMENTED_CHANNELS = {DispatchChannel.EMAIL}
+#: ATS_API regroupe Greenhouse/Lever/Ashby/Workable dans le mandat — seuls
+#: les trois premiers ont un connecteur écrit (voir `ats_connectors.py`) ;
+#: `send_dispatch` referme la porte sur Workable au moment de l'envoi.
+IMPLEMENTED_CHANNELS = {DispatchChannel.EMAIL, DispatchChannel.ATS_API}
 
 
 @dataclass
@@ -219,6 +222,34 @@ async def prepare_dispatch(
     return dispatch
 
 
+async def _send_via_ats(dispatch: ApplicationDispatch, candidate: Candidate) -> dict:
+    """
+    Route vers le connecteur du bon ATS. `dispatch.channel` ne dit que
+    « ATS_API » — il faut relire l'offre pour savoir laquelle des trois
+    plateformes implémentées (ou de Workable, non implémenté) est concernée.
+    """
+    from app.agents.application.ats_connectors import build_application_plan, submit_ats_application
+
+    async with async_session() as session:
+        row = (await session.execute(
+            select(JobPosting, Company)
+            .join(Application, Application.job_posting_id == JobPosting.id)
+            .join(Company, JobPosting.company_id == Company.id)
+            .where(Application.id == dispatch.application_id)
+        )).first()
+
+    if not row:
+        return {"ok": False, "real": False, "error": "offre introuvable"}
+    job, company = row
+
+    if job.apply_channel not in (ApplyChannel.GREENHOUSE_API, ApplyChannel.LEVER_API, ApplyChannel.ASHBY_API):
+        channel_name = job.apply_channel.value if job.apply_channel else "unknown"
+        return {"ok": False, "real": False, "error": f"canal « {channel_name} » pas encore implémenté"}
+
+    plan = await build_application_plan(job, company, candidate, dispatch.letter_body)
+    return await submit_ats_application(plan)
+
+
 async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
     """
     Exécute un envoi déjà autorisé.
@@ -238,7 +269,17 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         application = await session.get(Application, dispatch.application_id)
         letter = (application.metadata_json or {}).get("cover_letter") if application else None
 
-    if dispatch.channel != DispatchChannel.EMAIL:
+    if dispatch.channel == DispatchChannel.EMAIL:
+        result = await send_application_email(
+            to_email=dispatch.destination,
+            candidate=candidate,
+            letter=letter,
+            job_title=dispatch.job_title,
+            company_name=dispatch.company_name,
+        )
+    elif dispatch.channel == DispatchChannel.ATS_API:
+        result = await _send_via_ats(dispatch, candidate)
+    else:
         async with async_session() as session:
             d = await session.get(ApplicationDispatch, dispatch_id)
             d.status = DispatchStatus.FAILED
@@ -247,21 +288,15 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             await session.refresh(d)
             return d
 
-    result = await send_application_email(
-        to_email=dispatch.destination,
-        candidate=candidate,
-        letter=letter,
-        job_title=dispatch.job_title,
-        company_name=dispatch.company_name,
-    )
-
     async with async_session() as session:
         d = await session.get(ApplicationDispatch, dispatch_id)
         if result["ok"]:
             d.status = DispatchStatus.SENT if result["real"] else DispatchStatus.SIMULATED
             d.sent_at = datetime.now(timezone.utc)
             d.proof = result.get("proof")
-            d.error = None if result["real"] else "SMTP non configuré — rien n'a été envoyé"
+            d.error = None if result["real"] else result.get(
+                "simulated_reason", "SMTP non configuré — rien n'a été envoyé"
+            )
 
             # Le statut de la candidature ne bascule que sur un envoi RÉEL.
             if result["real"] and d.application_id:

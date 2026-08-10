@@ -1,12 +1,53 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/config";
 
-interface MessagesViewProps {
-  userName: string;
+interface RecruiterMessage {
+  id: string;
+  sender_name: string | null;
+  company_name: string | null;
+  subject: string | null;
+  body: string;
+  is_read: boolean;
+  received_at: string;
 }
 
-export function MessagesView({ userName }: MessagesViewProps) {
+interface MessagesViewProps {
+  candidateId: string | null;
+}
+
+export function MessagesView({ candidateId }: MessagesViewProps) {
+  const [messages, setMessages] = useState<RecruiterMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!candidateId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+
+    fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: RecruiterMessage[]) => {
+        if (!cancelled) setMessages(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [candidateId]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -22,15 +63,46 @@ export function MessagesView({ userName }: MessagesViewProps) {
         </p>
       </div>
 
-      <div className="p-5 rounded-2xl bg-white border border-[#EDECEA] space-y-2 text-left shadow-sm">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-semibold text-[#006045]">Doctolib • Recrutement</span>
-          <span className="text-[11px] text-[#1A1918]/40">Aujourd&apos;hui 10:18</span>
+      {loading ? (
+        <p className="text-xs text-[#1A1918]/40">Chargement…</p>
+      ) : messages.length === 0 ? (
+        <div className="text-left py-10 space-y-2">
+          <p className="text-sm text-[#1A1918]/60">Aucun message pour le moment.</p>
+          <p className="text-xs text-[#1A1918]/40">
+            Les réponses des recruteurs à tes candidatures apparaîtront ici.
+          </p>
         </div>
-        <p className="text-xs md:text-sm font-medium text-[#1A1918] leading-relaxed">
-          &quot;Bonjour {userName}, nous avons bien reçu ton CV et serions ravis d&apos;échanger avec toi lors d&apos;un premier entretien.&quot;
-        </p>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className="p-5 rounded-2xl bg-white border border-[#EDECEA] space-y-2 text-left shadow-sm"
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-[#006045]">
+                  {msg.company_name || msg.sender_name || "Recruteur"}
+                  {msg.company_name && msg.sender_name ? ` • ${msg.sender_name}` : ""}
+                </span>
+                <span className="text-[11px] text-[#1A1918]/40">
+                  {new Date(msg.received_at).toLocaleString("fr-FR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              {msg.subject && (
+                <p className="text-xs font-medium text-[#1A1918]/70">{msg.subject}</p>
+              )}
+              <p className="text-xs md:text-sm font-medium text-[#1A1918] leading-relaxed">
+                {msg.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }

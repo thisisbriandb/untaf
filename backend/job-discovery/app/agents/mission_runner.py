@@ -3,8 +3,9 @@ Exécution d'une mission bornée dans le temps.
 
 La pipeline fait du travail réel à chaque étape où c'est possible : collecte
 sur les plateformes, qualification des annonces, confrontation au mandat,
-rédaction des lettres. L'envoi passe par le CandidateAgent, en simulation tant
-que l'utilisateur ne l'a pas explicitement autorisé.
+rédaction des lettres. L'envoi automatique depuis une mission n'est pas
+encore raccordé au dispatcher (voir RunStep.APPLY plus bas) : les dossiers
+sont préparés puis attendent une approbation ou un envoi manuel via l'API.
 
 Rien n'est mimé. Une étape qui ne peut pas s'exécuter est consignée comme telle
 plutôt que rapportée comme faite : c'est la seule manière de rendre un compte

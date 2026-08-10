@@ -1,9 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Settings } from "lucide-react";
 import type { TabType } from "./DashboardSidebar";
+import { API_BASE_URL } from "@/lib/config";
+
+interface MissionEvent {
+  id: string;
+  kind: string;
+  summary: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface RecruiterMessage {
+  id: string;
+  sender_name: string | null;
+  company_name: string | null;
+  subject: string | null;
+  is_read: boolean;
+  received_at: string;
+}
+
+interface Notification {
+  id: string;
+  source: "mission" | "message";
+  title: string;
+  detail: string;
+  timestamp: string;
+}
 
 /**
  * Barre d'application — pleine largeur, au-dessus du split conversation/canvas.
@@ -13,12 +39,70 @@ import type { TabType } from "./DashboardSidebar";
 export function DashboardHeader({
   activeTab,
   onSelectTab,
+  candidateId,
 }: {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
+  candidateId: string | null;
 }) {
-  const [unreadCount, setUnreadCount] = useState(3);
-  const [showNotifs, setShowNotifs] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const refresh = useCallback(() => {
+    if (!candidateId) return;
+
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/mission/journal?limit=20`)
+        .then((res) => (res.ok ? res.json() : []))
+        .catch(() => []),
+      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages?unread_only=true`)
+        .then((res) => (res.ok ? res.json() : []))
+        .catch(() => []),
+    ]).then(([events, messages]: [MissionEvent[], RecruiterMessage[]]) => {
+      const fromEvents: Notification[] = events
+        .filter((e) => !e.is_read)
+        .map((e) => ({
+          id: `mission-${e.id}`,
+          source: "mission",
+          title: "Alice",
+          detail: e.summary,
+          timestamp: e.created_at,
+        }));
+      const fromMessages: Notification[] = messages.map((m) => ({
+        id: `message-${m.id}`,
+        source: "message",
+        title: m.company_name || m.sender_name || "Recruteur",
+        detail: m.subject || "Nouveau message",
+        timestamp: m.received_at,
+      }));
+
+      setNotifications(
+        [...fromEvents, ...fromMessages].sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+      );
+    });
+  }, [candidateId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const markAllRead = async () => {
+    if (!candidateId) return;
+    await Promise.all([
+      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/mission/journal/read`, {
+        method: "POST",
+      }).catch(() => null),
+      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages/read`, {
+        method: "POST",
+      }).catch(() => null),
+    ]);
+    setNotifications([]);
+    setShowNotifs(false);
+  };
+
+  const unreadCount = notifications.length;
 
   return (
     <header className="shrink-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 select-none">
@@ -35,7 +119,10 @@ export function DashboardHeader({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setShowNotifs(!showNotifs)}
+            onClick={() => {
+              if (!showNotifs) refresh();
+              setShowNotifs(!showNotifs);
+            }}
             aria-label="Notifications"
             className="relative p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
           >
@@ -60,29 +147,37 @@ export function DashboardHeader({
                   <span className="font-medium text-[#1A1918]">Notifications</span>
                   {unreadCount > 0 && (
                     <button
-                      onClick={() => {
-                        setUnreadCount(0);
-                        setShowNotifs(false);
-                      }}
+                      onClick={markAllRead}
                       className="text-[10px] text-[#006045] hover:underline cursor-pointer"
                     >
                       Tout marquer comme lu
                     </button>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <div className="p-2.5 rounded-xl bg-[#FAFAF8] space-y-0.5 border border-[#1A1918]/4">
-                    <p className="font-normal text-[#006045]">Doctolib — Entretien</p>
-                    <p className="text-[#1A1918]/60 text-[11px]">
-                      Consultation de ton CV à 09:41
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="text-[#1A1918]/40 text-[11px] py-2">
+                      Rien de nouveau pour le moment.
                     </p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-[#FAFAF8] space-y-0.5 border border-[#1A1918]/4">
-                    <p className="font-normal text-[#1A1918]">Alice</p>
-                    <p className="text-[#1A1918]/60 text-[11px]">
-                      8 candidatures adaptées ce matin
-                    </p>
-                  </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-2.5 rounded-xl bg-[#FAFAF8] space-y-0.5 border border-[#1A1918]/4"
+                      >
+                        <p
+                          className={
+                            n.source === "message"
+                              ? "font-normal text-[#006045]"
+                              : "font-normal text-[#1A1918]"
+                          }
+                        >
+                          {n.title}
+                        </p>
+                        <p className="text-[#1A1918]/60 text-[11px]">{n.detail}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}

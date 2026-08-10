@@ -714,15 +714,38 @@ async def download_candidate_cv_pdf(data: CVRenderRequest):
 
 
 @router.get("/download-cv/{template_id}")
-async def download_cv_pdf(template_id: str, name: str = "candidat", headline: str = "Ingénieur Développeur"):
+async def download_cv_pdf(
+    template_id: str,
+    candidate_id: UUID,
+    color_hex: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Fallback GET endpoint for PDF download.
+    Fallback GET endpoint for PDF download — utile pour un lien cliquable
+    (email, nouvel onglet) là où un POST avec corps JSON n'est pas pratique.
+
+    Construit la requête de rendu à partir du vrai profil du candidat en
+    base, jamais depuis des paramètres arbitraires passés dans l'URL.
     """
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Candidat introuvable")
+
+    cv = candidate.cv_content or {}
     req = CVRenderRequest(
         template_id=template_id,
-        full_name=name,
-        email="contact@email.com",
-        headline=headline,
+        color_hex=color_hex or (candidate.cv_design or {}).get("color_hex"),
+        show_photo=(candidate.cv_design or {}).get("show_photo", False),
+        full_name=candidate.full_name or "Candidat",
+        email=candidate.email or "",
+        phone=candidate.phone,
+        headline=candidate.headline,
+        summary=cv.get("summary"),
+        skills=candidate.skills or [],
+        linkedin_url=candidate.linkedin_url,
+        experiences=cv.get("experiences") or [],
+        education=cv.get("education") or [],
+        languages=cv.get("languages") or [],
     )
     return await download_candidate_cv_pdf(req)
 

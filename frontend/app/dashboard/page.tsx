@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "@/lib/config";
 import { AlicePresence } from "../onboarding/components/AlicePresence";
-import { TabType } from "./components/DashboardSidebar";
+import { DashboardSidebar, TabType } from "./components/DashboardSidebar";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { AliceView } from "./components/AliceView";
 import { MissionView } from "./components/MissionView";
@@ -157,9 +157,17 @@ export default function DashboardPage() {
       candidateId={candidateId}
       onGoToConversation={() => setActiveTab("alice")}
     >
-      <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex flex-col overflow-hidden">
+      <DashboardSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        applicationsCount={applications.length}
+        userName={userName}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+      />
+      <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex flex-col overflow-hidden pl-14">
         {/* ═══ Barre d'application, pleine largeur ═══ */}
-        <DashboardHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+        <DashboardHeader activeTab={activeTab} onSelectTab={setActiveTab} candidateId={candidateId} />
 
         {/* ═══ Ligne principale : conversation + canvas (dès lg) ═══ */}
         <main className="flex-1 min-h-0 flex justify-center overflow-hidden">
@@ -180,7 +188,7 @@ export default function DashboardPage() {
                 )}
 
                 {activeTab === "messages" && (
-                  <MessagesView key="messages" userName={userName} />
+                  <MessagesView key="messages" candidateId={candidateId} />
                 )}
 
                 {activeTab === "parametres" && (

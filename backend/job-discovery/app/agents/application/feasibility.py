@@ -39,7 +39,11 @@ class Feasibility:
 
 #: Ce qui est réellement implémenté aujourd'hui. Distinct de ce qui serait
 #: techniquement possible : promettre l'un pour l'autre serait mentir.
-IMPLEMENTED = {"email"}
+#: Pour les trois ATS, l'implémentation vérifie le formulaire réel au moment
+#: de l'envoi (voir `ats_connectors.py`) — Greenhouse peut bloquer sur une
+#: question requise non automatisable, Lever et Ashby restent honnêtement
+#: non-automatisables tant qu'ils ne publient pas le schéma du formulaire.
+IMPLEMENTED = {"email", "greenhouse_api", "lever_api", "ashby_api"}
 
 #: Une adresse, pas une consigne rédigée.
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
@@ -47,7 +51,7 @@ _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
 #: Canaux techniquement automatisables une fois le connecteur écrit. Sert à
 #: dire au candidat « c'est faisable, ce n'est pas encore fait » plutôt que
 #: « impossible » — la nuance est honnête et utile pour prioriser.
-AUTOMATABLE_SOON = {"greenhouse_api", "lever_api", "ashby_api", "workable_api"}
+AUTOMATABLE_SOON = {"workable_api"}
 
 
 def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
@@ -78,7 +82,29 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
             blockers, link, channel,
         )
 
-    # ── ATS à formulaire public ───────────────────────────
+    # ── ATS à formulaire public, connecteur écrit ─────────
+    # Le verdict définitif (question requise non automatisable sur
+    # Greenhouse, ou absence de schéma vérifiable sur Lever/Ashby) ne se
+    # joue qu'au moment de l'envoi, une fois le formulaire réel consulté —
+    # comme pour l'email, dont `assess` ne vérifie pas non plus que le SMTP
+    # fonctionnera.
+    if channel in ("greenhouse_api", "lever_api", "ashby_api"):
+        ats = channel.replace("_api", "").capitalize()
+        if not link:
+            blockers.append("Lien de candidature absent de l'annonce.")
+            return Feasibility(
+                "impossible", False,
+                f"Je n'ai pas de lien pour postuler sur {ats}.",
+                blockers, link, channel,
+            )
+        return Feasibility(
+            "simple", not blockers,
+            f"Je postule pour toi via {ats} — je vérifie le formulaire exact "
+            f"au moment de l'envoi.",
+            blockers, link, channel,
+        )
+
+    # ── ATS à formulaire public, connecteur pas encore écrit ──
     if channel in AUTOMATABLE_SOON:
         ats = channel.replace("_api", "").capitalize()
         blockers.append(

@@ -21,6 +21,7 @@ from app.models.mission import (
     MissionStatus,
     AutonomyLevel,
 )
+from app.models.message import RecruiterMessage, MessageDirection
 
 __all__ = [
     "Base",
@@ -45,4 +46,6 @@ __all__ = [
     "ApplicationDispatch",
     "DispatchChannel",
     "DispatchStatus",
+    "RecruiterMessage",
+    "MessageDirection",
 ]
