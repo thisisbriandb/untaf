@@ -5,10 +5,14 @@ Le canal le plus simple et le seul irréprochable : le candidat écrit à une
 adresse que le recruteur a lui-même publiée. Ni scraping, ni contournement,
 ni conditions d'utilisation à négocier.
 
-Sans configuration SMTP, la fonction ne prétend pas avoir envoyé : elle renvoie
-`real=False`, et l'appelant enregistre une simulation. Un envoi fictif rapporté
-comme réel serait la pire trahison possible pour un agent qui agit au nom de
-quelqu'un.
+Chaque candidat envoie depuis sa propre adresse Gmail (configurée dans
+Paramètres → Envoi d'emails), jamais une boîte partagée par l'application —
+un recruteur doit voir le vrai expéditeur, pas un tiers.
+
+Sans configuration SMTP par le candidat, la fonction ne prétend pas avoir
+envoyé : elle renvoie `real=False`, et l'appelant enregistre une simulation.
+Un envoi fictif rapporté comme réel serait la pire trahison possible pour un
+agent qui agit au nom de quelqu'un.
 """
 
 import logging
@@ -17,9 +21,14 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
-from app.config import settings
+from app.auth.crypto import decrypt
 
 logger = logging.getLogger(__name__)
+
+#: Cette première version ne supporte que Gmail — host/port/TLS ne sont donc
+#: pas des réglages à demander au candidat, juste des constantes.
+GMAIL_SMTP_HOST = "smtp.gmail.com"
+GMAIL_SMTP_PORT = 587
 
 
 def _plain_text(letter: dict | None, candidate, job_title: str, company: str) -> str:
@@ -72,8 +81,8 @@ async def send_application_email(
     message["To"] = to_email
     message["Message-ID"] = make_msgid()
     message["From"] = formataddr((
-        candidate.full_name or settings.smtp_from_name,
-        settings.smtp_user or "candidature@localhost",
+        candidate.full_name or "Candidature",
+        candidate.smtp_email or "candidature@localhost",
     ))
     if candidate.email:
         message["Reply-To"] = candidate.email
@@ -88,9 +97,15 @@ async def send_application_email(
             cv_bytes, maintype="application", subtype="pdf", filename=cv_name,
         )
 
-    if not settings.can_send_email:
+    app_password = (
+        decrypt(candidate.smtp_app_password_encrypted)
+        if candidate.smtp_app_password_encrypted else None
+    )
+    can_send = bool(candidate.smtp_email and app_password)
+
+    if not can_send:
         logger.warning(
-            "SMTP non configuré — candidature vers %s NON envoyée (simulation).",
+            "SMTP non configuré pour ce candidat — candidature vers %s NON envoyée (simulation).",
             to_email,
         )
         return {
@@ -108,10 +123,9 @@ async def send_application_email(
 
     try:
         context = ssl.create_default_context()
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
-            if settings.smtp_use_tls:
-                server.starttls(context=context)
-            server.login(settings.smtp_user, settings.smtp_password)
+        with smtplib.SMTP(GMAIL_SMTP_HOST, GMAIL_SMTP_PORT, timeout=30) as server:
+            server.starttls(context=context)
+            server.login(candidate.smtp_email, app_password)
             server.send_message(message)
 
         logger.info("Candidature envoyée à %s (%s)", to_email, job_title)

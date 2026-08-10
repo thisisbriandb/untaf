@@ -16,12 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
 from app.agents.mission_log import log_event
+from app.auth.dependencies import require_owner
 from app.database import get_db
 from app.models.dispatch import ApplicationDispatch, DispatchChannel, DispatchStatus
 from app.models.mission import MissionEventKind
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/candidates/{candidate_id}/dispatches", tags=["dispatches"])
+router = APIRouter(
+    prefix="/candidates/{candidate_id}/dispatches", tags=["dispatches"],
+    dependencies=[Depends(require_owner)],
+)
 
 
 class DispatchOut(BaseModel):

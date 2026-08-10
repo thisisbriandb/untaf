@@ -3,12 +3,11 @@ Chat API — endpoint for Alice conversational agent.
 """
 
 import logging
-from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.database import async_session
+from app.auth.dependencies import get_current_candidate
 from app.models.candidate import Candidate
 from app.agents.alice_agent import chat_with_alice
 
@@ -22,7 +21,6 @@ class ChatTurn(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    candidate_id: str = Field(..., description="UUID of the candidate")
     message: str = Field(..., min_length=1, max_length=1000, description="User message to Alice")
     history: list[ChatTurn] = Field(
         default_factory=list,
@@ -44,29 +42,16 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
+async def chat_endpoint(req: ChatRequest, current: Candidate = Depends(get_current_candidate)):
     """
     Send a message to Alice and receive a structured response.
     Alice may call tools (search_jobs, get_cv_audit, etc.) and return
     both text and UI blocks for the frontend to render inline.
     """
-    # Validate candidate exists
-    try:
-        candidate_id = UUID(req.candidate_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid candidate_id format")
-
-    async with async_session() as session:
-        candidate = await session.get(Candidate, candidate_id)
-
-    if not candidate:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-
-    # Call Alice agent
     result = await chat_with_alice(
-        candidate_id=candidate_id,
+        candidate_id=current.id,
         user_message=req.message,
-        user_name=candidate.full_name or "l'utilisateur",
+        user_name=current.full_name or "l'utilisateur",
         history=[t.model_dump() for t in req.history],
     )
 

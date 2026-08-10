@@ -1,0 +1,20 @@
+A. Ce que je peux coder
+- Brancher _step_apply dans les missions (mission_runner.py) pour qu'il appelle réellement le dispatcher au lieu de simplement logger une erreur.
+- Même si je faisais cela, rien ne partirait vraiment tant que :
+  - SMTP n'est pas configuré
+  - les connecteurs ATS restent en mode simulation
+- Cela changerait toutefois le comportement des missions en autonomie "full" : elles passeraient d'un simple log d'erreur à une simulation d'envoi automatique.
+- Je ne l'ai pas fait, car ce n'était pas dans le périmètre validé aujourd'hui. Si tu veux, je peux l'ajouter.
+
+B. Ce qu'il faut que TOI (ou ton ami, vu que c'est son projet) fournisses
+
+Besoin | Pour quoi | Comment l'obtenir
+- Identifiants SMTP (SMTP_HOST, SMTP_USER, SMTP_PASSWORD dans .env) | Sortir l'envoi d'email du mode simulé | Un compte email dédié (Gmail avec mot de passe d'application, SendGrid, etc.)
+- SIRENE_API_TOKEN | Activer la 3e source de seeding d'entreprises | Inscription sur l'API SIRENE de l'INSEE
+- Vérification manuelle d'un vrai board Greenhouse/Lever/Ashby | Avant d'activer un vrai envoi de candidature via ces connecteurs | Il faut que quelqu'un teste submit_url et le format exact de la requête contre une vraie offre ; je ne l'ai pas fait, car c'est un envoi réel non simulable
+- Décision Supabase | Le fichier .env contient déjà SUPABASE_URL et SUPABASE_KEY, mais rien ne les utilise | Dire si le projet reste sur Postgres local ou s'il faut migrer pour de vrai (gros chantier)
+- Décision sur le suivi des réponses recruteurs | L'onglet Messages a un vrai backend, mais aucune source de données | Fournir soit une boîte mail à surveiller en IMAP, soit un service d'emailing avec webhook entrant (SendGrid Inbound Parse, etc.)
+
+C. Chantiers plus lourds, à cadrer avant de commencer
+- Suivi des réponses recruteurs — dépend du point B ci-dessus (boîte mail ou webhook)
+- Migration Supabase — dépend de la décision du point B

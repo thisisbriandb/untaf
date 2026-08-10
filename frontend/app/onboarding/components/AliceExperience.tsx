@@ -13,6 +13,7 @@ import {
   ZONE_COUNTRIES,
   type CriteriaDraft,
 } from "./CriteriaStep";
+import { useAuth } from "../../auth-context";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ const ROLE_TO_CONTRACTS: Record<string, string[]> = {
 
 export function AliceExperience() {
   const router = useRouter();
+  const { refresh: refreshAuth } = useAuth();
   const [phase, setPhase] = useState(0);
   const [aliceLine, setAliceLine] = useState("");
   const [emotion, setEmotion] = useState<AliceEmotion>("idle");
@@ -72,6 +74,7 @@ export function AliceExperience() {
   const [criteria, setCriteria] = useState<CriteriaDraft>(DEFAULT_CRITERIA);
   const [cityInput, setCityInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [activationError, setActivationError] = useState<string | null>(null);
 
@@ -293,6 +296,10 @@ export function AliceExperience() {
       setActivationError("J'ai besoin de ton email pour te suivre.");
       return;
     }
+    if (passwordInput.length < 8) {
+      setActivationError("Le mot de passe doit faire au moins 8 caractères.");
+      return;
+    }
 
     setActivationError(null);
     setIsActivating(true);
@@ -309,6 +316,7 @@ export function AliceExperience() {
     const payload = {
       full_name: profile.fullName || "Candidat",
       email,
+      password: passwordInput,
       phone: profile.phone || null,
       linkedin_url: linkedinUrl || null,
       headline: profile.headline || null,
@@ -322,44 +330,26 @@ export function AliceExperience() {
     };
 
     try {
-      let res = await fetch(`${API_BASE_URL}/api/candidates/`, {
+      const res = await fetch(`${API_BASE_URL}/api/candidates/`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      let candidate: { id: string; full_name: string; email: string } | null = null;
-
-      if (res.ok) {
-        candidate = await res.json();
-      } else if (res.status === 409) {
-        // Profil déjà connu : on le récupère et on réécrit tout — profil *et*
-        // mandat. Ne mettre à jour que le mandat laisserait un CV périmé
-        // derrière, et c'est le profil qui sert à déduire ce que le mandat ne
-        // dit pas. Le PUT relance le matching côté serveur.
-        const lookup = await fetch(
-          `${API_BASE_URL}/api/candidates/?email=${encodeURIComponent(email)}`
-        );
-        const found = lookup.ok ? await lookup.json() : [];
-        const existing = found[0] ?? null;
-
-        if (existing) {
-          const updated = await fetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          candidate = updated.ok ? await updated.json() : existing;
-        }
+      if (res.status === 409) {
+        // Compte déjà existant : on ne devine pas de mot de passe à sa place,
+        // on renvoie vers la connexion.
+        router.push(`/login?email=${encodeURIComponent(email)}&reason=exists`);
+        return;
       }
 
-      if (!candidate) {
+      if (!res.ok) {
         throw new Error(`Création impossible (${res.status})`);
       }
 
-      localStorage.setItem("candidate_id", candidate.id);
-      localStorage.setItem("candidate_email", candidate.email);
-      localStorage.setItem("candidate_name", candidate.full_name);
+      const candidate: { id: string; full_name: string; email: string } = await res.json();
+      await refreshAuth();
 
       // Le CV d'origine est conservé tel quel : c'est lui qui s'ouvrira dans le
       // Canvas tant que le candidat n'aura pas demandé un modèle. Un échec ici
@@ -370,6 +360,7 @@ export function AliceExperience() {
           form.append("file", cvFile);
           await fetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
             method: "POST",
+            credentials: "include",
             body: form,
           });
         } catch (err) {
@@ -388,7 +379,7 @@ export function AliceExperience() {
       );
       setIsActivating(false);
     }
-  }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say]);
+  }, [profile, emailInput, passwordInput, criteria, targetRole, linkedinUrl, cvFile, router, say, refreshAuth]);
 
   // ─── Render Canvas ────────────────────────────────────────────────────────
 
@@ -654,6 +645,8 @@ export function AliceExperience() {
                   needsEmail={!profile.email}
                   emailInput={emailInput}
                   setEmailInput={setEmailInput}
+                  passwordInput={passwordInput}
+                  setPasswordInput={setPasswordInput}
                   isSubmitting={isActivating}
                   error={activationError}
                 />

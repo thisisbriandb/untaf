@@ -25,6 +25,7 @@ class CandidateBase(BaseModel):
 
 
 class CandidateCreate(CandidateBase):
+    password: str = Field(min_length=8, max_length=128)
     resume_raw: str | None = None
     matching_criteria: MatchingCriteria | None = None
 
@@ -54,6 +55,19 @@ class CandidateOut(CandidateBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SmtpSettingsUpdate(BaseModel):
+    smtp_email: EmailStr
+    app_password: str = Field(min_length=1, max_length=255)
+
+
+class SmtpSettingsOut(BaseModel):
+    smtp_email: str | None
+    #: True si un mot de passe d'application est enregistré — jamais renvoyé
+    #: lui-même, même chiffré : la seule information utile côté client est
+    #: « configuré ou non ».
+    configured: bool
 
 
 class CvDesignUpdate(BaseModel):

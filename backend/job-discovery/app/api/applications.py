@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import ensure_owner, get_current_candidate
 from app.database import get_db
 from app.models.application import Application, ApplicationStatus
+from app.models.candidate import Candidate
 from app.models.company import Company
 from app.models.job_posting import JobPosting
 from app.schemas.application import ApplicationOut, ApplicationDetail, ApplicationStatusUpdate
@@ -22,24 +24,23 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 
 @router.get("/", response_model=list[ApplicationDetail])
 async def list_applications(
-    candidate_id: UUID | None = None,
     status: ApplicationStatus | None = None,
     min_score: int = Query(default=0, ge=0, le=100),
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
+    current: Candidate = Depends(get_current_candidate),
 ):
-    """List matched applications with filters, sorted by match score desc."""
+    """List the current candidate's matched applications, sorted by match score desc."""
     query = (
         select(Application, JobPosting, Company.name, Company.domain)
         .join(JobPosting, Application.job_posting_id == JobPosting.id)
         .join(Company, JobPosting.company_id == Company.id)
         .where(Application.match_score >= min_score)
+        .where(Application.candidate_id == current.id)
         .order_by(desc(Application.match_score), desc(Application.created_at))
     )
 
-    if candidate_id:
-        query = query.where(Application.candidate_id == candidate_id)
     if status:
         query = query.where(Application.status == status)
 
@@ -59,7 +60,11 @@ async def list_applications(
 
 
 @router.get("/{application_id}", response_model=ApplicationDetail)
-async def get_application(application_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_application(
+    application_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current: Candidate = Depends(get_current_candidate),
+):
     """Get single application details."""
     query = (
         select(Application, JobPosting, Company.name, Company.domain)
@@ -71,8 +76,9 @@ async def get_application(application_id: UUID, db: AsyncSession = Depends(get_d
     row = result.first()
     if not row:
         raise HTTPException(404, "Application not found")
-        
+
     app, posting, company_name, company_domain = row
+    ensure_owner(current, app.candidate_id)
     app_data = ApplicationDetail.model_validate(app)
     job_data = JobPostingOut.model_validate(posting)
     job_data.company_name = company_name
@@ -86,11 +92,13 @@ async def update_application_status(
     application_id: UUID,
     data: ApplicationStatusUpdate,
     db: AsyncSession = Depends(get_db),
+    current: Candidate = Depends(get_current_candidate),
 ):
     """Update status of a candidate match/application."""
     application = await db.get(Application, application_id)
     if not application:
         raise HTTPException(404, "Application not found")
+    ensure_owner(current, application.candidate_id)
 
     application.status = data.status
     await db.commit()

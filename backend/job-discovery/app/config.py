@@ -53,25 +53,38 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-1.5-flash"
 
     # ── Envoi de candidatures (SMTP) ─────────────────────
-    # Tant que ces valeurs sont vides, aucune candidature ne peut partir : le
-    # dispatcher bascule en simulation et le dit, il ne prétend jamais avoir
-    # envoyé.
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from_name: str = "Candidature"
-    smtp_use_tls: bool = True
+    # Chaque candidat envoie depuis sa propre adresse — voir `Candidate.smtp_*`
+    # dans app/models/candidate.py. Rien de global ici : un identifiant
+    # partagé enverrait toutes les candidatures de tout le monde depuis la
+    # même boîte, ce que personne n'a demandé.
 
-    @property
-    def can_send_email(self) -> bool:
-        return bool(self.smtp_host and self.smtp_user and self.smtp_password)
+    # ── Chiffrement des identifiants SMTP ────────────────
+    # Clé Fernet — générer avec `python -c "from cryptography.fernet import
+    # Fernet; print(Fernet.generate_key().decode())"`. La perdre rend tous
+    # les mots de passe d'application stockés définitivement illisibles.
+    credentials_encryption_key: str = ""
 
     # ── Matching ─────────────────────────────────────────
     # Score minimum pour qu'une offre entre dans la liste du candidat.
     match_min_score: int = 55
     # Score à partir duquel l'offre passe en MATCHED (haut du panier).
     match_shortlist_score: int = 78
+
+    # ── Authentification ─────────────────────────────────
+    # Session stockée côté serveur dans Redis — le cookie ne porte qu'un
+    # identifiant aléatoire, jamais l'identité elle-même.
+    session_cookie_name: str = "alice_session"
+    session_ttl_seconds: int = 60 * 60 * 24 * 14  # 14 jours, glissant
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        return not self.debug
+
+    @property
+    def session_cookie_samesite(self) -> str:
+        # "none" exige "secure" — cohérent avec la propriété ci-dessus tant
+        # que debug/prod restent le même bascule pour les deux.
+        return "lax" if self.debug else "none"
 
 
     @property

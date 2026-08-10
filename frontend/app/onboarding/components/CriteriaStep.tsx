@@ -91,6 +91,9 @@ interface CriteriaStepProps {
   needsEmail?: boolean;
   emailInput?: string;
   setEmailInput?: (v: string) => void;
+  /** Le mot de passe, lui, est toujours demandé — chaque compte en a besoin. */
+  passwordInput: string;
+  setPasswordInput: (v: string) => void;
   isSubmitting?: boolean;
   error?: string | null;
 }
@@ -143,6 +146,8 @@ export function CriteriaStep({
   needsEmail = false,
   emailInput = "",
   setEmailInput,
+  passwordInput,
+  setPasswordInput,
   isSubmitting = false,
   error = null,
 }: CriteriaStepProps) {
@@ -311,6 +316,17 @@ export function CriteriaStep({
           />
         </Field>
       )}
+
+      <Field label="Mot de passe" hint="pour retrouver ton espace ensuite">
+        <input
+          type="password"
+          value={passwordInput}
+          onChange={(e) => setPasswordInput(e.target.value)}
+          placeholder="8 caractères minimum"
+          autoComplete="new-password"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+        />
+      </Field>
 
       {error && <p className="text-center text-xs text-red-600/80">{error}</p>}
 

@@ -2,7 +2,7 @@
  * Alice API Client — talks to POST /api/chat on the backend.
  */
 
-import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -75,18 +75,15 @@ export interface ChatTurn {
 }
 
 export async function sendMessageToAlice(
-  candidateId: string,
   message: string,
   history: ChatTurn[] = [],
 ): Promise<AliceResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/chat`, {
+  const res = await apiFetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      candidate_id: candidateId,
       message,
       // Le fil de la discussion seulement : les chiffres sont relus côté
-      // serveur depuis la base à chaque tour.
+      // serveur depuis la base à chaque tour, à partir du candidat authentifié.
       history: history.slice(-12),
     }),
   });

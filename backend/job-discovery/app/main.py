@@ -19,6 +19,7 @@ from app.api.dispatches import router as dispatches_router
 from app.api.apply import router as apply_router
 from app.api.chat import router as chat_router
 from app.api.messages import router as messages_router
+from app.api.auth import router as auth_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -78,6 +79,7 @@ app.include_router(dispatches_router, prefix="/api")
 app.include_router(apply_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(messages_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/health")

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.outcome import build_outcome
 from app.agents.application.requirements import detect_requirements
+from app.auth.dependencies import require_owner
 from app.database import async_session, get_db
 from app.models.application import Application
 from app.models.candidate import Candidate
@@ -27,7 +28,10 @@ from app.models.dispatch import ApplicationDispatch
 from app.models.job_posting import JobPosting
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/candidates/{candidate_id}/apply", tags=["apply"])
+router = APIRouter(
+    prefix="/candidates/{candidate_id}/apply", tags=["apply"],
+    dependencies=[Depends(require_owner)],
+)
 
 
 class RequirementOut(BaseModel):

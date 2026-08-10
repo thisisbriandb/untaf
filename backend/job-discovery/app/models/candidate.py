@@ -26,6 +26,20 @@ class Candidate(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    # ── Authentification ──────────────────────────────────
+    # Chaque candidat en a un dès la création (POST /candidates/) — aucun
+    # compte ne peut exister sans mot de passe.
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # ── Envoi d'emails (SMTP du candidat) ──────────────────
+    # Chacun envoie depuis sa propre adresse Gmail — jamais une boîte
+    # partagée. `smtp_app_password_encrypted` est chiffré (voir
+    # app/auth/crypto.py), jamais haché : il faut pouvoir le relire pour se
+    # connecter au serveur SMTP. Host/port/TLS ne sont pas stockés : figés
+    # sur Gmail (smtp.gmail.com:587) pour cette première version.
+    smtp_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_app_password_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # ── Links ─────────────────────────────────────────────
     github_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     linkedin_url: Mapped[str | None] = mapped_column(Text, nullable=True)

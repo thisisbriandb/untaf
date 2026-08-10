@@ -5,7 +5,7 @@
  * exécution avec un début, une fin et un rapport.
  */
 
-import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 import type { MissionEventKind } from "./mission-client";
 
 export type RunStatus = "preparing" | "running" | "completed" | "interrupted";
@@ -66,8 +66,7 @@ export const DURATIONS = [
   { minutes: 240, label: "Une demi-journée" },
 ];
 
-const base = (candidateId: string) =>
-  `${API_BASE_URL}/api/candidates/${candidateId}/mission/runs`;
+const base = (candidateId: string) => `/api/candidates/${candidateId}/mission/runs`;
 
 export async function startRun(
   candidateId: string,
@@ -79,9 +78,8 @@ export async function startRun(
   },
 ): Promise<MissionRun | null> {
   try {
-    const res = await fetch(base(candidateId), {
+    const res = await apiFetch(base(candidateId), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     return res.ok ? await res.json() : null;
@@ -92,7 +90,7 @@ export async function startRun(
 
 export async function fetchCurrentRun(candidateId: string): Promise<MissionRun | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/current`);
+    const res = await apiFetch(`${base(candidateId)}/current`);
     if (!res.ok) return null;
     const data = await res.json();
     return data ?? null;
@@ -106,7 +104,7 @@ export async function stopRun(
   runId: string,
 ): Promise<MissionRun | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/${runId}/stop`, { method: "POST" });
+    const res = await apiFetch(`${base(candidateId)}/${runId}/stop`, { method: "POST" });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

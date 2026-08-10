@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { API_BASE_URL } from "@/lib/config";
+import { apiFetch } from "@/lib/api";
 
 interface RecruiterMessage {
   id: string;
@@ -31,7 +31,7 @@ export function MessagesView({ candidateId }: MessagesViewProps) {
     let cancelled = false;
     setLoading(true);
 
-    fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages`)
+    apiFetch(`/api/candidates/${candidateId}/messages`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data: RecruiterMessage[]) => {
         if (!cancelled) setMessages(data);

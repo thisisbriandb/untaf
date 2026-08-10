@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import require_owner
 from app.database import get_db
 from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
@@ -30,7 +31,10 @@ from app.schemas.mission import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/candidates/{candidate_id}/mission", tags=["missions"])
+router = APIRouter(
+    prefix="/candidates/{candidate_id}/mission", tags=["missions"],
+    dependencies=[Depends(require_owner)],
+)
 
 
 async def _load(db: AsyncSession, candidate_id: UUID) -> tuple[Candidate, Mission]:

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import { API_BASE_URL } from "@/lib/config";
+import { apiFetch, apiJson } from "@/lib/api";
 import { AlicePresence } from "../onboarding/components/AlicePresence";
 import { DashboardSidebar, TabType } from "./components/DashboardSidebar";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -14,6 +14,7 @@ import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
 import { CanvasPanel } from "./components/CanvasPanel";
 import { AliceProvider, useAlice } from "./alice-context";
+import { useAuth } from "../auth-context";
 import type { ReactNode } from "react";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
@@ -26,14 +27,6 @@ interface Application {
   match_score: number;
   created_at: string;
   job_posting: any;
-}
-
-interface Candidate {
-  id: string;
-  full_name: string;
-  email: string;
-  headline?: string;
-  skills: string[];
 }
 
 /**
@@ -55,64 +48,41 @@ function ConversationColumn({ children }: { children: ReactNode }) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { candidate, loading: authLoading, logout } = useAuth();
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<TabType>("alice");
 
-  // Data States
-  const [candidateId, setCandidateId] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [appsLoading, setAppsLoading] = useState(true);
   const [updatingAppId, setUpdatingAppId] = useState<string | null>(null);
 
-  // 1. Load Candidate ID from localStorage or fallback
+  const candidateId = candidate?.id ?? null;
+
+  // Redirige vers la connexion une fois qu'on sait vraiment que personne
+  // n'est authentifié — jamais avant, sinon un utilisateur connecté verrait
+  // un aller-retour visible vers /login à chaque chargement.
   useEffect(() => {
-    const storedId = localStorage.getItem("candidate_id");
-    if (!storedId) {
-      setLoading(false);
+    if (!authLoading && !candidate) {
+      router.push("/login");
+    }
+  }, [authLoading, candidate, router]);
+
+  // Candidatures — dépendent du profil authentifié.
+  useEffect(() => {
+    if (!candidateId) {
+      setAppsLoading(false);
       return;
     }
-    setCandidateId(storedId);
-  }, []);
 
-  // 2. Fetch Candidate Profile & Applications from Backend
-  useEffect(() => {
-    if (!candidateId) return;
-
-    const fetchData = async () => {
-      try {
-        const [candRes, appsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/candidates/${candidateId}`).catch(() => null),
-          fetch(`${API_BASE_URL}/api/applications/?candidate_id=${candidateId}`).catch(
-            () => null
-          ),
-        ]);
-
-        if (candRes && candRes.ok) {
-          const candData = await candRes.json();
-          setCandidate(candData);
-        }
-
-        if (appsRes && appsRes.ok) {
-          const appsData = await appsRes.json();
-          setApplications(appsData);
-        }
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    apiJson<Application[]>(`/api/applications/`)
+      .then(setApplications)
+      .catch((err) => console.error("Error loading applications:", err))
+      .finally(() => setAppsLoading(false));
   }, [candidateId]);
 
-  // Handle Logout
-  const handleLogout = () => {
-    localStorage.removeItem("candidate_id");
-    localStorage.removeItem("candidate_email");
-    localStorage.removeItem("candidate_name");
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 
@@ -120,9 +90,8 @@ export default function DashboardPage() {
   const handleUpdateStatus = async (appId: string, newStatus: string) => {
     setUpdatingAppId(appId);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/applications/${appId}/status`, {
+      const res = await apiFetch(`/api/applications/${appId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -138,7 +107,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || (candidate && appsLoading)) {
     return (
       <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -149,8 +118,13 @@ export default function DashboardPage() {
     );
   }
 
-  const userName = candidate?.full_name || "Briand";
-  const userEmail = candidate?.email || "";
+  if (!candidate) {
+    // Le useEffect ci-dessus redirige déjà — rien à afficher entre-temps.
+    return null;
+  }
+
+  const userName = candidate.full_name || "Briand";
+  const userEmail = candidate.email || "";
 
   return (
     <AliceProvider
@@ -196,6 +170,7 @@ export default function DashboardPage() {
                     key="parametres"
                     userName={userName}
                     userEmail={userEmail}
+                    candidateId={candidateId}
                     onLogout={handleLogout}
                   />
                 )}

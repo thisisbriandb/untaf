@@ -17,11 +17,15 @@ from pydantic import BaseModel
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import require_owner
 from app.database import get_db
 from app.models.message import RecruiterMessage, MessageDirection
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/candidates/{candidate_id}/messages", tags=["messages"])
+router = APIRouter(
+    prefix="/candidates/{candidate_id}/messages", tags=["messages"],
+    dependencies=[Depends(require_owner)],
+)
 
 
 class MessageOut(BaseModel):

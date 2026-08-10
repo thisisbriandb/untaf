@@ -6,6 +6,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 export type RequirementStatus = "satisfied" | "generate" | "missing";
 
@@ -79,7 +80,9 @@ export async function fetchApplyOutcome(
   dispatchId: string,
 ): Promise<ApplyOutcome | null> {
   try {
-    const res = await fetch(dispatchBase(candidateId, dispatchId));
+    const res = await apiFetch(
+      `/api/candidates/${candidateId}/apply/dispatches/${dispatchId}`,
+    );
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -99,9 +102,7 @@ export async function fetchApplyPlan(
   jobId: string,
 ): Promise<ApplyPlan | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/plan`,
-    );
+    const res = await apiFetch(`/api/candidates/${candidateId}/apply/${jobId}/plan`);
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -121,7 +122,7 @@ export async function streamApply(
 ): Promise<void> {
   const res = await fetch(
     `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/stream`,
-    { method: "POST" },
+    { method: "POST", credentials: "include" },
   );
 
   if (!res.ok || !res.body) {

@@ -10,11 +10,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, U
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.crypto import encrypt
+from app.auth.dependencies import require_owner
+from app.auth.security import hash_password
+from app.auth.session import issue_session
 from app.database import get_db
 from app.models.candidate import Candidate
 from app.schemas.candidate import (
     CandidateCreate, CandidateOut, CandidateUpdate, CvDesignOut, CvDesignUpdate,
     EffectiveCriteriaOut, ParsedCandidateProfile, CVAuditResult, CVRenderRequest,
+    SmtpSettingsOut, SmtpSettingsUpdate,
 )
 from app.schemas.matching import MatchingCriteria
 from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
@@ -81,9 +86,10 @@ async def list_candidates(
 async def create_candidate(
     data: CandidateCreate,
     background_tasks: BackgroundTasks,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new candidate profile."""
+    """Create a new candidate profile — c'est aussi le point d'inscription."""
     # Check email uniqueness
     existing = await db.scalar(
         select(Candidate).where(Candidate.email == data.email)
@@ -105,6 +111,7 @@ async def create_candidate(
         preferred_remote_policies=data.preferred_remote_policies,
         preferred_contract_types=data.preferred_contract_types,
         resume_raw=data.resume_raw,
+        password_hash=hash_password(data.password),
         matching_criteria=(
             data.matching_criteria.model_dump(mode="json", exclude_unset=True)
             if data.matching_criteria else None
@@ -117,11 +124,18 @@ async def create_candidate(
     # Schedule the matching flow in the background
     background_tasks.add_task(_match_candidate_to_existing_jobs, candidate.id)
 
+    # L'inscription connecte directement — pas de deuxième aller-retour.
+    await issue_session(response, candidate)
+
     return candidate
 
 
 @router.get("/{candidate_id}", response_model=CandidateOut)
-async def get_candidate(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_candidate(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     """Get a candidate profile by ID."""
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
@@ -135,6 +149,7 @@ async def update_candidate(
     data: CandidateUpdate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """Update an existing candidate profile."""
     candidate = await db.get(Candidate, candidate_id)
@@ -160,7 +175,11 @@ async def update_candidate(
 
 
 @router.get("/{candidate_id}/criteria", response_model=EffectiveCriteriaOut)
-async def get_matching_criteria(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_matching_criteria(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     """
     Le mandat de matching réellement appliqué.
 
@@ -184,6 +203,7 @@ async def set_matching_criteria(
     criteria: MatchingCriteria,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """Fixer le mandat et relancer le matching sur le stock d'offres existant."""
     candidate = await db.get(Candidate, candidate_id)
@@ -206,6 +226,7 @@ async def upload_resume(
     candidate_id: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """
     Conserve le CV tel que déposé.
@@ -241,7 +262,11 @@ async def upload_resume(
 
 
 @router.get("/{candidate_id}/resume")
-async def get_resume(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_resume(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     """Restitue le CV d'origine, pour l'afficher tel quel dans le Canvas."""
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
@@ -261,7 +286,11 @@ async def get_resume(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{candidate_id}/cv-design", response_model=CvDesignOut)
-async def get_cv_design(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_cv_design(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     """Présentation choisie, et si un CV d'origine est disponible."""
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
@@ -287,6 +316,7 @@ async def set_cv_design(
     candidate_id: UUID,
     design: CvDesignUpdate,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """
     Enregistre un choix de présentation.
@@ -337,6 +367,7 @@ async def store_cv_content(
     candidate_id: UUID,
     content: dict,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """
     Enregistre le parcours détaillé (expériences, formation, langues).
@@ -358,7 +389,11 @@ async def store_cv_content(
 
 
 @router.get("/{candidate_id}/signature", response_model=dict)
-async def get_signature(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_signature(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     """La signature enregistrée, réutilisée sur chaque lettre générée."""
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
@@ -371,6 +406,7 @@ async def set_signature(
     candidate_id: UUID,
     data: SignatureUpdate,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """Enregistre la signature manuscrite une fois pour toutes."""
     candidate = await db.get(Candidate, candidate_id)
@@ -388,13 +424,74 @@ async def set_signature(
 
 
 @router.delete("/{candidate_id}/signature", response_model=dict)
-async def delete_signature(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_signature(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
         raise HTTPException(404, "Candidate profile not found")
     candidate.signature_image = None
     await db.commit()
     return {"has_signature": False}
+
+
+@router.get("/{candidate_id}/smtp", response_model=SmtpSettingsOut)
+async def get_smtp_settings(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
+    """Ce qu'il faut pour savoir si l'envoi est configuré — jamais le secret lui-même."""
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Candidate profile not found")
+    return SmtpSettingsOut(
+        smtp_email=candidate.smtp_email,
+        configured=bool(candidate.smtp_email and candidate.smtp_app_password_encrypted),
+    )
+
+
+@router.put("/{candidate_id}/smtp", response_model=SmtpSettingsOut)
+async def set_smtp_settings(
+    candidate_id: UUID,
+    data: SmtpSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
+    """
+    Enregistre l'adresse Gmail et le mot de passe d'application du candidat.
+
+    C'est depuis cette adresse, et celle-là seule, que ses candidatures
+    partiront — jamais une boîte partagée par l'application.
+    """
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Candidate profile not found")
+
+    candidate.smtp_email = data.smtp_email
+    candidate.smtp_app_password_encrypted = encrypt(data.app_password)
+    await db.commit()
+
+    return SmtpSettingsOut(smtp_email=candidate.smtp_email, configured=True)
+
+
+@router.delete("/{candidate_id}/smtp", response_model=SmtpSettingsOut)
+async def delete_smtp_settings(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
+):
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Candidate profile not found")
+
+    candidate.smtp_email = None
+    candidate.smtp_app_password_encrypted = None
+    await db.commit()
+
+    return SmtpSettingsOut(smtp_email=None, configured=False)
 
 
 @router.post("/download-cover-letter")
@@ -719,6 +816,7 @@ async def download_cv_pdf(
     candidate_id: UUID,
     color_hex: str | None = None,
     db: AsyncSession = Depends(get_db),
+    _owner: Candidate = Depends(require_owner),
 ):
     """
     Fallback GET endpoint for PDF download — utile pour un lien cliquable

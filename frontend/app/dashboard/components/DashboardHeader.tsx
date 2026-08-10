@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Settings } from "lucide-react";
 import type { TabType } from "./DashboardSidebar";
-import { API_BASE_URL } from "@/lib/config";
+import { apiFetch } from "@/lib/api";
 
 interface MissionEvent {
   id: string;
@@ -52,10 +52,10 @@ export function DashboardHeader({
     if (!candidateId) return;
 
     Promise.all([
-      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/mission/journal?limit=20`)
+      apiFetch(`/api/candidates/${candidateId}/mission/journal?limit=20`)
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
-      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages?unread_only=true`)
+      apiFetch(`/api/candidates/${candidateId}/messages?unread_only=true`)
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
     ]).then(([events, messages]: [MissionEvent[], RecruiterMessage[]]) => {
@@ -91,10 +91,10 @@ export function DashboardHeader({
   const markAllRead = async () => {
     if (!candidateId) return;
     await Promise.all([
-      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/mission/journal/read`, {
+      apiFetch(`/api/candidates/${candidateId}/mission/journal/read`, {
         method: "POST",
       }).catch(() => null),
-      fetch(`${API_BASE_URL}/api/candidates/${candidateId}/messages/read`, {
+      apiFetch(`/api/candidates/${candidateId}/messages/read`, {
         method: "POST",
       }).catch(() => null),
     ]);

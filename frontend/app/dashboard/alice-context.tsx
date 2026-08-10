@@ -212,9 +212,9 @@ export function AliceProvider({
 
       try {
         // On transmet les tours précédents — pas le message courant, que
-        // l'API reçoit séparément.
+        // l'API reçoit séparément. L'identité vient du cookie de session,
+        // plus besoin de la passer explicitement.
         const response = await sendMessageToAlice(
-          candidateId,
           trimmed,
           messages
             .filter((m) => m.text.trim())

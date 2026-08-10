@@ -22,7 +22,7 @@ ne l'est pas) · 🪦 code mort · 🚧 manquant/à finir · 🐛 bug mineur rep
 | Découverte de nouveaux boards ATS           | ✅   | Via Common Crawl, hebdomadaire                                    |
 | Missions bornées + journal                  | ✅   | Cycle Scan→Qualify→Match→Prepare fonctionnel                      |
 | Rédaction CV / lettres                      | ✅   | Gemini + repli gabarit                                            |
-| Candidature — canal email                   | ✅   | Mais **simulée** sans SMTP configuré                              |
+| Candidature — canal email                   | ✅   | Chaque candidat configure sa propre adresse Gmail (2026-08-11) — simulée tant qu'il ne l'a pas fait |
 | Candidature — envoi auto en mission         | 🚧   | Jamais branché, même en autonomie "full" (reste à faire)          |
 | Candidature — canaux Greenhouse/Lever/Ashby | ✅   | Connecteurs écrits (2026-08-10) — simulation uniquement, jamais d'envoi réel |
 | Agent navigateur (formulaires employeur)    | ✅   | Supprimé (2026-08-10) — code mort, jamais appelé                  |
@@ -34,6 +34,88 @@ ne l'est pas) · 🪦 code mort · 🚧 manquant/à finir · 🐛 bug mineur rep
 | Source SIRENE (seeding entreprises)         | 🚧   | Inerte sans `SIRENE_API_TOKEN` (nécessite une inscription externe, pas fait) |
 | `download-cv/{template_id}` (fallback GET)  | ✅   | Corrigé (2026-08-10) — tire le vrai profil du candidat en base    |
 | Compteurs "nouveau" (companies/offers)      | ✅   | Corrigé (2026-08-10) — distinction insert/update via `xmax`       |
+| **Authentification**                        | ✅   | Ajoutée (2026-08-10) — voir section 4, aucune n'existait avant     |
+
+---
+
+## 4. Authentification — ajoutée le 2026-08-10
+
+Contexte : le projet visait un usage perso jusqu'ici. En passant à un objectif
+de déploiement public, l'audit a trouvé **zéro authentification** —
+`candidate_id` était un UUID dans `localStorage`, lu sans aucune vérification.
+N'importe qui connaissant/devinant un `candidate_id` avait accès complet
+(lecture ET écriture) au profil, CV, candidatures, messages de n'importe qui.
+Comblé avant tout le reste, car plus urgent que n'importe quel connecteur.
+
+**Ce qui a été construit** :
+- Mots de passe hachés avec `argon2-cffi` (recommandation OWASP)
+- Sessions côté serveur dans Redis (réutilise l'infra Celery existante),
+  cookie httpOnly — révocation instantanée à la déconnexion
+- `POST /candidates/` sert d'inscription (mot de passe obligatoire, `NOT
+  NULL` en base — aucun compte ne peut exister sans, connexion immédiate) ;
+  nouvelles routes `/auth/login`, `/auth/logout`, `/auth/me`. (Un
+  `/auth/claim` temporaire a existé le temps de migrer les 2 comptes créés
+  avant l'authentification — supprimé le 2026-08-11 une fois ces comptes
+  effacés : tout le monde repart de zéro, plus de cas particulier.)
+- **Vérification d'autorisation ajoutée sur les 38 endpoints qui manipulent
+  un `candidate_id`** — chacun vérifie désormais que l'appelant est bien le
+  candidat concerné (403 sinon)
+- **Bonus trouvés en creusant, corrigés au passage** : `GET /applications/`
+  laissait n'importe qui lister les candidatures de n'importe qui via un
+  paramètre non vérifié ; `GET/PATCH /applications/{id}` n'avaient même pas
+  de `candidate_id` à vérifier (ownership ajoutée par jointure) ; l'onboarding
+  avait un vrai risque de prise de compte — sur un email déjà enregistré, le
+  code faisait un `PUT` sur le profil existant **sans mot de passe** —
+  remplacé par une redirection vers `/login`
+- Nouvelle page `/login`, contexte d'authentification React
+  (`app/auth-context.tsx`), wrapper `fetch` (`lib/api.ts`) qui force l'envoi
+  du cookie de session sur les ~37 appels API existants
+
+**Testé** : inscription, connexion (bon/mauvais mot de passe), déconnexion
+(session Redis vraiment supprimée, pas juste le cookie local), accès refusé
+sur le profil de quelqu'un d'autre (testé sur `candidates`, `mission`,
+`messages`, `dispatches`, `apply`, `applications`, `chat`), flux de
+réclamation des comptes existants (fonctionne une fois, s'auto-désactive).
+
+**Volontairement pas fait** : `proxy.ts` (protection de route côté Next.js —
+la vraie sécurité est déjà côté backend, ce serait juste un bonus visuel
+contre le flash de chargement).
+
+*Mise à jour 2026-08-11* : les 2 comptes créés avant l'authentification ont
+été supprimés (à la demande explicite) — plus aucun cas particulier, tout le
+monde crée son compte via l'onboarding normal. `/auth/claim` est retiré.
+`password_hash` est maintenant `NOT NULL` en base : impossible qu'un compte
+existe sans mot de passe.
+
+---
+
+## 5. SMTP par candidat — ajouté le 2026-08-11
+
+Avant : une seule config SMTP globale (`.env`) pour toute l'app — toutes les
+candidatures de tous les candidats seraient parties depuis la même boîte
+mail (probablement celle de qui a déployé l'app). Demandé explicitement :
+chaque candidat connecté utilise sa **propre** adresse.
+
+**Ce qui a été construit** :
+- `Candidate.smtp_email` + `Candidate.smtp_app_password_encrypted` — le mot
+  de passe d'application est **chiffré** (Fernet, `app/auth/crypto.py`), pas
+  haché comme le mot de passe de connexion : il doit être déchiffrable pour
+  se connecter réellement au serveur SMTP
+- Clé de chiffrement dans `.env` (`CREDENTIALS_ENCRYPTION_KEY`) — jamais en
+  base, jamais commitée ; la perdre rend tous les mots de passe stockés
+  illisibles définitivement
+- Routes `GET/PUT/DELETE /candidates/{id}/smtp`, protégées comme les autres
+  (`require_owner`) — jamais le mot de passe renvoyé au client, même chiffré
+- `email_sender.py` utilise désormais les identifiants du candidat, plus
+  aucune configuration globale
+- Portée volontairement limitée à Gmail (`smtp.gmail.com:587`, TLS) pour
+  cette version — pas de champs serveur/port pour rester simple pour un
+  utilisateur non technique. Interface dans Paramètres → Envoi d'emails.
+
+**Testé** : cycle complet sauvegarde → lecture → suppression via curl ;
+chiffrement vérifié en base (ce n'est pas le mot de passe en clair) ; le
+mot de passe déchiffré correspond exactement à l'original ; accès refusé
+(403) sur la config SMTP de quelqu'un d'autre.
 
 ---
 

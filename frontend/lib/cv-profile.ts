@@ -10,6 +10,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 import type {
   EducationEntry,
   ExperienceEntry,
@@ -83,7 +84,7 @@ export async function loadCvProfile(candidateId: string): Promise<CvProfile> {
   let remote: Partial<CvProfile> = {};
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}`);
+    const res = await apiFetch(`/api/candidates/${candidateId}`);
     if (res.ok) {
       const c = await res.json();
       remote = {
@@ -117,9 +118,8 @@ export async function saveCvProfile(
   // Le parcours détaillé part aussi au serveur : Alice rédige côté backend et
   // ne peut argumenter à partir d'expériences restées dans le navigateur.
   try {
-    await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-content`, {
+    await apiFetch(`/api/candidates/${candidateId}/cv-content`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         summary: profile.summary,
         experiences: profile.experiences,
@@ -132,9 +132,8 @@ export async function saveCvProfile(
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}`, {
+    const res = await apiFetch(`/api/candidates/${candidateId}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         full_name: profile.fullName,
         email: profile.email,
@@ -172,7 +171,7 @@ export function resumeUrl(candidateId: string): string {
 
 export async function fetchCvDesign(candidateId: string): Promise<CvDesign | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`);
+    const res = await apiFetch(`/api/candidates/${candidateId}/cv-design`);
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -184,9 +183,8 @@ export async function saveCvDesign(
   patch: Partial<Pick<CvDesign, "mode" | "template_id" | "color_hex" | "show_photo">>,
 ): Promise<CvDesign | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`, {
+    const res = await apiFetch(`/api/candidates/${candidateId}/cv-design`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
     return res.ok ? await res.json() : null;
@@ -224,9 +222,8 @@ export async function writeCvContent(
   job?: JobContext,
 ): Promise<CvContent | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/cv-content`, {
+    const res = await apiFetch(`/api/candidates/cv-content`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         full_name: profile.fullName,
         headline: profile.headline,
@@ -270,9 +267,8 @@ export function toCvRenderPayload(profile: CvProfile) {
 }
 
 export async function downloadCvPdf(profile: CvProfile): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/candidates/download-cv`, {
+  const res = await apiFetch(`/api/candidates/download-cv`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(toCvRenderPayload(profile)),
   });
 
