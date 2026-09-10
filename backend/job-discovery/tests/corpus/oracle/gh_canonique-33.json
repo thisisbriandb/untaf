@@ -1,0 +1,56 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": false,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": true,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_29604857003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  }
+]

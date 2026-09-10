@@ -1,0 +1,86 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "preferred_name",
+    "type": "input_text",
+    "required": false,
+    "label": "Preferred First Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": false,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "question_18135059004",
+    "type": "input_text",
+    "required": true,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_18135060004",
+    "type": "input_text",
+    "required": true,
+    "label": "Where do you currently reside?"
+  },
+  {
+    "name": "question_18135061004",
+    "type": "input_text",
+    "required": true,
+    "label": "Desired Salary"
+  },
+  {
+    "name": "question_18135062004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Do you have any familial or close personal relationships with a current Zeta employee?"
+  },
+  {
+    "name": "question_18135063004",
+    "type": "textarea",
+    "required": true,
+    "label": "How did you hear about this opportunity?"
+  },
+  {
+    "name": "question_18135064004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you able to work in France?"
+  },
+  {
+    "name": "question_18135065004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Will you now or in the future require sponsorship for Employment Visa status?"
+  }
+]

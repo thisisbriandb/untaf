@@ -1,0 +1,74 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_28416381003",
+    "type": "input_text",
+    "required": true,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_28416382003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you currently eligible to legally work in the United States?\n"
+  },
+  {
+    "name": "question_28416383003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "If hired, do you now or in the future require immigration support or visa sponsorship to continue working in the United States?\n"
+  },
+  {
+    "name": "question_28416384003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you available to work in our San Francisco office two days a week, plus one day in Berkeley, Cupertino, or SF? The role offers remote flexibility outside of the required three in-office days and may be subject to change. "
+  }
+]

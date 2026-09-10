@@ -1,0 +1,50 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Prénom"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nom"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Adresse e-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Téléphone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": false,
+    "label": "CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": false,
+    "label": "CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Lettre de motivation"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Lettre de motivation"
+  }
+]

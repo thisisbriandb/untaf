@@ -43,7 +43,14 @@ CHANNEL_MAP = {
 
 #: Canaux réellement implémentés. Le reste est préparé mais pas envoyable —
 #: mieux vaut une file d'attente honnête qu'un échec silencieux.
-IMPLEMENTED_CHANNELS = {DispatchChannel.EMAIL}
+#: Canaux qu'Alice sait exécuter de bout en bout. `WEB_FORM` et `ATS_API`
+#: passent par le remplissage de formulaire dans un navigateur ; le clic final
+#: reste conditionné à `browser_submit_enabled`, comme l'email l'est à SMTP.
+IMPLEMENTED_CHANNELS = {
+    DispatchChannel.EMAIL,
+    DispatchChannel.WEB_FORM,
+    DispatchChannel.ATS_API,
+}
 
 
 @dataclass
@@ -238,7 +245,23 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         application = await session.get(Application, dispatch.application_id)
         letter = (application.metadata_json or {}).get("cover_letter") if application else None
 
-    if dispatch.channel != DispatchChannel.EMAIL:
+    if dispatch.channel == DispatchChannel.EMAIL:
+        result = await send_application_email(
+            to_email=dispatch.destination,
+            candidate=candidate,
+            letter=letter,
+            job_title=dispatch.job_title,
+            company_name=dispatch.company_name,
+        )
+    elif dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
+        # Formulaire public : on le remplit dans un navigateur, guidé par le
+        # schéma que l'ATS publie quand il en publie un.
+        from app.agents.application.form_filler import submit_via_browser
+
+        result = await submit_via_browser(
+            dispatch, candidate, dispatch.destination or ""
+        )
+    else:
         async with async_session() as session:
             d = await session.get(ApplicationDispatch, dispatch_id)
             d.status = DispatchStatus.FAILED
@@ -247,21 +270,18 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             await session.refresh(d)
             return d
 
-    result = await send_application_email(
-        to_email=dispatch.destination,
-        candidate=candidate,
-        letter=letter,
-        job_title=dispatch.job_title,
-        company_name=dispatch.company_name,
-    )
-
     async with async_session() as session:
         d = await session.get(ApplicationDispatch, dispatch_id)
         if result["ok"]:
             d.status = DispatchStatus.SENT if result["real"] else DispatchStatus.SIMULATED
             d.sent_at = datetime.now(timezone.utc)
             d.proof = result.get("proof")
-            d.error = None if result["real"] else "SMTP non configuré — rien n'a été envoyé"
+            # Le motif de simulation dépend du canal : SMTP absent pour un
+            # email, envoi navigateur désactivé pour un formulaire. C'est
+            # l'exécuteur qui le sait, pas le dispatcher.
+            d.error = None if result["real"] else (
+                result.get("error") or "rien n'a été envoyé"
+            )
 
             # Le statut de la candidature ne bascule que sur un envoi RÉEL.
             if result["real"] and d.application_id:

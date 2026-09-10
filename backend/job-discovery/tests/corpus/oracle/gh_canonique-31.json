@@ -1,0 +1,134 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_31407643003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_31407644003",
+    "type": "input_text",
+    "required": false,
+    "label": "Website"
+  },
+  {
+    "name": "question_31407645003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "To meet security clearance requirements, you will only be eligible for the position if you are a French citizen. Are you a French citizen?"
+  },
+  {
+    "name": "question_31407646003",
+    "type": "input_text",
+    "required": true,
+    "label": "Where are you currently located?"
+  },
+  {
+    "name": "question_31407647003",
+    "type": "input_text",
+    "required": true,
+    "label": "What city do you currently reside in?"
+  },
+  {
+    "name": "question_31407648003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you legally authorized to work in France for any French employer now and in the future?"
+  },
+  {
+    "name": "question_31407649003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Will you now or in the future require sponsorship for employment in France?"
+  },
+  {
+    "name": "question_31407650003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Can you provide verification of both your identity and authorization to work in France, to the extent required by law?"
+  },
+  {
+    "name": "question_31407651003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you at least 18 years of age?"
+  },
+  {
+    "name": "question_31407652003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Based on the below information, would you meet the requirements for a deemed export license in order to access EAR - controlled technology?"
+  },
+  {
+    "name": "question_31407653003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Do you have any contractual obligations, agreements, relationships, or commitments to another person or entity that would impact, impede or interfere with your ability to join Axon?"
+  },
+  {
+    "name": "question_31407654003[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Privacy Policy"
+  },
+  {
+    "name": "question_31407655003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Future Consideration"
+  },
+  {
+    "name": "question_31407984003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "This role requires going onsite with the customer approximately 3 days per week at least, occasional travel, and working from home when you're not onsite or travelling. Are you comfortable with this working arrangement?"
+  }
+]

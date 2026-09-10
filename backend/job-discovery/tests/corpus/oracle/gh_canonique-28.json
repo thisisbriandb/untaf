@@ -1,0 +1,86 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Vorname"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nachname"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "E-Mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Telefon"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Lebenslauf"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Lebenslauf"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Anschreiben"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Anschreiben"
+  },
+  {
+    "name": "question_30769685003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn"
+  },
+  {
+    "name": "question_30769686003",
+    "type": "input_text",
+    "required": false,
+    "label": "Angemessene Vorkehrungen\n"
+  },
+  {
+    "name": "question_30769687003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Um einen möglichen Interessenskonflikt beurteilen zu können, kannst Du uns bitte mitteilen, ob Du in den letzten 5 Jahren öffentliche:r Amtsträger:in oder ein enges Familienmitglied eines/einer Amtsträger:in warst?"
+  },
+  {
+    "name": "question_30769688003[]",
+    "type": "multi_value_multi_select",
+    "required": false,
+    "label": "Kommunikation von anderen Stellenangeboten"
+  },
+  {
+    "name": "question_30769690003",
+    "type": "input_text",
+    "required": false,
+    "label": "Dein Gehaltswunsch?"
+  },
+  {
+    "name": "question_31484841003",
+    "type": "multi_value_single_select",
+    "required": false,
+    "label": "Sprichst du Deutsch auf Niveau C1 oder besser?"
+  }
+]

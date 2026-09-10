@@ -1,0 +1,128 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_35861387002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Highest Diploma/qualification achieved "
+  },
+  {
+    "name": "question_35861388002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Graduation Year"
+  },
+  {
+    "name": "question_35861389002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Base Salary Currency "
+  },
+  {
+    "name": "question_35861390002",
+    "type": "input_text",
+    "required": true,
+    "label": "Current Base Salary ***in numeric form***"
+  },
+  {
+    "name": "question_35861391002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Last Bonus Currency"
+  },
+  {
+    "name": "question_35861392002",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Bonus ***numeric form***"
+  },
+  {
+    "name": "question_35861393002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you subject to any deferred compensation or potential claw back?"
+  },
+  {
+    "name": "question_35861394002",
+    "type": "input_text",
+    "required": true,
+    "label": "Other Salary Components "
+  },
+  {
+    "name": "question_35861395002",
+    "type": "input_text",
+    "required": true,
+    "label": "Notice Period "
+  },
+  {
+    "name": "question_35861396002",
+    "type": "input_text",
+    "required": true,
+    "label": "Non-Compete "
+  },
+  {
+    "name": "question_35861397002",
+    "type": "input_text",
+    "required": true,
+    "label": "Do you have any family members or close relatives currently employed at QRT? If yes, please provide their name(s) and relationship(s) to you."
+  },
+  {
+    "name": "question_35861398002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Privacy Policy"
+  },
+  {
+    "name": "question_35861399002",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  }
+]

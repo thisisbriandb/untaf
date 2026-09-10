@@ -1,0 +1,80 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_31453567003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn "
+  },
+  {
+    "name": "question_31453568003",
+    "type": "input_text",
+    "required": false,
+    "label": "Other Social Accounts"
+  },
+  {
+    "name": "question_31453569003",
+    "type": "input_text",
+    "required": false,
+    "label": "Reasonable Accommodation\n"
+  },
+  {
+    "name": "question_31453570003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Please tell us if you have been a Public Official or a Close Family Member of a Public Official in the last 5 years?"
+  },
+  {
+    "name": "question_31453571003[]",
+    "type": "multi_value_multi_select",
+    "required": false,
+    "label": "Job Offers Communication"
+  }
+]

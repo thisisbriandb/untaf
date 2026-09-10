@@ -80,6 +80,37 @@ def _mailto(dispatch: ApplicationDispatch) -> str | None:
     return f"mailto:{recipient}?subject={subject}&body={quote(body)}"
 
 
+#: Libellés lisibles des champs de formulaire les plus courants. Les questions
+#: propres à l'employeur (`question_29245599003`) n'en ont pas : on les compte
+#: plutôt que d'afficher un identifiant qui ne dit rien.
+_FIELD_LABELS = {
+    "first_name": "prénom",
+    "last_name": "nom",
+    "email": "adresse e-mail",
+    "phone": "téléphone",
+    "resume": "CV",
+    "cover_letter": "lettre de motivation",
+    "candidate-location": "ville",
+    "country": "pays",
+}
+
+
+def _remaining_fields(dispatch: ApplicationDispatch) -> list[str]:
+    """Champs que le remplissage automatique n'a pas su renseigner."""
+    unhandled = (dispatch.proof or {}).get("unhandled_fields") or []
+    if not unhandled:
+        return []
+
+    named = [_FIELD_LABELS[f] for f in unhandled if f in _FIELD_LABELS]
+    others = len(unhandled) - len(named)
+    if others:
+        named.append(
+            f"{others} question{'s' if others > 1 else ''} propre"
+            f"{'s' if others > 1 else ''} à l'employeur"
+        )
+    return named
+
+
 def _steps(dispatch: ApplicationDispatch, job_url: str | None) -> list[str]:
     """Les gestes qui restent, déduits du canal et du motif enregistré."""
     if dispatch.status == DispatchStatus.SENT:
@@ -98,11 +129,24 @@ def _steps(dispatch: ApplicationDispatch, job_url: str | None) -> list[str]:
         ]
 
     if dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
-        return [
+        steps = [
             "Télécharge le CV et la lettre préparés.",
             f"Ouvre le formulaire {where}.",
-            "Reporte les informations et joins les pièces : le contenu est déjà rédigé.",
         ]
+        # Nommer les champs restants plutôt que de dire « complète le
+        # formulaire » : Alice sait précisément lesquels elle n'a pas su
+        # renseigner, autant le dire.
+        remaining = _remaining_fields(dispatch)
+        if remaining:
+            steps.append(
+                "Le reste est déjà rempli ; il te manque : " + ", ".join(remaining) + "."
+            )
+        else:
+            steps.append(
+                "Reporte les informations et joins les pièces : le contenu est "
+                "déjà rédigé."
+            )
+        return steps
 
     return [
         "Télécharge les pièces préparées.",

@@ -1,0 +1,80 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Prénom"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nom"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Adresse e-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Téléphone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Lettre de motivation"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Lettre de motivation"
+  },
+  {
+    "name": "question_28179316003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn"
+  },
+  {
+    "name": "question_28179317003",
+    "type": "input_text",
+    "required": false,
+    "label": "Autres Réseaux Sociaux"
+  },
+  {
+    "name": "question_28179318003",
+    "type": "input_text",
+    "required": false,
+    "label": "Aménagement Raisonnable"
+  },
+  {
+    "name": "question_28179319003",
+    "type": "multi_value_single_select",
+    "required": false,
+    "label": "Veuillez nous indiquer si vous êtes ou avez été un fonctionnaire, ou si un de vos proches (conjoint ou famille) est ou a été membre de la fonction publique au cours des 5 dernières années?\n"
+  },
+  {
+    "name": "question_28179320003[]",
+    "type": "multi_value_multi_select",
+    "required": false,
+    "label": "Communication des offres d'emploi\n"
+  }
+]

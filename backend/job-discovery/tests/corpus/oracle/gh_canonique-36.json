@@ -1,0 +1,116 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": false,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": false,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_14712658004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Where will you be located for this role by your start date (and for the duration of the role)?"
+  },
+  {
+    "name": "question_11544645004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you currently authorised to work in France?"
+  },
+  {
+    "name": "question_11544639004",
+    "type": "input_text",
+    "required": true,
+    "label": "What is your legal first name?"
+  },
+  {
+    "name": "question_11544640004",
+    "type": "input_text",
+    "required": true,
+    "label": "What is your preferred first name?"
+  },
+  {
+    "name": "question_11544641004",
+    "type": "input_text",
+    "required": true,
+    "label": "What is your legal last name?"
+  },
+  {
+    "name": "question_11544642004",
+    "type": "input_text",
+    "required": true,
+    "label": "Current Company"
+  },
+  {
+    "name": "question_11544643004",
+    "type": "input_text",
+    "required": true,
+    "label": "Current Title"
+  },
+  {
+    "name": "question_11544646004",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "How did you initially hear about this job?"
+  },
+  {
+    "name": "question_11544647004",
+    "type": "input_text",
+    "required": false,
+    "label": "If you chose Algolia Employee, Conference / Event / Career Fair, or Other, please specify here:"
+  },
+  {
+    "name": "question_11544648004",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_14839624004[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Guidelines for using AI in our interviewing process"
+  }
+]

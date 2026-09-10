@@ -1,0 +1,80 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nome"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Cognome"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "E-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Telefono"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Curriculum Vitae"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Curriculum Vitae"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Lettera di presentazione"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Lettera di presentazione"
+  },
+  {
+    "name": "question_29764537003",
+    "type": "input_text",
+    "required": true,
+    "label": "Qual è la tua data di inizio ideale e hai un periodo di preavviso da rispettare con l’attuale datore di lavoro? Se sì, di quanti giorni/settimane?"
+  },
+  {
+    "name": "question_29758994003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Negli ultimi 5 anni sei stato/a un Pubblico Ufficiale o un Parente Stretto di un Pubblico Ufficiale?"
+  },
+  {
+    "name": "question_29758991003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn"
+  },
+  {
+    "name": "question_29758993003",
+    "type": "input_text",
+    "required": false,
+    "label": "Accessibilità durante i colloqui\n"
+  },
+  {
+    "name": "question_29758995003[]",
+    "type": "multi_value_multi_select",
+    "required": false,
+    "label": "Comunicazioni relative alle offerte di lavoro\n"
+  }
+]

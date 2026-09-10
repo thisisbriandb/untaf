@@ -67,6 +67,19 @@ class Settings(BaseSettings):
     def can_send_email(self) -> bool:
         return bool(self.smtp_host and self.smtp_user and self.smtp_password)
 
+    # ── Candidature par pilotage navigateur ──────────────
+    # Interrupteur volontairement distinct de l'autorisation du mandat. Le
+    # mandat dit « tu peux postuler pour moi » ; ceci dit « ce déploiement a le
+    # droit de cliquer sur Soumettre ». Tant que c'est faux, l'agent remplit le
+    # formulaire et s'arrête avant l'envoi — la candidature est enregistrée en
+    # SIMULATED, jamais en SENT.
+    #
+    # Même logique que SMTP : sans configuration explicite, on répète, on
+    # n'envoie pas.
+    browser_submit_enabled: bool = False
+    #: Un navigateur visible aide à comprendre un échec en développement.
+    browser_headless: bool = True
+
     # ── Matching ─────────────────────────────────────────
     # Score minimum pour qu'une offre entre dans la liste du candidat.
     match_min_score: int = 55

@@ -25,6 +25,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Automatisation navigateur. Séparée du socle parce que les navigateurs pèsent
+# plusieurs centaines de mégaoctets : une API qui ne fait que servir des routes
+# n'en a pas besoin. Le worker, lui, en dépend.
+#   pip install -e ".[browser]" && playwright install chromium
+browser = [
+    "playwright>=1.49",
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Vorname"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nachname"
+  },
+  {
+    "name": "preferred_name",
+    "type": "input_text",
+    "required": false,
+    "label": "Bevorzugter Vorname"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "E-Mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": false,
+    "label": "Telefon"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": false,
+    "label": "Lebenslauf"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Lebenslauf"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Anschreiben"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Anschreiben"
+  },
+  {
+    "name": "question_31191336003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_31191337003",
+    "type": "input_text",
+    "required": false,
+    "label": "Website"
+  }
+]

@@ -15,6 +15,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 
+from app.config import settings
 from app.models.job_posting import ApplyChannel, JobPosting
 
 logger = logging.getLogger(__name__)
@@ -39,14 +40,14 @@ class Feasibility:
 
 #: Ce qui est réellement implémenté aujourd'hui. Distinct de ce qui serait
 #: techniquement possible : promettre l'un pour l'autre serait mentir.
-IMPLEMENTED = {"email"}
+IMPLEMENTED = {"email", "web_form", "greenhouse_api", "lever_api",
+               "ashby_api", "workable_api"}
 
 #: Une adresse, pas une consigne rédigée.
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
 
-#: Canaux techniquement automatisables une fois le connecteur écrit. Sert à
-#: dire au candidat « c'est faisable, ce n'est pas encore fait » plutôt que
-#: « impossible » — la nuance est honnête et utile pour prioriser.
+#: Canaux dont le formulaire est public et dont l'ATS publie le schéma des
+#: champs : ce sont ceux que le remplissage guidé couvre le mieux.
 AUTOMATABLE_SOON = {"greenhouse_api", "lever_api", "ashby_api", "workable_api"}
 
 
@@ -63,7 +64,7 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
     if not has_resume:
         blockers.append("Aucun CV enregistré — dépose-le dans l'éditeur.")
 
-    # ── Email : le seul canal réellement branché ──────────
+    # ── Email : envoi direct, le chemin le plus sûr ───────
     if channel == "email" or email:
         if not email:
             blockers.append("Adresse de candidature absente de l'annonce.")
@@ -81,27 +82,35 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
     # ── ATS à formulaire public ───────────────────────────
     if channel in AUTOMATABLE_SOON:
         ats = channel.replace("_api", "").capitalize()
-        blockers.append(
-            f"Le connecteur {ats} n'est pas encore écrit. Techniquement "
-            f"faisable — le formulaire est public — mais je ne l'ai pas."
-        )
+        if not settings.browser_submit_enabled:
+            blockers.append(
+                "L'envoi par navigateur est désactivé sur ce serveur : je "
+                "remplis le formulaire mais je ne le soumets pas."
+            )
         return Feasibility(
-            "medium", False,
-            f"Cette offre passe par {ats}. Je prépare tes documents, "
-            f"tu finis en deux clics.",
+            "medium", not blockers,
+            f"Cette offre passe par {ats}. Je remplis le formulaire dans un "
+            f"navigateur, en suivant les champs que l'ATS publie.",
             blockers, link, channel,
         )
 
     # ── Formulaire web quelconque ─────────────────────────
     if channel == "web_form":
+        # Sans schéma publié, on travaille au socle commun : ça couvre les
+        # champs d'identité et le CV, rarement les questions propres à
+        # l'employeur. Le dire plutôt que promettre l'automatisation complète.
         blockers.append(
-            "Formulaire propre à l'employeur : il faut un agent navigateur "
-            "pour le lire et le remplir."
+            "Formulaire propre à l'employeur : je remplis ce que je reconnais, "
+            "les questions spécifiques peuvent rester à ta charge."
         )
+        if not settings.browser_submit_enabled:
+            blockers.append(
+                "L'envoi par navigateur est désactivé sur ce serveur."
+            )
         return Feasibility(
             "complex", False,
             "Le formulaire de cet employeur demande une navigation. "
-            "Je prépare tes documents, tu les déposes.",
+            "Je le remplis autant que possible et je te dis ce qui reste.",
             blockers, link, channel,
         )
 

@@ -1,0 +1,152 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_31524438003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_31524439003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "How did you hear about Remote?"
+  },
+  {
+    "name": "question_31524440003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Please choose the country in which you are located."
+  },
+  {
+    "name": "question_31524441003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Work eligibility is extremely important. Are you legally eligible to work in the country where you’re planning to work from?"
+  },
+  {
+    "name": "question_31524442003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Will you require sponsorship if you join Remote?"
+  },
+  {
+    "name": "question_31524443003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Do you have a non-compete in place with your previous or current employer that prevents you from working for us?"
+  },
+  {
+    "name": "question_31524444003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "What pronouns should we use to refer to you?"
+  },
+  {
+    "name": "question_31524445003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "At Remote, we are committed to transparency, innovation, and care for our employees and candidates. To support this and ensure we are able to focus on you, not on taking notes, we use brighthire.ai to record and auto-transcript our interviews. If we decide you are good potential fit for the role, do you consent to us using this tool during the interviewing process? Declining recording will not affect your candidacy."
+  },
+  {
+    "name": "question_31524446003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Privacy notice"
+  },
+  {
+    "name": "question_31524447003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Notice at Collection for California Job Applicants "
+  },
+  {
+    "name": "question_31524448003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you based in EMEA?"
+  },
+  {
+    "name": "question_31524449003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you professionally fluent in English or local language, including the ability to read, write, and communicate in a business setting?\n"
+  },
+  {
+    "name": "question_31524450003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you willing and able to work flexible hours within EMEA time zones?\n"
+  },
+  {
+    "name": "question_31524451003",
+    "type": "textarea",
+    "required": true,
+    "label": "Please describe your experience working in employee relations and/or labour relations across multiple jurisdictions, either within EMEA or internationally. What types of matters have you supported, and which jurisdictions/ countries have you worked with most frequently?\n"
+  },
+  {
+    "name": "question_31524452003",
+    "type": "textarea",
+    "required": true,
+    "label": "Please share your experience applying EMEA common law principles in employment matters. Please also describe any experience you have with employee terminations, including any unique considerations you have had to navigate.\n"
+  },
+  {
+    "name": "question_31524453003",
+    "type": "textarea",
+    "required": true,
+    "label": "How would you describe your knowledge of EMEA employment and labour law? Please provide examples of how you have applied this knowledge in employee relations, labour relations, terminations, investigations, or advisory work?\n"
+  },
+  {
+    "name": "question_31524454003",
+    "type": "textarea",
+    "required": true,
+    "label": "How many cases do you typically handle at one time?"
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_36633973002",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_36633974002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "DV operates on a hybrid schedule. Are you able to come into the Paris office 3 days a week? (Days determined by office location and manager)"
+  },
+  {
+    "name": "question_36633975002",
+    "type": "input_text",
+    "required": true,
+    "label": "What are your compensation expectations for this role?"
+  },
+  {
+    "name": "question_36633976002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you legally authorized to work in the France?"
+  },
+  {
+    "name": "question_36633977002",
+    "type": "input_text",
+    "required": true,
+    "label": "Now or in the future, will you require sponsorship?"
+  },
+  {
+    "name": "question_36633978002",
+    "type": "textarea",
+    "required": true,
+    "label": "Where did you first learn about this opportunity? (If you were referred, please note individual's name)"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "question_30132021003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you currently based in Paris?"
+  },
+  {
+    "name": "question_30132022003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you legally authorized to work in France?"
+  },
+  {
+    "name": "question_30132023003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "English Proficiency"
+  },
+  {
+    "name": "question_30132024003",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_30132025003",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "GDPR Notice"
+  },
+  {
+    "name": "question_31111093003",
+    "type": "input_text",
+    "required": false,
+    "label": "If you hold one, please specify your type of work permit\n"
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "First Name"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Last Name"
+  },
+  {
+    "name": "preferred_name",
+    "type": "input_text",
+    "required": false,
+    "label": "Preferred First Name"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Email"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": false,
+    "label": "Phone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "Resume/CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Cover Letter"
+  },
+  {
+    "name": "question_16075380008",
+    "type": "input_text",
+    "required": false,
+    "label": "LinkedIn Profile"
+  },
+  {
+    "name": "question_16075381008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you based in Paris?"
+  },
+  {
+    "name": "question_16075382008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you legally authorized to work in France?"
+  },
+  {
+    "name": "question_16075383008",
+    "type": "input_text",
+    "required": false,
+    "label": "Were you referred by an ANINE BING employee? If so, list their name here"
+  }
+]

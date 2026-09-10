@@ -9,7 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir -e ".[browser]"
+
+# Le worker exécute le repli navigateur du scraper. Sans le binaire Chromium
+# et ses dépendances système, ce repli échoue par ImportError au moment où on
+# en a besoin — c'est-à-dire quand une API d'ATS ne répond plus.
+RUN playwright install --with-deps chromium
 
 # Copy application code
 COPY . .

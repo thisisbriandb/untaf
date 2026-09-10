@@ -1,0 +1,74 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Prénom"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nom"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Adresse e-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": false,
+    "label": "Téléphone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "cover_letter",
+    "type": "input_file",
+    "required": false,
+    "label": "Lettre de motivation"
+  },
+  {
+    "name": "cover_letter_text",
+    "type": "textarea",
+    "required": false,
+    "label": "Lettre de motivation"
+  },
+  {
+    "name": "question_29495595002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Personal Data "
+  },
+  {
+    "name": "question_29495596002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Resume Data "
+  },
+  {
+    "name": "question_26242320002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Are you fluent in french ?"
+  },
+  {
+    "name": "question_31002106002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "What is your gender ?"
+  }
+]

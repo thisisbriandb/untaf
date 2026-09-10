@@ -1,0 +1,92 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Prénom"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nom"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Adresse e-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Téléphone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "question_18066482008",
+    "type": "input_text",
+    "required": false,
+    "label": "Profil LinkedIn"
+  },
+  {
+    "name": "question_18066483008",
+    "type": "input_text",
+    "required": false,
+    "label": "Site Web"
+  },
+  {
+    "name": "question_18066484008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Êtes-vous actuellement stagiaire, freelance (indépendant) ou salarié chez WPP ou dans l'une de ses agences ?"
+  },
+  {
+    "name": "question_18066485008",
+    "type": "multi_value_single_select",
+    "required": false,
+    "label": "Si oui, veuillez préciser l'agence WPP actuelle"
+  },
+  {
+    "name": "question_18066486008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Avez-vous déjà travaillé pour une agence du groupe WPP?"
+  },
+  {
+    "name": "question_18066487008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Êtes-vous légalement autorisé(e) à travailler en France?"
+  },
+  {
+    "name": "question_18066488008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Avez-vous, ou aurez-vous besoin à l'avenir, d'un parrainage (visa/permis de travail) pour occuper légalement cet emploi en France?"
+  },
+  {
+    "name": "question_18066489008",
+    "type": "input_text",
+    "required": true,
+    "label": "Quelles sont vos prétentions salariales?"
+  },
+  {
+    "name": "question_18066490008",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "Quel est votre préavis actuel?"
+  }
+]

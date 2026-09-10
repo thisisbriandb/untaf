@@ -1,0 +1,68 @@
+[
+  {
+    "name": "first_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Prénom"
+  },
+  {
+    "name": "last_name",
+    "type": "input_text",
+    "required": true,
+    "label": "Nom"
+  },
+  {
+    "name": "email",
+    "type": "input_text",
+    "required": true,
+    "label": "Adresse e-mail"
+  },
+  {
+    "name": "phone",
+    "type": "input_text",
+    "required": true,
+    "label": "Téléphone"
+  },
+  {
+    "name": "resume",
+    "type": "input_file",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "resume_text",
+    "type": "textarea",
+    "required": true,
+    "label": "CV"
+  },
+  {
+    "name": "question_37181992002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Personal Data "
+  },
+  {
+    "name": "question_37181993002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Resume Data "
+  },
+  {
+    "name": "question_37181994002",
+    "type": "multi_value_single_select",
+    "required": true,
+    "label": "What is your gender ?"
+  },
+  {
+    "name": "question_37181995002[]",
+    "type": "multi_value_multi_select",
+    "required": true,
+    "label": "Quel est votre niveau d'anglais ? "
+  },
+  {
+    "name": "question_37181996002",
+    "type": "textarea",
+    "required": true,
+    "label": "Quelles sont vos prétentions salariales ? "
+  }
+]

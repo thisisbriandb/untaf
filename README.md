@@ -188,9 +188,25 @@ Chaque offre écartée l'est avec un motif lisible, consultable dans le journal.
 | Canal | Complexité | État |
 | --- | --- | --- |
 | Email | `simple` | Implémenté, mais **sans stock** (voir *Limites connues*) |
-| Greenhouse / Lever / Ashby | `medium` | Connecteur à écrire |
-| Formulaire employeur | `complex` | Agent navigateur requis |
+| Greenhouse / Lever / Ashby | `medium` | Formulaire rempli dans un navigateur |
+| Formulaire employeur | `complex` | Socle commun rempli, le reste signalé |
 | Portail France Travail | `impossible` | Compte candidat requis |
+
+Le remplissage est **guidé par le schéma**, pas par des sélecteurs devinés :
+`GET /jobs/{id}?questions=true` donne le nom, le type et le caractère
+obligatoire de chaque champ. Ces noms apparaissent en `id` dans la page rendue
+— les boards React ne mettent aucun attribut `name` — et restent stables là où
+une classe CSS change à chaque refonte.
+
+Chaque champ est traité indépendamment : ce qui résiste est consigné dans
+`unhandled_fields` et remonté à l'utilisateur nommément (« il te manque :
+téléphone, 2 questions propres à l'employeur ») plutôt que de faire échouer
+l'ensemble. Rien n'est rapporté rempli sans que la page l'ait confirmé.
+
+**Deux verrous indépendants** commandent la soumission : le mandat autorise la
+candidature, et `BROWSER_SUBMIT_ENABLED` autorise le clic final. Tant que le
+second est faux, le formulaire est rempli puis abandonné, et l'envoi est
+enregistré en `SIMULATED`.
 
 Sur les trois ATS, l'endpoint de candidature de l'API est authentifié par une
 clé appartenant à l'employeur : il est réservé à ses intégrations, pas au

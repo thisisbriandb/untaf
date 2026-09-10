@@ -31,3 +31,11 @@ out/
 /tmp/
 *.pdf
 !frontend/public/**/*.pdf
+
+# ── Corpus d'évaluation du moteur de candidature ───────────
+# Instantanés de pages, reconstructibles :
+#   cd backend/job-discovery && python -m tests.harness.freeze
+# Plusieurs dizaines de mégaoctets, sans valeur historique. Le manifeste et
+# les corrigés publiés par l'ATS, eux, sont versionnés.
+backend/job-discovery/tests/corpus/pages/
+backend/job-discovery/tests/corpus/runs/
