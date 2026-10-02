@@ -33,7 +33,8 @@ def upgrade() -> None:
                existing_type=postgresql.JSONB(astext_type=sa.Text()),
                comment='MatchingCriteria: filtres durs (langue, pays, métier, exclusions) et pondérations. Null = dérivé du profil à la volée.',
                existing_nullable=True)
-    op.create_index(op.f('ix_mission_events_run_id'), 'mission_events', ['run_id'], unique=False)
+    # L'index ix_mission_events_run_id est créé par la migration initiale :
+    # le recréer ici rendait impossible la migration d'une base neuve.
     op.add_column('mission_runs', sa.Column('heartbeat_at', sa.DateTime(timezone=True), nullable=True, comment="Dernier signe de vie du worker. Un processus tué net ne peut pas clore son run : c'est l'absence de battement, et non le statut en base, qui permet de savoir qu'une mission n'existe plus."))
     op.alter_column('missions', 'allowed_channels',
                existing_type=postgresql.ARRAY(sa.VARCHAR()),
@@ -51,7 +52,6 @@ def downgrade() -> None:
                existing_comment='email | web_form | ats_api',
                existing_nullable=True)
     op.drop_column('mission_runs', 'heartbeat_at')
-    op.drop_index(op.f('ix_mission_events_run_id'), table_name='mission_events')
     op.alter_column('candidates', 'matching_criteria',
                existing_type=postgresql.JSONB(astext_type=sa.Text()),
                comment=None,

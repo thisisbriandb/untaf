@@ -3,6 +3,7 @@ Application settings — loaded from environment variables.
 Railway injects DATABASE_URL and REDIS_URL automatically.
 """
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,8 +18,33 @@ class Settings(BaseSettings):
     app_name: str = "job-discovery"
     debug: bool = False
 
+    # ── CORS ─────────────────────────────────────────────
+    # Origines autorisées en plus de localhost, séparées par des virgules.
+    # En production : l'URL du frontend Vercel, ex. https://untaf.vercel.app
+    cors_origins: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+
     # ── Database (PostgreSQL) ────────────────────────────
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/job_discovery"
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg(cls, url: str) -> str:
+        # Railway et Supabase fournissent postgres:// ou postgresql:// ; le
+        # moteur est asynchrone et exige le pilote asyncpg.
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                return "postgresql+asyncpg://" + url[len(prefix):]
+        return url
+
+    # Connexions ouvertes par processus (API, chaque worker). Le pooler de
+    # Supabase en plafonne le total selon l'offre : 3 + 2 suffit largement à
+    # ce volume, et laisse de la place au worker et au beat.
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     # ── Redis (Celery broker + result backend) ───────────
     redis_url: str = "redis://localhost:6379/0"
@@ -50,7 +76,7 @@ class Settings(BaseSettings):
 
     # ── Gemini API (LLM) ─────────────────────────────────
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
 
     # ── Envoi de candidatures (SMTP) ─────────────────────
     # Tant que ces valeurs sont vides, aucune candidature ne peut partir : le
