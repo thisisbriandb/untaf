@@ -416,10 +416,8 @@ async def _write_report(
         return fallback
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(model_name=settings.gemini_model)
-        response = model.generate_content(
+        from app import llm
+        response = await llm.generate(
             f"""{IDENTITY}
 
 Tu rends compte d'une mission que tu viens de terminer.
@@ -431,7 +429,7 @@ Donne les chiffres réels. Si quelque chose attend une validation, dis-le
 clairement. N'invente aucune action qui ne figure pas dans le journal.
 Pas de titre, pas de liste : un paragraphe parlé."""
         )
-        return (response.text or "").strip() or fallback
+        return response.strip() or fallback
     except Exception as e:  # noqa: BLE001
         logger.error("Report generation failed: %s", e)
         return fallback

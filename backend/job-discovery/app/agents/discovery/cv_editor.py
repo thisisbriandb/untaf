@@ -15,8 +15,8 @@ import json
 import logging
 from typing import Literal
 
-import google.generativeai as genai
 
+from app import llm
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -89,15 +89,10 @@ async def structure_cv_entries(raw: str, section: CvSection) -> list[dict]:
         return _fallback_experience(raw) if section == "experiences" else []
 
     try:
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={"response_mime_type": "application/json"},
+        response = await llm.generate(
+            STRUCTURE_PROMPT.format(raw=raw[:4000], section=section), json=True
         )
-        response = model.generate_content(
-            STRUCTURE_PROMPT.format(raw=raw[:4000], section=section)
-        )
-        entries = json.loads(response.text).get("entries") or []
+        entries = json.loads(response).get("entries") or []
         return [e for e in entries if isinstance(e, (dict, str))]
 
     except Exception as e:  # noqa: BLE001

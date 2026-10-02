@@ -9,9 +9,9 @@ import logging
 import re
 from typing import Optional
 
-import google.generativeai as genai
 from pydantic import BaseModel, Field
 
+from app import llm
 from app.config import settings
 from app.models.job_posting import ContractType, RemotePolicy
 
@@ -117,18 +117,6 @@ async def qualify_job_description(title: str, description: str) -> dict:
         return heuristic_qualify(title, description)
 
     try:
-        # Initialize Gemini client
-        genai.configure(api_key=api_key)
-        
-        # Use settings.gemini_model for structured data extraction
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": QualifiedJobResponse,
-            }
-        )
-
         prompt = f"""
         Analyze the following job description and extract structured information.
         
@@ -138,8 +126,7 @@ async def qualify_job_description(title: str, description: str) -> dict:
         {description}
         """
 
-        response = model.generate_content(prompt)
-        parsed_data = json.loads(response.text)
+        parsed_data = json.loads(await llm.generate(prompt, schema=QualifiedJobResponse))
         return parsed_data
 
     except Exception as e:

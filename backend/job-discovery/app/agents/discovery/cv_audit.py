@@ -6,8 +6,8 @@ provides scores, diagnostic feedback, and generates optimized professional title
 
 import json
 import logging
-import google.generativeai as genai
 
+from app import llm
 from app.config import settings
 from app.schemas.candidate import ParsedCandidateProfile, CVAuditResult
 
@@ -83,15 +83,6 @@ async def audit_candidate_profile(profile: ParsedCandidateProfile) -> CVAuditRes
         return heuristic_audit_profile(profile)
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": CVAuditResult,
-            }
-        )
-
         prompt = f"""
         Tu es un expert RH et ATS francophone. Realise un audit ATS et propose un profil optimise EN FRANCAIS pour ce candidat.
 
@@ -112,8 +103,7 @@ async def audit_candidate_profile(profile: ParsedCandidateProfile) -> CVAuditRes
         - suggested_skills : 3 à 4 compétences techniques complémentaires à ajouter.
         """
 
-        response = model.generate_content(prompt)
-        parsed = json.loads(response.text)
+        parsed = json.loads(await llm.generate(prompt, schema=CVAuditResult))
         return CVAuditResult(**parsed)
 
     except Exception as e:

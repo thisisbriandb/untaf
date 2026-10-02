@@ -17,9 +17,9 @@ import logging
 import re
 from datetime import date
 
-import google.generativeai as genai
 
 from app.agents.persona import IDENTITY, WRITING_RULES
+from app import llm
 from app.config import settings
 from app.schemas.cover_letter import CoverLetterResult
 
@@ -216,13 +216,7 @@ async def write_cover_letter(
         )
 
     try:
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={"response_mime_type": "application/json"},
-        )
-
-        response = model.generate_content(PROMPT.format(
+        response = await llm.generate(PROMPT.format(
             identity=IDENTITY,
             writing_rules=WRITING_RULES,
             experiences=_format_experiences(experiences),
@@ -238,9 +232,9 @@ async def write_cover_letter(
             location=location or "non précisée",
             tech_stack=", ".join(tech_stack) or "non précisées",
             job_excerpt=(job_excerpt or "non disponible")[:3000],
-        ))
+        ), json=True)
 
-        data = json.loads(_clean(response.text))
+        data = json.loads(_clean(response))
         body = _clean(data.get("body") or "")
         if len(body) < 150:
             raise ValueError("corps trop court")

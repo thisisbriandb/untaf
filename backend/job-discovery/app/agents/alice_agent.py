@@ -10,10 +10,11 @@ import json
 import logging
 from uuid import UUID
 
-import google.generativeai as genai
-from google.generativeai.types import FunctionDeclaration, Tool
+from google.genai import types
+from google.genai.types import FunctionDeclaration, Tool
 from sqlalchemy import select, func as sql_func
 
+from app import llm
 from app.config import settings
 from app.database import async_session
 from app.models.candidate import Candidate
@@ -42,7 +43,7 @@ _search_jobs_fn = FunctionDeclaration(
         "Utilise cette fonction quand l'utilisateur demande à voir des offres, "
         "des opportunités, ou des postes disponibles."
     ),
-    parameters={
+    parameters_json_schema={
         "type": "object",
         "properties": {
             "query": {
@@ -64,7 +65,7 @@ _get_applications_fn = FunctionDeclaration(
         "Utilise cette fonction quand l'utilisateur demande le statut de ses candidatures, "
         "postulations ou applications."
     ),
-    parameters={"type": "object", "properties": {}},
+    parameters_json_schema={"type": "object", "properties": {}},
 )
 
 _get_cv_audit_fn = FunctionDeclaration(
@@ -73,7 +74,7 @@ _get_cv_audit_fn = FunctionDeclaration(
         "Lance un audit ATS du CV du candidat et retourne un score avec des recommandations. "
         "Utilise cette fonction quand l'utilisateur demande un audit, une analyse ou un diagnostic de son CV."
     ),
-    parameters={"type": "object", "properties": {}},
+    parameters_json_schema={"type": "object", "properties": {}},
 )
 
 _open_cv_editor_fn = FunctionDeclaration(
@@ -82,7 +83,7 @@ _open_cv_editor_fn = FunctionDeclaration(
         "Ouvre l'éditeur de CV dans l'interface. "
         "Utilise cette fonction quand l'utilisateur veut modifier, éditer ou mettre à jour son CV."
     ),
-    parameters={"type": "object", "properties": {}},
+    parameters_json_schema={"type": "object", "properties": {}},
 )
 
 _open_cover_letter_fn = FunctionDeclaration(
@@ -91,7 +92,7 @@ _open_cover_letter_fn = FunctionDeclaration(
         "Rédige ou ouvre l'éditeur de lettre de motivation dans le Canvas. "
         "Utilise cette fonction quand l'utilisateur demande de rédiger, préparer, créer, écrire ou ouvrir une lettre de motivation."
     ),
-    parameters={
+    parameters_json_schema={
         "type": "object",
         "properties": {
             "company_name": {
@@ -115,7 +116,7 @@ _get_mission_fn = FunctionDeclaration(
         "ce que tu as fait, où en est la recherche, un bilan, un point, un "
         "récapitulatif, ou pourquoi il n'a pas ou peu d'offres."
     ),
-    parameters={"type": "object", "properties": {}},
+    parameters_json_schema={"type": "object", "properties": {}},
 )
 
 _trigger_agent_scan_fn = FunctionDeclaration(
@@ -124,7 +125,7 @@ _trigger_agent_scan_fn = FunctionDeclaration(
         "Lance l'agent d'exploration (ScraperAgent avec Playwright) pour inspecter le site carrière d'une entreprise spécifique. "
         "Utilise cette fonction si l'utilisateur demande de chercher, scrapper ou explorer les offres d'une entreprise en particulier."
     ),
-    parameters={
+    parameters_json_schema={
         "type": "object",
         "properties": {
             "company_name": {
@@ -145,7 +146,7 @@ _edit_cv_fn = FunctionDeclaration(
         "compétences en demandant de les ajouter à son CV. Ne réponds jamais "
         "que tu ne peux pas ajouter : structure ce qu'il t'a donné et écris-le."
     ),
-    parameters={
+    parameters_json_schema={
         "type": "object",
         "properties": {
             "section": {
@@ -174,6 +175,13 @@ _alice_tools = Tool(function_declarations=[
     _open_cover_letter_fn,
     _trigger_agent_scan_fn,
 ])
+
+
+def _parts(response: types.GenerateContentResponse) -> list[types.Part]:
+    """Les morceaux de la réponse ; vide si le modèle n'a rien renvoyé."""
+    if not response.candidates or not response.candidates[0].content:
+        return []
+    return response.candidates[0].content.parts or []
 
 
 # ── Tool execution (server-side) ─────────────────────────────────────────────
@@ -561,13 +569,13 @@ async def chat_with_alice(
             "ui_blocks": [],
         }
 
-    genai.configure(api_key=api_key)
-
     state = await load_state(candidate_id)
 
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
+    config = types.GenerateContentConfig(
         tools=[_alice_tools],
+        # Les outils sont exécutés ici, à la main : le SDK ne doit pas tenter
+        # de les appeler lui-même.
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         system_instruction=(
             SYSTEM_PROMPT.format(user_name=user_name)
             + "\n\nÉTAT RÉEL DU SYSTÈME À CET INSTANT — ce sont les seuls "
@@ -584,27 +592,34 @@ async def chat_with_alice(
         if not text:
             continue
         role = "user" if turn.get("sender") == "user" else "model"
-        gemini_history.append({"role": role, "parts": [text]})
+        gemini_history.append(
+            types.Content(role=role, parts=[types.Part.from_text(text=text)])
+        )
 
     # Gemini exige que l'historique commence par un tour utilisateur.
-    while gemini_history and gemini_history[0]["role"] != "user":
+    while gemini_history and gemini_history[0].role != "user":
         gemini_history.pop(0)
 
-    chat = model.start_chat(history=gemini_history)
+    chat = llm.client().aio.chats.create(
+        model=settings.gemini_model, config=config, history=gemini_history,
+    )
 
     try:
         # Step 1: Send user message to Gemini
-        response = chat.send_message(user_message)
+        response = await chat.send_message(user_message)
 
         ui_blocks = []
         final_text = ""
+        # Gemini peut demander plusieurs outils dans une même réponse ; il
+        # attend alors tous leurs résultats ensemble, en un seul tour.
+        function_responses = []
 
         # Step 2: Check if Gemini wants to call a function
-        for part in response.parts:
-            if hasattr(part, "function_call") and part.function_call:
+        for part in _parts(response):
+            if part.function_call:
                 fc = part.function_call
                 fn_name = fc.name
-                fn_args = dict(fc.args) if fc.args else {}
+                fn_args = dict(fc.args or {})
 
                 logger.info("Alice calling tool: %s(%s)", fn_name, fn_args)
 
@@ -674,29 +689,17 @@ async def chat_with_alice(
                         "grounded_on_experiences": tool_result.get("grounded_on_experiences"),
                     }
 
-                # Step 3: Feed tool result back to Gemini for final response
-                from google.generativeai.types import content_types
-
-                follow_up = chat.send_message(
-                    content_types.to_content(
-                        {
-                            "role": "function",
-                            "parts": [
-                                {
-                                    "function_response": {
-                                        "name": fn_name,
-                                        "response": tool_result,
-                                    }
-                                }
-                            ],
-                        }
-                    )
+                function_responses.append(
+                    types.Part.from_function_response(name=fn_name, response=tool_result)
                 )
 
-                final_text = follow_up.text if follow_up.text else ""
-
-            elif hasattr(part, "text") and part.text:
+            elif part.text and not part.thought:
                 final_text += part.text
+
+        # Step 3: Feed tool results back to Gemini for final response
+        if function_responses:
+            follow_up = await chat.send_message(function_responses)
+            final_text = follow_up.text or ""
 
         # Le modèle n'a ni appelé d'outil ni produit de texte. Masquer ça
         # derrière « C'est noté. » donnait une réponse qui ressemble à un
@@ -704,16 +707,16 @@ async def chat_with_alice(
         # pour un agent censé agir. On relance une fois, explicitement.
         if not final_text.strip() and not ui_blocks:
             logger.warning("Alice: réponse vide sans outil, relance forcée.")
-            retry = chat.send_message(
+            retry = await chat.send_message(
                 "Tu n'as rien produit. Reprends la demande de l'utilisateur et "
                 "APPELLE l'outil approprié maintenant, puis donne le résultat "
                 "avec ses chiffres. N'accuse pas réception."
             )
 
-            for part in retry.candidates[0].content.parts:
-                if hasattr(part, "function_call") and part.function_call.name:
+            for part in _parts(retry):
+                if part.function_call and part.function_call.name:
                     fc_name = part.function_call.name
-                    fc_args = dict(part.function_call.args) if part.function_call.args else {}
+                    fc_args = dict(part.function_call.args or {})
                     logger.info("Alice retry calling tool: %s", fc_name)
 
                     if fc_name == "search_jobs":
@@ -732,7 +735,7 @@ async def chat_with_alice(
                         result = await _execute_get_mission(candidate_id)
                         ui_blocks.append({"type": "mission", "data": result})
                         final_text = "Voici où en est ta mission."
-                elif hasattr(part, "text") and part.text:
+                elif part.text and not part.thought:
                     final_text += part.text
 
         if not final_text.strip():

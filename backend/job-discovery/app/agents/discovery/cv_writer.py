@@ -13,9 +13,9 @@ responsabilités, ses réalisations, et la progression de l'un à l'autre.
 import json
 import logging
 
-import google.generativeai as genai
 
 from app.agents.persona import BANNED_PHRASES, DIFFERENTIATION_QUESTION, IDENTITY, WRITING_RULES
+from app import llm
 from app.config import settings
 from app.schemas.cv_content import CvContentRequest, CvContentResult
 
@@ -160,12 +160,6 @@ async def write_cv_content(req: CvContentRequest) -> CvContentResult:
         return _fallback(req)
 
     try:
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={"response_mime_type": "application/json"},
-        )
-
         target = (
             f"Poste visé : {req.target_role}" if req.target_role
             else "Aucun poste précis visé."
@@ -182,7 +176,7 @@ async def write_cv_content(req: CvContentRequest) -> CvContentResult:
             "Aucune offre visée : rédige un CV générique mais spécifique au parcours."
         )
 
-        response = model.generate_content(PROMPT.format(
+        response = await llm.generate(PROMPT.format(
             identity=IDENTITY,
             writing_rules=WRITING_RULES,
             experiences=_format_experiences(req.experiences or []),
@@ -198,9 +192,9 @@ async def write_cv_content(req: CvContentRequest) -> CvContentResult:
             summary=req.summary or "Aucune",
             target=target,
             job_context=job_context,
-        ))
+        ), json=True)
 
-        data = json.loads(response.text)
+        data = json.loads(response)
         result = CvContentResult(
             headline=(data.get("headline") or "").strip(),
             summary=(data.get("summary") or "").strip(),

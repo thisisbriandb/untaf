@@ -12,8 +12,8 @@ from typing import Optional
 
 import httpx
 from pypdf import PdfReader
-import google.generativeai as genai
 
+from app import llm
 from app.config import settings
 from app.schemas.candidate import ParsedCandidateProfile
 
@@ -181,14 +181,6 @@ async def parse_resume(pdf_bytes: bytes, filename: str = "cv.pdf") -> ParsedCand
         return heuristic_extract_profile(raw_text)
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            generation_config={
-                "response_mime_type": "application/json",
-            }
-        )
-
         prompt = f"""
         Tu es un expert recruteur francophone et un parser de CV de haute précision.
         Analyse le texte de CV ci-dessous et extrait les informations au format JSON strict.
@@ -221,8 +213,7 @@ async def parse_resume(pdf_bytes: bytes, filename: str = "cv.pdf") -> ParsedCand
         {raw_text[:12000]}
         """
 
-        response = model.generate_content(prompt)
-        parsed_json = json.loads(response.text)
+        parsed_json = json.loads(await llm.generate(prompt, json=True))
         profile = ParsedCandidateProfile(**parsed_json)
         
         # Sanitize full name against section titles
