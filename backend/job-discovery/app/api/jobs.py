@@ -14,6 +14,7 @@ from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.models.company import Company
 from app.models.job_posting import (
+    IMPORT_PREFIX,
     JobPosting, PostingStatus, ApplyChannel, ApplyComplexity,
 )
 from app.schemas.job import JobPostingOut, JobPostingDetail, JobStats
@@ -38,6 +39,8 @@ async def list_jobs(
     query = (
         select(JobPosting, Company.name, Company.domain)
         .join(Company, JobPosting.company_id == Company.id)
+        # Les offres collées par un candidat ne sont pas publiques.
+        .where(JobPosting.external_id.not_like(f"{IMPORT_PREFIX}%"))
     )
 
     if status:

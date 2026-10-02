@@ -14,6 +14,11 @@ from sqlalchemy.sql import func
 from app.database import Base
 
 
+#: Préfixe d'`external_id` des offres collées par un candidat. Elles lui
+#: restent privées : la liste publique et le matching collectif les excluent.
+IMPORT_PREFIX = "import:"
+
+
 class RemotePolicy(str, enum.Enum):
     REMOTE = "remote"
     HYBRID = "hybrid"

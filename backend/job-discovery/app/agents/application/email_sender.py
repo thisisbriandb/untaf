@@ -53,6 +53,8 @@ async def send_application_email(
     letter: dict | None,
     job_title: str,
     company_name: str,
+    resume: bytes | None = None,
+    resume_name: str | None = None,
 ) -> dict:
     """
     Envoie la candidature. Ne lève jamais.
@@ -79,10 +81,14 @@ async def send_application_email(
         message["Reply-To"] = candidate.email
     message.set_content(body)
 
-    # Le CV joint suit le choix de présentation du candidat, pas seulement le
-    # fichier déposé à l'inscription.
-    from app.agents.application.cv_resolver import resolve_cv
-    cv_bytes, cv_name, cv_origin = resolve_cv(candidate)
+    # Le CV joint est celui figé à la préparation de l'envoi — adapté à
+    # l'offre le cas échéant. À défaut, il suit le choix de présentation du
+    # candidat, pas seulement le fichier déposé à l'inscription.
+    if resume:
+        cv_bytes, cv_name, cv_origin = resume, resume_name or "CV.pdf", "prepared"
+    else:
+        from app.agents.application.cv_resolver import resolve_cv
+        cv_bytes, cv_name, cv_origin = resolve_cv(candidate)
     if cv_bytes:
         message.add_attachment(
             cv_bytes, maintype="application", subtype="pdf", filename=cv_name,

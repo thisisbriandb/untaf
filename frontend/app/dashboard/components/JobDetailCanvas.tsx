@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, FileText, Loader2, PenLine, Send, Sparkles } from "lucide-react";
+import {
+  Download, ExternalLink, FileText, FolderDown, Loader2, PenLine, Send, Sparkles,
+} from "lucide-react";
 import { API_BASE_URL } from "@/lib/config";
 import type { JobCardData } from "@/lib/alice-client";
 import { Markdown } from "./Markdown";
 import { ApplyPanel } from "./ApplyPanel";
-import { loadCvProfile, saveCvProfile, writeCvContent } from "@/lib/cv-profile";
+import {
+  packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
+} from "@/lib/tailor-client";
 import { useAlice } from "../alice-context";
 
 interface JobDetail {
@@ -49,35 +53,34 @@ function Meta({ label, value }: { label: string; value: string }) {
 export function JobDetailCanvas({ job }: { job: JobCardData }) {
   const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice } = useAlice();
   const [adapting, setAdapting] = useState(false);
+  const [tailored, setTailored] = useState<TailoredDocuments | null>(null);
 
   /**
-   * Adapte le CV à CETTE offre — pas une réécriture générique. Le texte de
-   * l'annonce part avec le parcours, sinon « adapter » ne veut rien dire.
+   * Adapte le CV et la lettre à CETTE offre. Les deux sont rangés sur la
+   * candidature, pas sur le profil : les autres offres gardent le CV général,
+   * et ce sont ces documents-là qui partiront à l'envoi.
    */
-  const adaptCv = async () => {
+  const adaptDocuments = async () => {
     if (!candidateId) return;
     setAdapting(true);
-    const profile = await loadCvProfile(candidateId);
-    const content = await writeCvContent(profile, job.title, {
-      job_title: job.title,
-      company_name: job.company_name,
-      job_excerpt: detail?.description_raw ?? undefined,
-      job_skills: detail?.tech_stack ?? undefined,
-    });
-    if (content) {
-      await saveCvProfile(candidateId, {
-        ...profile, headline: content.headline, summary: content.summary,
-      });
-      sayAsAlice(
-        `J'ai adapté ton CV pour « ${job.title} » chez ${job.company_name}. ` +
-        `Nouvelle accroche : « ${content.headline} ».`,
-        { mode: "cv_editor" },
-      );
-      openCanvas({ mode: "cv_editor" });
-    } else {
-      sayAsAlice("Je n'ai pas réussi à adapter ton CV. Réessaie dans un instant.");
-    }
+    const docs = await tailorDocuments(candidateId, job.id);
     setAdapting(false);
+    if (!docs) {
+      sayAsAlice("Je n'ai pas réussi à adapter tes documents. Réessaie dans un instant.");
+      return;
+    }
+    setTailored(docs);
+    const letterRef = {
+      mode: "cover_letter" as const,
+      companyName: job.company_name,
+      jobTitle: job.title,
+      letter: docs.letter,
+    };
+    sayAsAlice(
+      `J'ai adapté ton CV et ta lettre pour « ${job.title} » chez ${job.company_name}. ` +
+      `Nouvelle accroche : « ${docs.cv.headline} ». Ton CV général n'a pas bougé.`,
+      letterRef,
+    );
   };
   const [detail, setDetail] = useState<JobDetail | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -89,6 +92,7 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
     setStatus("loading");
     setDetail(null);
     setApplying(false);
+    setTailored(null);
 
     fetch(`${API_BASE_URL}/api/jobs/${job.id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
@@ -250,41 +254,66 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
           </button>
 
           {/* Actions séparées : tout ne passe pas par la candidature complète. */}
-          <div className="grid grid-cols-2 gap-2">
+          {tailored && candidateId ? (
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href={tailoredCvUrl(candidateId, job.id)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-light text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors"
+              >
+                <Download className="w-3 h-3 stroke-[1.6]" />
+                CV adapté (PDF)
+              </a>
+              <button
+                type="button"
+                onClick={() => openCanvas({
+                  mode: "cover_letter",
+                  companyName: job.company_name,
+                  jobTitle: job.title,
+                  letter: tailored.letter,
+                })}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-light text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors cursor-pointer"
+              >
+                <PenLine className="w-3 h-3 stroke-[1.6]" />
+                Voir la lettre
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={adaptCv}
+              onClick={adaptDocuments}
               disabled={adapting || !candidateId}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
+              className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
             >
               {adapting ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
                 <FileText className="w-3 h-3 stroke-[1.6]" />
               )}
-              {adapting ? "J'adapte…" : "Adapter mon CV"}
+              {adapting ? "J'adapte ton CV et ta lettre…" : "Adapter mon CV et ma lettre"}
             </button>
-            <button
-              type="button"
-              onClick={() => void submitQuery(
-                `Rédige-moi une lettre de motivation pour « ${job.title} » chez ${job.company_name}`
-              )}
-              disabled={isThinking}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
-            >
-              <PenLine className="w-3 h-3 stroke-[1.6]" />
-              Écrire la lettre
-            </button>
+          )}
+          <div className="flex items-center justify-center gap-4">
+            {candidateId && (
+              <a
+                href={packUrl(candidateId, job.id)}
+                className="flex items-center gap-1.5 text-[11px] font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight transition-colors"
+              >
+                <FolderDown className="w-3 h-3 stroke-[1.5]" />
+                Pack candidature (ZIP)
+              </a>
+            )}
+            {!applyUrl.startsWith("import://") && (
+              <a
+                href={applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[11px] font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight transition-colors"
+              >
+                Voir l&apos;annonce d&apos;origine
+                <ExternalLink className="w-3 h-3 stroke-[1.5]" />
+              </a>
+            )}
           </div>
-          <a
-            href={applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 w-full text-[11px] font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight transition-colors"
-          >
-            Voir l&apos;annonce d&apos;origine
-            <ExternalLink className="w-3 h-3 stroke-[1.5]" />
-          </a>
         </div>
       </div>
     </div>

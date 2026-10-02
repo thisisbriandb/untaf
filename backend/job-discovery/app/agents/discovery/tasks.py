@@ -13,6 +13,7 @@ from app.celery_app import celery_app
 from app.database import async_session, engine
 from app.models.company import Company, ATSType, CompanyStatus
 from app.models.job_posting import (
+    IMPORT_PREFIX,
     JobPosting, ApplyChannel, ApplyComplexity, PostingStatus,
     RemotePolicy, ContractType,
 )
@@ -473,6 +474,8 @@ async def _match_candidate_to_existing_jobs(candidate_id):
             .join(Company, JobPosting.company_id == Company.id)
             .where(JobPosting.status == PostingStatus.ACTIVE)
             .where(JobPosting.description_parsed.is_not(None))
+            # Une offre collée par un candidat reste la sienne.
+            .where(JobPosting.external_id.not_like(f"{IMPORT_PREFIX}%"))
         )
         rows = result.all()
 

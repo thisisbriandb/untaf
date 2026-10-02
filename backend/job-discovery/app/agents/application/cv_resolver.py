@@ -16,7 +16,7 @@ from app.models.candidate import Candidate
 
 logger = logging.getLogger(__name__)
 
-CV_ENGINE_PATH = Path(__file__).resolve().parents[3] / "cv-engine"
+CV_ENGINE_PATH = Path(__file__).resolve().parents[4] / "cv-engine"
 if str(CV_ENGINE_PATH) not in sys.path:
     sys.path.append(str(CV_ENGINE_PATH))
 
@@ -34,16 +34,29 @@ def _safe_name(name: str) -> str:
     return re.sub(r"[^\w\s-]", "", ascii_name).strip().replace(" ", "_") or "candidat"
 
 
-def resolve_cv(candidate: Candidate) -> tuple[bytes | None, str, str]:
+def resolve_cv(
+    candidate: Candidate, tailoring: dict | None = None,
+) -> tuple[bytes | None, str, str]:
     """
     Renvoie (pdf, nom_de_fichier, origine).
 
-    `origine` vaut « original » ou « template » — c'est ce qui est affiché au
-    candidat, pour qu'il sache lequel des deux part.
+    `origine` vaut « original », « template » ou « tailored » — c'est ce qui
+    est affiché au candidat, pour qu'il sache lequel part.
+
+    `tailoring` ({headline, summary}) est l'adaptation à UNE offre, rangée sur
+    la candidature. Elle remplace l'accroche et la synthèse de ce CV-là sans
+    toucher au profil : les autres candidatures gardent le CV général. Un PDF
+    déposé ne se réécrit pas ; l'adaptation passe donc toujours par un modèle,
+    celui choisi par le candidat ou le classique à défaut.
     """
     design = candidate.cv_design or {}
     mode = design.get("mode") or ("original" if candidate.resume_file else "template")
     template_id = design.get("template_id")
+
+    tailoring = tailoring or {}
+    tailored = bool(tailoring.get("headline") or tailoring.get("summary"))
+    if tailored and HAS_ENGINE:
+        mode, template_id = "template", template_id or "classic"
 
     # Mode original, ou modèle non choisi : on envoie le document déposé.
     if mode != "template" or not template_id:
@@ -58,9 +71,11 @@ def resolve_cv(candidate: Candidate) -> tuple[bytes | None, str, str]:
         return candidate.resume_file, candidate.resume_filename or "CV.pdf", "original"
 
     cv = candidate.cv_content or {}
+    summary = (tailoring.get("summary") if tailored else None) or cv.get("summary")
+    headline = (tailoring.get("headline") if tailored else None) or candidate.headline
     sections: dict = {}
-    if cv.get("summary"):
-        sections["profil"] = [cv["summary"]]
+    if summary:
+        sections["profil"] = [summary]
 
     experiences = []
     for exp in cv.get("experiences") or []:
@@ -106,7 +121,7 @@ def resolve_cv(candidate: Candidate) -> tuple[bytes | None, str, str]:
     color = design.get("color_hex") or "#234C6A"
     data = {
         "name": candidate.full_name or "Candidat",
-        "headline": candidate.headline or "",
+        "headline": headline or "",
         "email": candidate.email or "",
         "phone": candidate.phone or "",
         "location": "France",
@@ -138,6 +153,8 @@ def resolve_cv(candidate: Candidate) -> tuple[bytes | None, str, str]:
             bold_keywords=list(candidate.skills or []),
         )
         pdf = compile_typst_to_pdf(typst)
+        if tailored:
+            return pdf, f"CV_{_safe_name(candidate.full_name)}.pdf", "tailored"
         return pdf, f"CV_{_safe_name(candidate.full_name)}_{template_id}.pdf", "template"
 
     except Exception as e:  # noqa: BLE001

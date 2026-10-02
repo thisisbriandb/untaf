@@ -13,7 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,8 @@ from app.models.candidate import Candidate
 from app.models.company import Company
 from app.models.dispatch import ApplicationDispatch
 from app.models.job_posting import JobPosting
+from app.schemas.cover_letter import CoverLetterResult
+from app.schemas.cv_content import CvContentRequest, CvContentResult
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/candidates/{candidate_id}/apply", tags=["apply"])
@@ -72,6 +74,257 @@ async def _load(session, candidate_id: UUID, job_id: UUID):
     return job, company_name, candidate, application
 
 
+def _profile(candidate: Candidate) -> dict:
+    """Le parcours du candidat, tel que les rédacteurs l'attendent."""
+    cv = candidate.cv_content or {}
+    return {
+        "full_name": candidate.full_name or "",
+        "email": candidate.email or "",
+        "phone": candidate.phone or "",
+        "linkedin_url": candidate.linkedin_url or "",
+        "headline": candidate.headline or "",
+        "skills": list(candidate.skills or []),
+        "summary": cv.get("summary") or candidate.resume_raw or "",
+        "experiences": cv.get("experiences") or [],
+        "education": cv.get("education") or [],
+        "signature_image": candidate.signature_image,
+    }
+
+
+def _tailoring(application: Application | None) -> dict | None:
+    return (application.metadata_json or {}).get("tailored_cv") if application else None
+
+
+# ── Offre collée par le candidat ───────────────────────────────────────────
+
+
+class ImportIn(BaseModel):
+    text: str = Field(min_length=80, max_length=30000, description="Texte de l'annonce.")
+    url: str | None = Field(default=None, max_length=2000)
+
+
+class JobCardOut(BaseModel):
+    """Même forme que les offres renvoyées par Alice : le front les affiche pareil."""
+    id: UUID
+    title: str
+    company_name: str
+    location: str
+    match_score: int
+    contract_type: str
+    remote_policy: str
+    source_url: str
+    status: str
+    #: Motifs pour lesquels l'offre sort du mandat, s'il y en a.
+    rejections: list[str] = []
+
+
+@router.post("/import", response_model=JobCardOut, status_code=201)
+async def import_job(candidate_id: UUID, data: ImportIn):
+    """
+    Ajoute une offre trouvée ailleurs à la liste du candidat.
+
+    Elle y entre quel que soit son score — c'est lui qui l'a choisie — mais le
+    score et ses motifs sont renvoyés, pour qu'il sache à quoi s'en tenir.
+    """
+    from app.agents.discovery.job_import import import_posting
+
+    url = (data.url or "").strip() or None
+    result = await import_posting(candidate_id, data.text.strip(), url)
+    if not result:
+        raise HTTPException(404, "Candidat introuvable")
+    job, company_name, application = result
+
+    return JobCardOut(
+        id=job.id,
+        title=job.title,
+        company_name=company_name,
+        location=job.location or "",
+        match_score=application.match_score,
+        contract_type=job.contract_type.value,
+        remote_policy=job.remote_policy.value,
+        source_url=job.source_url,
+        status=application.status.value,
+        rejections=(application.metadata_json or {}).get("match", {}).get("rejections", []),
+    )
+
+
+# ── CV et lettre adaptés à une offre ───────────────────────────────────────
+
+
+class TailorOut(BaseModel):
+    cv: CvContentResult
+    letter: CoverLetterResult
+
+
+@router.post("/{job_id}/tailor", response_model=TailorOut)
+async def tailor_documents(candidate_id: UUID, job_id: UUID):
+    """
+    Rédige l'accroche, la synthèse et la lettre pour CETTE offre.
+
+    Le résultat est rangé sur la candidature, pas sur le profil : les autres
+    candidatures gardent le CV général. Ce sont ce CV et cette lettre qui
+    partiront à l'envoi.
+    """
+    from app.agents.discovery.cover_letter import write_cover_letter
+    from app.agents.discovery.cv_writer import write_cv_content
+
+    async with async_session() as session:
+        job, company_name, candidate, application = await _load(session, candidate_id, job_id)
+        if not job or not candidate:
+            raise HTTPException(404, "Offre ou candidat introuvable")
+        if not application:
+            raise HTTPException(404, "Cette offre n'est pas dans ta liste.")
+        profile = _profile(candidate)
+        languages = (candidate.cv_content or {}).get("languages") or []
+        experience_years = candidate.experience_years
+        app_id = application.id
+
+    tech_stack = list((job.description_parsed or {}).get("tech_stack") or job.tech_stack or [])
+    cv_request = CvContentRequest(
+        full_name=profile["full_name"],
+        headline=profile["headline"],
+        summary=profile["summary"],
+        skills=profile["skills"],
+        experience_years=experience_years,
+        experiences=profile["experiences"],
+        education=profile["education"],
+        languages=languages,
+        target_role=job.title,
+        job_title=job.title,
+        company_name=company_name,
+        job_excerpt=job.description_raw,
+        job_skills=tech_stack,
+    )
+    # Les deux rédactions sont indépendantes : l'une n'attend pas l'autre.
+    cv, letter = await asyncio.gather(
+        write_cv_content(cv_request),
+        write_cover_letter(
+            **profile,
+            job_title=job.title,
+            company_name=company_name or "",
+            location=job.location or "",
+            tech_stack=tech_stack,
+            job_excerpt=job.description_raw or "",
+        ),
+    )
+
+    async with async_session() as session:
+        stored = await session.get(Application, app_id)
+        stored.metadata_json = {
+            **(stored.metadata_json or {}),
+            "tailored_cv": {"headline": cv.headline, "summary": cv.summary},
+            "cover_letter": letter.model_dump(),
+        }
+        await session.commit()
+
+    return TailorOut(cv=cv, letter=letter)
+
+
+@router.get("/{job_id}/cv")
+async def download_tailored_cv(
+    candidate_id: UUID,
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Le CV qui partira pour cette offre : adapté s'il l'a été, général sinon."""
+    from app.agents.application.cv_resolver import resolve_cv
+
+    job, _, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate:
+        raise HTTPException(404, "Offre ou candidat introuvable")
+
+    # La compilation Typst occupe le processeur : hors de la boucle d'événements.
+    pdf, name, _ = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
+    if not pdf:
+        raise HTTPException(404, "Aucun CV disponible — dépose-le dans l'éditeur.")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+@router.get("/{job_id}/pack")
+async def download_pack(
+    candidate_id: UUID,
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Le dossier de candidature d'une offre, en un ZIP : CV, lettre, annonce.
+
+    Candidature déjà partie : les pièces envoyées, telles quelles. Sinon : les
+    pièces qui partiraient maintenant, adaptées à l'offre si elles l'ont été.
+    """
+    import io
+    import zipfile
+
+    from app.agents.application.cv_resolver import _safe_name, resolve_cv
+    from app.agents.discovery.letter_render import render_letter_pdf
+    from app.models.dispatch import DispatchStatus
+
+    job, company_name, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate:
+        raise HTTPException(404, "Offre ou candidat introuvable")
+
+    sent = None
+    if application:
+        sent = (await db.execute(
+            select(ApplicationDispatch)
+            .where(ApplicationDispatch.application_id == application.id)
+            .where(ApplicationDispatch.status == DispatchStatus.SENT)
+            .order_by(ApplicationDispatch.sent_at.desc())
+        )).scalars().first()
+
+    files: dict[str, bytes] = {}
+
+    # ── CV ──
+    if sent and sent.resume_blob:
+        files[sent.resume_name or "CV.pdf"] = sent.resume_blob
+    else:
+        pdf, name, _ = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
+        if pdf:
+            files[name] = pdf
+
+    # ── Lettre ──
+    company_slug = _safe_name(company_name or "entreprise")
+    letter = (application.metadata_json or {}).get("cover_letter") if application else None
+    if sent and sent.letter_body:
+        subject = sent.letter_subject or f"Candidature — {sent.job_title}"
+        files[f"Lettre_{company_slug}.txt"] = f"{subject}\n\n{sent.letter_body}\n".encode()
+    elif letter:
+        try:
+            files[f"Lettre_{company_slug}.pdf"] = await asyncio.to_thread(
+                render_letter_pdf, CoverLetterResult(**letter),
+            )
+        except Exception as e:  # noqa: BLE001 — la lettre reste lisible en texte
+            logger.error("Rendu PDF de la lettre impossible : %s", e, exc_info=True)
+            files[f"Lettre_{company_slug}.txt"] = (
+                f"{letter.get('subject', '')}\n\n{letter.get('body', '')}\n".encode()
+            )
+
+    # ── Annonce ──
+    contact = job.contact_json or {}
+    header = [
+        job.title,
+        f"{company_name or ''} · {job.location or ''}".strip(" ·"),
+        f"Lien : {job.apply_url or job.source_url}" if not job.source_url.startswith("import://") else "",
+        f"Contact : {contact['email']}" if contact.get("email") else "",
+    ]
+    annonce = "\n".join(l for l in header if l) + "\n\n" + (job.description_raw or "")
+    files["Annonce.txt"] = annonce.encode()
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="Candidature_{company_slug}.zip"'},
+    )
+
+
 @router.get("/{job_id}/plan", response_model=PlanOut)
 async def get_plan(
     candidate_id: UUID,
@@ -84,7 +337,7 @@ async def get_plan(
         raise HTTPException(404, "Offre ou candidat introuvable")
 
     letter = (application.metadata_json or {}).get("cover_letter") if application else None
-    plan = detect_requirements(job, candidate, letter)
+    plan = detect_requirements(job, candidate, letter, _tailoring(application))
 
     return PlanOut(
         job_id=job_id,
@@ -126,22 +379,10 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
                     return
 
                 letter = (application.metadata_json or {}).get("cover_letter") if application else None
-                plan = detect_requirements(job, candidate, letter)
+                plan = detect_requirements(job, candidate, letter, _tailoring(application))
                 job_title, apply_channel = job.title, job.apply_channel
                 app_id = application.id if application else None
-                cv = candidate.cv_content or {}
-                profile = {
-                    "full_name": candidate.full_name or "",
-                    "email": candidate.email or "",
-                    "phone": candidate.phone or "",
-                    "linkedin_url": candidate.linkedin_url or "",
-                    "headline": candidate.headline or "",
-                    "skills": list(candidate.skills or []),
-                    "summary": cv.get("summary") or candidate.resume_raw or "",
-                    "experiences": cv.get("experiences") or [],
-                    "education": cv.get("education") or [],
-                    "signature_image": candidate.signature_image,
-                }
+                profile = _profile(candidate)
 
             # Aucune étape n'est émise pour un travail instantané : cocher
             # des cases qui se remplissent seules donne l'illusion d'un

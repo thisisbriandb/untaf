@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowUp, ArrowUpRight, Mic, PanelRight, Plus, Radar } from "lucide-react";
+import {
+  ArrowRight, ArrowUp, ArrowUpRight, ClipboardPaste, Mic, PanelRight, Plus, Radar,
+} from "lucide-react";
 import { AlicePresence } from "../../onboarding/components/AlicePresence";
 import type {
   UiBlock, JobCardData, CvAuditData, ApplicationData, MissionReportData,
@@ -11,6 +13,7 @@ import { JobCardList } from "./JobCard";
 import { Markdown } from "./Markdown";
 import { ActiveMissionCard } from "./ActiveMissionCard";
 import { MissionLauncher } from "./MissionLauncher";
+import { ImportJobDialog } from "./ImportJobDialog";
 import { fetchCurrentRun, type MissionRun } from "@/lib/mission-run-client";
 import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../alice-context";
 
@@ -242,12 +245,15 @@ export function AliceView({ userName }: { userName: string }) {
   const firstName = userName.split(" ")[0] || "Briand";
   const [prompt, setPrompt] = useState("");
   const [workingLabel, setWorkingLabel] = useState("Je m'en occupe…");
-  const { messages, isThinking, emotion, hasConversation, submitQuery, candidateId } =
-    useAlice();
+  const {
+    messages, isThinking, emotion, hasConversation, submitQuery, candidateId,
+    openCanvas, sayAsAlice,
+  } = useAlice();
 
   // Mission bornée en cours, s'il y en a une.
   const [run, setRun] = useState<MissionRun | null>(null);
   const [showLauncher, setShowLauncher] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     if (!candidateId) return;
@@ -389,6 +395,15 @@ export function AliceView({ userName }: { userName: string }) {
           >
             <Plus className="w-4 h-4 stroke-[1.4]" />
           </button>
+          <button
+            type="button"
+            onClick={() => setShowImport(true)}
+            aria-label="Coller une offre"
+            title="Coller une offre trouvée ailleurs"
+            className="text-[#1A1918]/35 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+          >
+            <ClipboardPaste className="w-4 h-4 stroke-[1.4]" />
+          </button>
 
           <input
             type="text"
@@ -429,6 +444,30 @@ export function AliceView({ userName }: { userName: string }) {
             onLaunched={(r) => {
               setRun(r);
               setShowLauncher(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Coller une offre trouvée ailleurs */}
+      <AnimatePresence>
+        {showImport && candidateId && (
+          <ImportJobDialog
+            candidateId={candidateId}
+            onClose={() => setShowImport(false)}
+            onImported={(job) => {
+              setShowImport(false);
+              const canvasRef: CanvasPayload = { mode: "job_detail", job };
+              const fit = job.rejections.length
+                ? ` Attention, elle sort de ton mandat : ${job.rejections[0]}.`
+                : "";
+              sayAsAlice(
+                `J'ai ajouté « ${job.title} » chez ${job.company_name} à ta liste ` +
+                `(${job.match_score}% de correspondance).${fit} ` +
+                "Je peux adapter ton CV et ta lettre à cette offre.",
+                canvasRef,
+              );
+              openCanvas(canvasRef);
             }}
           />
         )}

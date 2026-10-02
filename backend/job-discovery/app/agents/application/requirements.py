@@ -78,7 +78,8 @@ _PATTERNS: list[tuple[str, str, re.Pattern]] = [
 
 
 def detect_requirements(job: JobPosting, candidate: Candidate,
-                        cover_letter: dict | None = None) -> ApplicationPlan:
+                        cover_letter: dict | None = None,
+                        tailoring: dict | None = None) -> ApplicationPlan:
     """Ce que cette offre demande, et ce dont on dispose déjà."""
     contact = job.contact_json or {}
     channel = (job.apply_channel.value if job.apply_channel else "unknown")
@@ -90,12 +91,13 @@ def detect_requirements(job: JobPosting, candidate: Candidate,
 
     # Le CV est attendu partout, sans exception.
     from app.agents.application.cv_resolver import resolve_cv
-    cv_bytes, cv_name, cv_origin = resolve_cv(candidate)
+    cv_bytes, cv_name, cv_origin = resolve_cv(candidate, tailoring)
     if cv_bytes:
-        reqs.append(Requirement(
-            "resume", "CV", "satisfied",
-            f"{cv_name} — {'ton document d’origine' if cv_origin == 'original' else 'généré depuis ton modèle'}",
-        ))
+        origin = {
+            "original": "ton document d’origine",
+            "tailored": "adapté à cette offre",
+        }.get(cv_origin, "généré depuis ton modèle")
+        reqs.append(Requirement("resume", "CV", "satisfied", f"{cv_name} — {origin}"))
     else:
         reqs.append(Requirement(
             "resume", "CV", "missing",

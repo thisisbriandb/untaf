@@ -193,7 +193,9 @@ async def prepare_dispatch(
         from app.agents.application.cv_resolver import resolve_cv
         from app.agents.application.email_sender import _plain_text
 
-        cv_bytes, cv_name, cv_mode = resolve_cv(candidate)
+        cv_bytes, cv_name, cv_mode = resolve_cv(
+            candidate, (application.metadata_json or {}).get("tailored_cv"),
+        )
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
 
         dispatch = ApplicationDispatch(
@@ -252,6 +254,8 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             letter=letter,
             job_title=dispatch.job_title,
             company_name=dispatch.company_name,
+            resume=dispatch.resume_blob,
+            resume_name=dispatch.resume_name,
         )
     elif dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
         # Formulaire public : on le remplit dans un navigateur, guidé par le

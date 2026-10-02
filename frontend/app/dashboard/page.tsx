@@ -173,6 +173,7 @@ export default function DashboardPage() {
                 {activeTab === "candidatures" && (
                   <CandidaturesView
                     key="candidatures"
+                    candidateId={candidateId}
                     applications={applications}
                     updatingAppId={updatingAppId}
                     onUpdateStatus={handleUpdateStatus}

@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { FolderDown } from "lucide-react";
+import { packUrl } from "@/lib/tailor-client";
 
 interface JobPosting {
   id: string;
@@ -11,18 +13,21 @@ interface JobPosting {
 
 interface Application {
   id: string;
+  job_posting_id: string;
   status: string;
   match_score: number;
   job_posting: JobPosting | null;
 }
 
 interface CandidaturesViewProps {
+  candidateId: string | null;
   applications: Application[];
   updatingAppId: string | null;
   onUpdateStatus: (appId: string, currentStatus: string) => void;
 }
 
 export function CandidaturesView({
+  candidateId,
   applications,
   updatingAppId,
   onUpdateStatus,
@@ -80,14 +85,25 @@ export function CandidaturesView({
                   <span className="text-xs font-medium text-[#1A1918]/50">
                     Statut : <strong className="text-[#006045]">{statusLabel}</strong>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateStatus(app.id, app.status)}
-                    disabled={updatingAppId === app.id}
-                    className="text-xs text-[#006045] hover:underline font-medium cursor-pointer"
-                  >
-                    Changer statut
-                  </button>
+                  <div className="flex items-center gap-4">
+                    {candidateId && (
+                      <a
+                        href={packUrl(candidateId, app.job_posting_id)}
+                        className="flex items-center gap-1 text-xs text-[#006045] hover:underline font-medium"
+                      >
+                        <FolderDown className="w-3.5 h-3.5 stroke-[1.6]" />
+                        Pack
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatus(app.id, app.status)}
+                      disabled={updatingAppId === app.id}
+                      className="text-xs text-[#006045] hover:underline font-medium cursor-pointer"
+                    >
+                      Changer statut
+                    </button>
+                  </div>
                 </div>
               </div>
             );
