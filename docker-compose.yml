@@ -25,7 +25,7 @@ services:
 
   worker:
     build:
-      context: ./backend/job-discovery
+      context: ./backend
     command: celery -A app.celery_app worker -l info --concurrency=2
     restart: unless-stopped
     env_file: ./backend/job-discovery/.env
@@ -42,7 +42,7 @@ services:
 
   beat:
     build:
-      context: ./backend/job-discovery
+      context: ./backend
     command: celery -A app.celery_app beat -l info
     restart: unless-stopped
     env_file: ./backend/job-discovery/.env

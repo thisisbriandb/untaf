@@ -93,6 +93,7 @@ app.add_middleware(
         "http://localhost:3001",
         "http://localhost:3010",
         "http://localhost:3011",
+        *settings.cors_origin_list,
     ],
     allow_credentials=True,
     allow_methods=["*"],

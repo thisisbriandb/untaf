@@ -1,0 +1,12 @@
+# Partagé par les trois services Railway (api, worker, beat), tous avec
+# « Root Directory » = backend. Ils ne diffèrent que par la variable ROLE.
+#
+# Pas de healthcheck ici : il s'appliquerait aussi au worker et au beat, qui
+# n'écoutent sur aucun port. Le configurer sur le seul service api (/health).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

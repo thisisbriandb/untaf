@@ -1,0 +1,25 @@
+# Le Dockerfile copie job-discovery/ et cv-engine/ en entier : sans ce
+# fichier, les secrets réels partent dans l'image, où ils restent lisibles
+# par quiconque peut la télécharger. Les variables sont injectées à
+# l'exécution (env_file / variables du service).
+**/.env
+**/.env.*
+!**/.env.example
+
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+**/.git/
+**/.gitignore
+**/*.log
+**/*.pdf
+
+# Corpus d'évaluation : plusieurs dizaines de mégaoctets, inutiles en prod.
+job-discovery/tests/corpus/pages/
+job-discovery/tests/corpus/runs/
