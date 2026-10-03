@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Heart, X, Sparkles, Check } from "lucide-react";
 import { cvTemplates } from "../types";
+import { apiFetch } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 
 interface TemplateSwipeCardProps {
   template: (typeof cvTemplates)[0];
@@ -52,7 +54,7 @@ export function TemplateSwipeCard({
           languages: candidateData.languages || [],
         };
 
-        const res = await fetch("http://localhost:8000/api/candidates/render-preview-svg", {
+        const res = await apiFetch(`${API_BASE_URL}/api/candidates/render-preview-svg`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

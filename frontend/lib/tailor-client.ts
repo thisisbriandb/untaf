@@ -8,6 +8,7 @@
 import { API_BASE_URL } from "./config";
 import type { JobCardData } from "./alice-client";
 import type { CoverLetter } from "./letter-client";
+import { apiFetch } from "./api";
 
 export interface ImportedJob extends JobCardData {
   /** Motifs pour lesquels l'offre sort du mandat, s'il y en a. */
@@ -37,7 +38,7 @@ export async function importJob(
   url?: string,
 ): Promise<ImportedJob | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/import`, {
+    const res = await apiFetch(`${base(candidateId)}/import`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, url: url || null }),
@@ -53,7 +54,7 @@ export async function tailorDocuments(
   jobId: string,
 ): Promise<TailoredDocuments | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/${jobId}/tailor`, { method: "POST" });
+    const res = await apiFetch(`${base(candidateId)}/${jobId}/tailor`, { method: "POST" });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

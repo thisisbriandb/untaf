@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_admin
 from app.database import get_db
 from app.models.company import Company, CompanyStatus, ATSType, SeedSource
 from app.schemas.company import CompanyCreate, CompanyOut, CompanyStats
@@ -86,7 +87,7 @@ async def get_company_stats(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/", response_model=CompanyOut, status_code=201)
+@router.post("/", response_model=CompanyOut, status_code=201, dependencies=[Depends(require_admin)])
 async def create_company(
     data: CompanyCreate,
     db: AsyncSession = Depends(get_db),
@@ -125,7 +126,7 @@ async def get_company(company_id: UUID, db: AsyncSession = Depends(get_db)):
     return data
 
 
-@router.post("/seed", status_code=202)
+@router.post("/seed", status_code=202, dependencies=[Depends(require_admin)])
 async def trigger_seeding():
     """Trigger the full seeding pipeline (async via Celery)."""
     from app.agents.seeding.tasks import run_full_seeding
@@ -133,7 +134,7 @@ async def trigger_seeding():
     return {"task_id": task.id, "status": "seeding started"}
 
 
-@router.post("/{company_id}/resolve", status_code=202)
+@router.post("/{company_id}/resolve", status_code=202, dependencies=[Depends(require_admin)])
 async def trigger_resolution(
     company_id: UUID,
     db: AsyncSession = Depends(get_db),

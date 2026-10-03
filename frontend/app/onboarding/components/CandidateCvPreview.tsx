@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { cvTemplates, ExperienceEntry, EducationEntry, LanguageEntry } from "../types";
 import { Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/config";
+import { apiFetch } from "@/lib/api";
 
 interface CandidateCvPreviewProps {
   fullName: string;
@@ -95,7 +96,7 @@ export function CandidateCvPreview({
           })),
         };
 
-        const res = await fetch(`${API_BASE_URL}/api/candidates/render-preview-svg`, {
+        const res = await apiFetch(`${API_BASE_URL}/api/candidates/render-preview-svg`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

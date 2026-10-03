@@ -5,10 +5,11 @@ FastAPI application — job-discovery API server.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.auth import guard_candidate_path
 from app.config import settings
 from app.database import engine, Base
 from app.api.companies import router as companies_router
@@ -20,6 +21,7 @@ from app.api.dispatches import router as dispatches_router
 from app.api.apply import router as apply_router
 from app.api.chat import router as chat_router
 from app.api.pipeline import router as pipeline_router
+from app.api.me import router as me_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -51,6 +53,8 @@ _PENDING_COLUMNS = (
     "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_subject VARCHAR(500)",
     "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_body TEXT",
     "ALTER TABLE candidates ADD COLUMN IF NOT EXISTS notification_prefs JSONB",
+    "ALTER TABLE candidates ADD COLUMN IF NOT EXISTS auth_user_id UUID",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ix_candidates_auth_user_id ON candidates (auth_user_id)",
 )
 
 
@@ -59,6 +63,12 @@ async def lifespan(app: FastAPI):
     """Create tables on startup (dev only — use Alembic in prod)."""
     # Import all models so they're registered with Base.metadata
     import app.models  # noqa: F401
+
+    if settings.auth_disabled:
+        logger.warning(
+            "AUTH_DISABLED=true : toutes les gardes sont levées. "
+            "Réservé au développement local, jamais en production."
+        )
 
     if settings.debug:
         async with engine.begin() as conn:
@@ -85,6 +95,9 @@ app = FastAPI(
     ),
     version="0.1.0",
     lifespan=lifespan,
+    # Toute route dont le chemin désigne un candidat n'est accessible qu'à son
+    # propriétaire. Posée ici, la garde couvre aussi les routes de demain.
+    dependencies=[Depends(guard_candidate_path)],
 )
 
 # CORS — allow frontend
@@ -113,6 +126,7 @@ app.include_router(dispatches_router, prefix="/api")
 app.include_router(apply_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(pipeline_router, prefix="/api")
+app.include_router(me_router, prefix="/api")
 
 
 @app.get("/health")

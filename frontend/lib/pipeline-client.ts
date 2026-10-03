@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 export type Stage =
   | "to_prepare"
@@ -92,7 +93,7 @@ async function json<T>(promise: Promise<Response>): Promise<T | null> {
 }
 
 const post = (url: string, body?: unknown) =>
-  fetch(url, {
+  apiFetch(url, {
     method: "POST",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -101,7 +102,7 @@ const post = (url: string, body?: unknown) =>
 // ── Pipeline ──────────────────────────────────────────────────────────────
 
 export const fetchPipeline = (candidateId: string) =>
-  json<Pipeline>(fetch(`${root(candidateId)}/pipeline`));
+  json<Pipeline>(apiFetch(`${root(candidateId)}/pipeline`));
 
 export const approveDispatch = (candidateId: string, dispatchId: string) =>
   json<DispatchBrief>(post(`${root(candidateId)}/dispatches/${dispatchId}/approve`));
@@ -120,7 +121,7 @@ export async function updateApplicationStatus(
   note?: string,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/applications/${applicationId}/status`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/applications/${applicationId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, note: note || null }),
@@ -185,11 +186,11 @@ export interface NotificationRecord {
 }
 
 export const fetchNotificationSettings = (candidateId: string) =>
-  json<NotificationSettings>(fetch(`${root(candidateId)}/notifications`));
+  json<NotificationSettings>(apiFetch(`${root(candidateId)}/notifications`));
 
 export const saveNotificationPrefs = (candidateId: string, prefs: NotificationPrefs) =>
   json<NotificationSettings>(
-    fetch(`${root(candidateId)}/notifications`, {
+    apiFetch(`${root(candidateId)}/notifications`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(prefs),
@@ -200,7 +201,7 @@ export const sendTestNotification = (candidateId: string) =>
   json<NotificationRecord>(post(`${root(candidateId)}/notifications/test`));
 
 export const fetchNotificationHistory = (candidateId: string) =>
-  json<NotificationRecord[]>(fetch(`${root(candidateId)}/notifications/history?limit=8`));
+  json<NotificationRecord[]>(apiFetch(`${root(candidateId)}/notifications/history?limit=8`));
 
 // ── Journal (cloche) ──────────────────────────────────────────────────────
 

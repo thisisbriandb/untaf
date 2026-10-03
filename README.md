@@ -119,6 +119,9 @@ Toutes dans `backend/job-discovery/.env`.
 | Variable | Requis | Rôle |
 | --- | --- | --- |
 | `DATABASE_URL` | oui | PostgreSQL, pilote `asyncpg` |
+| `SUPABASE_URL` / `SUPABASE_JWT_SECRET` | oui | Vérification des jetons de session (JWKS ou secret HS256) |
+| `AUTH_DISABLED` | — | `true` lève toutes les gardes — **développement local uniquement** |
+| `ADMIN_EMAILS` | — | Comptes autorisés à déclencher scraping et seeding |
 | `REDIS_URL` | Celery | Courtier des tâches planifiées |
 | `DEBUG` | — | `true` crée les tables au démarrage |
 | `GEMINI_API_KEY` | oui | Conversation, qualification, rédaction |
@@ -140,6 +143,37 @@ distincte de la création de l'application. Sans lui, l'authentification renvoie
 
 Le scope OAuth doit contenir `application_{client_id}` en plus des scopes
 d'API ; c'est géré par le code mais mal documenté côté France Travail.
+
+---
+
+## Authentification
+
+Connexion sans mot de passe par Supabase Auth : un lien et un code reçus par
+e-mail. Côté frontend, `NEXT_PUBLIC_SUPABASE_URL` et
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` (voir `frontend/.env.example`) ; ajouter
+`<FRONTEND_URL>/auth/confirmed` aux *Redirect URLs* du projet. Pour que le
+code à 6 chiffres apparaisse dans l'e-mail, ajouter `{{ .Token }}` au modèle
+*Magic Link* (Authentication → Email Templates) ; sans lui, le lien suffit.
+
+Chaque requête porte le jeton de session, vérifié par
+[`app/auth.py`](backend/job-discovery/app/auth.py). Un profil n'est accessible
+qu'au compte auquel il est rattaché (`candidates.auth_user_id`) :
+
+- toute route dont le chemin contient `{candidate_id}` est gardée au niveau de
+  l'application — une route ajoutée plus tard l'est d'office ;
+- les routes sans ce paramètre (`/api/chat`, `/api/applications/…`, liste des
+  candidats) vérifient l'appartenance explicitement ;
+- les déclencheurs coûteux (seeding, résolution ATS, matching global) sont
+  réservés à `ADMIN_EMAILS` ;
+- les offres collées par un candidat ne sont lisibles que par lui ;
+- un profil créé avant l'authentification est rattaché à la première
+  connexion avec la même adresse. Le projet Supabase doit donc exiger la
+  confirmation de l'e-mail (réglage par défaut).
+
+L'onboarding reste ouvert jusqu'à l'activation : l'analyse du CV et la mise en
+forme ne demandent pas de compte. L'adresse est confirmée à la dernière étape,
+sans perdre ce qui a été saisi. Sans configuration, l'API refuse (503) plutôt
+que d'ouvrir ; `AUTH_DISABLED=true` sert au développement local.
 
 ---
 

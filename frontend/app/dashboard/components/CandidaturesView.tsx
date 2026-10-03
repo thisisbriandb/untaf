@@ -34,6 +34,7 @@ import {
   type Stage,
 } from "@/lib/pipeline-client";
 import { useAlice } from "../alice-context";
+import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
 
 // ── Filtres ───────────────────────────────────────────────────────────────
@@ -370,12 +371,13 @@ function Row({
             )}
 
             {(item.pack_ready || item.dispatch) && (
-              <a
-                href={packUrl(candidateId, item.job_id)}
+              <DownloadLink
+                url={packUrl(candidateId, item.job_id)}
+                filename={`Candidature_${item.company_name}.zip`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
               >
                 <FolderDown className="h-3 w-3" /> Pack
-              </a>
+              </DownloadLink>
             )}
 
             {item.followup.due && (

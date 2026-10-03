@@ -31,6 +31,8 @@ import {
   type CvProfile,
 } from "@/lib/cv-profile";
 import { useAlice } from "../alice-context";
+import { openFile } from "@/lib/api";
+import { useProtectedBlobUrl } from "./ProtectedFile";
 
 /** Prompts sent straight into the Alice thread, tuned to the open section. */
 const ALICE_PROMPTS: Record<CvEditorSubStep, string[]> = {
@@ -257,6 +259,10 @@ export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) 
   const [design, setDesign] = useState<CvDesign | null>(null);
   const [subStep, setSubStep] = useState<CvEditorSubStep>("personal");
   const [pane, setPane] = useState<Pane>("content");
+  // Le PDF d'origine est protégé : récupéré avec le jeton, affiché en local.
+  const originalPdf = useProtectedBlobUrl(
+    pane === "original" && candidateId ? resumeUrl(candidateId) : null,
+  );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isExporting, setIsExporting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -341,7 +347,7 @@ export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) 
     if (!profile) return;
 
     if (design?.mode === "original" && design.has_original && candidateId) {
-      window.open(resumeUrl(candidateId), "_blank", "noopener");
+      void openFile(resumeUrl(candidateId));
       sayAsAlice("Je t'ai rouvert ton CV d'origine, tel que tu me l'as donné.");
       return;
     }
@@ -492,7 +498,7 @@ export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) 
               {design?.original_filename} — ton document d&apos;origine, inchangé.
             </p>
             <object
-              data={resumeUrl(candidateId)}
+              data={originalPdf ?? undefined}
               type="application/pdf"
               className="w-full flex-1 min-h-[28rem] rounded-xl border border-[#1A1918]/10 bg-white"
             >
@@ -500,14 +506,13 @@ export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) 
                 <p className="text-sm font-light text-[#1A1918]/55 tracking-tight">
                   Ton navigateur n&apos;affiche pas les PDF ici.
                 </p>
-                <a
-                  href={resumeUrl(candidateId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-xs text-[#006045] hover:underline"
+                <button
+                  type="button"
+                  onClick={() => void openFile(resumeUrl(candidateId))}
+                  className="inline-block text-xs text-[#006045] hover:underline cursor-pointer"
                 >
                   Ouvrir dans un onglet
-                </a>
+                </button>
               </div>
             </object>
           </div>

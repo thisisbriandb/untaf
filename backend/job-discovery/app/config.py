@@ -46,6 +46,22 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 10
 
+    # ── Authentification (Supabase Auth) ─────────────────
+    # Chaque requête porte le jeton de session Supabase de l'utilisateur. Il
+    # est vérifié avec le secret JWT du projet (clés HS256 historiques) ou
+    # contre le JWKS public de SUPABASE_URL (nouvelles clés asymétriques).
+    supabase_url: str = ""
+    supabase_jwt_secret: str = ""
+    #: Développement local uniquement : lève toutes les gardes. Jamais en
+    #: production — n'importe qui pourrait lire n'importe quel profil.
+    auth_disabled: bool = False
+    #: E-mails autorisés à déclencher scraping et seeding, séparés par des virgules.
+    admin_emails: str = ""
+
+    @property
+    def admin_email_list(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
     # ── Redis (Celery broker + result backend) ───────────
     redis_url: str = "redis://localhost:6379/0"
 

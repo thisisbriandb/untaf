@@ -7,6 +7,7 @@
 
 import { API_BASE_URL } from "./config";
 import type { MissionEventKind } from "./mission-client";
+import { apiFetch } from "./api";
 
 export type RunStatus = "preparing" | "running" | "completed" | "interrupted";
 export type RunStep = "scan" | "qualify" | "match" | "prepare" | "apply";
@@ -84,7 +85,7 @@ export async function startRun(
   },
 ): Promise<MissionRun | null> {
   try {
-    const res = await fetch(base(candidateId), {
+    const res = await apiFetch(base(candidateId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -97,7 +98,7 @@ export async function startRun(
 
 export async function fetchCurrentRun(candidateId: string): Promise<MissionRun | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/current`);
+    const res = await apiFetch(`${base(candidateId)}/current`);
     if (!res.ok) return null;
     const data = await res.json();
     return data ?? null;
@@ -111,7 +112,7 @@ export async function stopRun(
   runId: string,
 ): Promise<MissionRun | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/${runId}/stop`, { method: "POST" });
+    const res = await apiFetch(`${base(candidateId)}/${runId}/stop`, { method: "POST" });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

@@ -16,7 +16,10 @@ import { CanvasPanel } from "./components/CanvasPanel";
 import { ToastProvider } from "./components/Toaster";
 import { AliceProvider, useAlice } from "./alice-context";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
+import { AUTH_ENABLED, accessToken, signOut } from "@/lib/supabase";
+import { clearLocalCandidate, destinationAfterSignIn } from "@/lib/session";
 import type { ReactNode } from "react";
+import { apiFetch } from "@/lib/api";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -62,17 +65,48 @@ export default function DashboardPage() {
 
   // 1. Load Candidate ID from localStorage, and the tab from the URL: the
   //    e-mails d'Alice pointent sur `/dashboard?tab=candidatures`.
+  //    Avec authentification, c'est le serveur qui dit quel profil appartient
+  //    au compte connecté — le navigateur n'est plus une source de vérité.
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get("tab") as TabType | null;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") as TabType | null;
     if (tab && TABS.includes(tab)) setActiveTab(tab);
 
-    const storedId = localStorage.getItem("candidate_id");
-    if (!storedId) {
-      setLoading(false);
+    if (!AUTH_ENABLED) {
+      const storedId = localStorage.getItem("candidate_id");
+      if (!storedId) {
+        setLoading(false);
+        return;
+      }
+      setCandidateId(storedId);
       return;
     }
-    setCandidateId(storedId);
-  }, []);
+
+    let alive = true;
+    const here = window.location.pathname + window.location.search;
+    accessToken().then(async (token) => {
+      if (!alive) return;
+      if (!token) {
+        router.replace(`/login?next=${encodeURIComponent(here)}`);
+        return;
+      }
+      const destination = await destinationAfterSignIn(here);
+      if (!alive) return;
+      if (destination === "/") {
+        router.replace("/"); // connecté, mais pas encore de profil : onboarding
+        return;
+      }
+      setCandidateId(localStorage.getItem("candidate_id"));
+    });
+
+    // Session révoquée en cours de route : retour à la connexion.
+    const onUnauthorized = () => router.replace(`/login?next=${encodeURIComponent(here)}`);
+    window.addEventListener("untaf:unauthorized", onUnauthorized);
+    return () => {
+      alive = false;
+      window.removeEventListener("untaf:unauthorized", onUnauthorized);
+    };
+  }, [router]);
 
   /** L'onglet suit l'URL : un rechargement ou un lien partagé y ramène. */
   const selectTab = useCallback((tab: TabType) => {
@@ -90,7 +124,7 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const [candRes, pipeline] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/candidates/${candidateId}`).catch(() => null),
+          apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}`).catch(() => null),
           fetchPipeline(candidateId),
         ]);
 
@@ -114,11 +148,10 @@ export default function DashboardPage() {
   );
 
   // Handle Logout
-  const handleLogout = () => {
-    localStorage.removeItem("candidate_id");
-    localStorage.removeItem("candidate_email");
-    localStorage.removeItem("candidate_name");
-    router.push("/");
+  const handleLogout = async () => {
+    await signOut();
+    clearLocalCandidate();
+    router.push(AUTH_ENABLED ? "/login" : "/");
   };
 
   if (loading) {

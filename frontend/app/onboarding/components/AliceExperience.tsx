@@ -13,6 +13,11 @@ import {
   ZONE_COUNTRIES,
   type CriteriaDraft,
 } from "./CriteriaStep";
+import { apiFetch } from "@/lib/api";
+import { AUTH_ENABLED, accessToken } from "@/lib/supabase";
+import { destinationAfterSignIn } from "@/lib/session";
+import { EmailSignIn } from "../../auth/EmailSignIn";
+import Link from "next/link";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +79,9 @@ export function AliceExperience() {
   const [emailInput, setEmailInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [activationError, setActivationError] = useState<string | null>(null);
+  /** Adresse en attente de confirmation : l'activation reprend à la connexion. */
+  const [pendingAuthEmail, setPendingAuthEmail] = useState<string | null>(null);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -182,7 +190,7 @@ export function AliceExperience() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${API_BASE_URL}/api/candidates/parse-resume`, {
+      const res = await apiFetch(`${API_BASE_URL}/api/candidates/parse-resume`, {
         method: "POST",
         body: formData,
       });
@@ -222,7 +230,7 @@ export function AliceExperience() {
 
     let parsedData: any = null;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE_URL}/api/candidates/parse-linkedin?linkedin_url=${encodeURIComponent(linkedinUrl.trim())}`,
         { method: "POST" }
       );
@@ -295,6 +303,15 @@ export function AliceExperience() {
     }
 
     setActivationError(null);
+
+    // Le profil appartient à un compte : sans session, on fait confirmer
+    // l'adresse d'abord. Tout ce qui a été saisi reste en mémoire, et
+    // l'activation reprend d'elle-même une fois la connexion faite.
+    if (AUTH_ENABLED && !(await accessToken())) {
+      setPendingAuthEmail(email);
+      return;
+    }
+
     setIsActivating(true);
 
     const matchingCriteria = {
@@ -322,7 +339,7 @@ export function AliceExperience() {
     };
 
     try {
-      let res = await fetch(`${API_BASE_URL}/api/candidates/`, {
+      let res = await apiFetch(`${API_BASE_URL}/api/candidates/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -337,14 +354,14 @@ export function AliceExperience() {
         // mandat. Ne mettre à jour que le mandat laisserait un CV périmé
         // derrière, et c'est le profil qui sert à déduire ce que le mandat ne
         // dit pas. Le PUT relance le matching côté serveur.
-        const lookup = await fetch(
+        const lookup = await apiFetch(
           `${API_BASE_URL}/api/candidates/?email=${encodeURIComponent(email)}`
         );
         const found = lookup.ok ? await lookup.json() : [];
         const existing = found[0] ?? null;
 
         if (existing) {
-          const updated = await fetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
+          const updated = await apiFetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -354,6 +371,11 @@ export function AliceExperience() {
       }
 
       if (!candidate) {
+        if (AUTH_ENABLED && res.status === 409) {
+          setActivationError("Cette adresse est déjà liée à un autre compte. Connecte-toi avec elle.");
+          setIsActivating(false);
+          return;
+        }
         throw new Error(`Création impossible (${res.status})`);
       }
 
@@ -368,7 +390,7 @@ export function AliceExperience() {
         try {
           const form = new FormData();
           form.append("file", cvFile);
-          await fetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
+          await apiFetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
             method: "POST",
             body: form,
           });
@@ -390,10 +412,43 @@ export function AliceExperience() {
     }
   }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say]);
 
+  const activateRef = useRef(handleActivateAlice);
+  useEffect(() => {
+    activateRef.current = handleActivateAlice;
+  }, [handleActivateAlice]);
+
+  const handleAuthConfirmed = useCallback(() => {
+    setPendingAuthEmail(null);
+    void activateRef.current();
+  }, []);
+
+  // Déjà connecté avec un profil : rien à refaire ici, direction l'espace.
+  useEffect(() => {
+    if (!AUTH_ENABLED) return;
+    let alive = true;
+    accessToken().then(async (token) => {
+      if (!alive || !token) return;
+      setIsSignedIn(true);
+      const destination = await destinationAfterSignIn();
+      if (alive && destination !== "/") router.replace(destination);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
   // ─── Render Canvas ────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-[#FAFAF8] text-[#1A1918] flex flex-col items-center justify-center relative overflow-hidden">
+      {AUTH_ENABLED && !isSignedIn && (
+        <Link
+          href="/login"
+          className="absolute top-5 right-6 z-10 text-xs font-light text-[#1A1918]/45 hover:text-[#006045] tracking-tight"
+        >
+          Déjà un compte ? Se connecter
+        </Link>
+      )}
       <div
         ref={scrollRef}
         className="w-full max-w-[520px] mx-auto px-6 py-10 md:py-14 flex flex-col items-center gap-6 overflow-y-auto"
@@ -643,8 +698,18 @@ export function AliceExperience() {
                 </div>
               )}
 
+              {/* ── Confirmation de l'adresse, avant d'ouvrir l'espace ── */}
+              {phase === 5 && pendingAuthEmail && (
+                <EmailSignIn
+                  initialEmail={pendingAuthEmail}
+                  autoSend
+                  title="Confirme ton adresse : c'est elle qui protège ton espace."
+                  onSignedIn={handleAuthConfirmed}
+                />
+              )}
+
               {/* ── Phase 5: Mandat de recherche — dernière étape ── */}
-              {phase === 5 && (
+              {phase === 5 && !pendingAuthEmail && (
                 <CriteriaStep
                   value={criteria}
                   onChange={setCriteria}

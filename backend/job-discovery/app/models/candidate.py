@@ -21,6 +21,14 @@ class Candidate(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
+    # ── Compte ────────────────────────────────────────────
+    # Utilisateur Supabase propriétaire du profil. Seul lui peut le lire ou
+    # agir en son nom. Null pour les profils créés avant l'authentification :
+    # ils sont rattachés à la première connexion avec la même adresse.
+    auth_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, unique=True, index=True,
+    )
+
     # ── Identity & Contact ────────────────────────────────
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)

@@ -12,6 +12,8 @@ import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
 } from "@/lib/tailor-client";
 import { useAlice } from "../alice-context";
+import { apiFetch } from "@/lib/api";
+import { DownloadLink } from "./ProtectedFile";
 
 interface JobDetail {
   description_raw?: string | null;
@@ -94,7 +96,7 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
     setApplying(false);
     setTailored(null);
 
-    fetch(`${API_BASE_URL}/api/jobs/${job.id}`)
+    apiFetch(`${API_BASE_URL}/api/jobs/${job.id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((data: JobDetail) => {
         if (!alive) return;
@@ -256,13 +258,14 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
           {/* Actions séparées : tout ne passe pas par la candidature complète. */}
           {tailored && candidateId ? (
             <div className="grid grid-cols-2 gap-2">
-              <a
-                href={tailoredCvUrl(candidateId, job.id)}
+              <DownloadLink
+                url={tailoredCvUrl(candidateId, job.id)}
+                filename="CV.pdf"
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-light text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors"
               >
                 <Download className="w-3 h-3 stroke-[1.6]" />
                 CV adapté (PDF)
-              </a>
+              </DownloadLink>
               <button
                 type="button"
                 onClick={() => openCanvas({
@@ -294,13 +297,14 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
           )}
           <div className="flex items-center justify-center gap-4">
             {candidateId && (
-              <a
-                href={packUrl(candidateId, job.id)}
+              <DownloadLink
+                url={packUrl(candidateId, job.id)}
+                filename="Candidature.zip"
                 className="flex items-center gap-1.5 text-[11px] font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight transition-colors"
               >
                 <FolderDown className="w-3 h-3 stroke-[1.5]" />
                 Pack candidature (ZIP)
-              </a>
+              </DownloadLink>
             )}
             {!applyUrl.startsWith("import://") && (
               <a

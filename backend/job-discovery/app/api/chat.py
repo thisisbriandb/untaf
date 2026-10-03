@@ -5,9 +5,10 @@ Chat API — endpoint for Alice conversational agent.
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.auth import AuthUser, assert_owner, require_user
 from app.database import async_session
 from app.models.candidate import Candidate
 from app.agents.alice_agent import chat_with_alice
@@ -44,7 +45,7 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
+async def chat_endpoint(req: ChatRequest, user: AuthUser = Depends(require_user)):
     """
     Send a message to Alice and receive a structured response.
     Alice may call tools (search_jobs, get_cv_audit, etc.) and return
@@ -57,6 +58,9 @@ async def chat_endpoint(req: ChatRequest):
         raise HTTPException(status_code=400, detail="Invalid candidate_id format")
 
     async with async_session() as session:
+        # Le candidat est dans le corps, pas dans le chemin : la garde
+        # globale ne le voit pas, on vérifie ici.
+        await assert_owner(session, user, candidate_id)
         candidate = await session.get(Candidate, candidate_id)
 
     if not candidate:

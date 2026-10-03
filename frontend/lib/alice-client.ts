@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export async function sendMessageToAlice(
   message: string,
   history: ChatTurn[] = [],
 ): Promise<AliceResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/chat`, {
+  const res = await apiFetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

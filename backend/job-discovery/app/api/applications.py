@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import AuthUser, assert_owner, require_admin, require_user
+from app.config import settings
 from app.database import get_db
 from app.models.application import Application, ApplicationStatus
 from app.models.company import Company
@@ -28,8 +30,15 @@ async def list_applications(
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
+    user: AuthUser = Depends(require_user),
 ):
     """List matched applications with filters, sorted by match score desc."""
+    # Sans authentification, la liste couvrait tous les candidats. On exige
+    # désormais un candidat, et qu'il appartienne à l'appelant.
+    if not settings.auth_disabled:
+        if not candidate_id:
+            raise HTTPException(400, "candidate_id requis")
+        await assert_owner(db, user, candidate_id)
     query = (
         select(Application, JobPosting, Company.name, Company.domain)
         .join(JobPosting, Application.job_posting_id == JobPosting.id)
@@ -59,7 +68,11 @@ async def list_applications(
 
 
 @router.get("/{application_id}", response_model=ApplicationDetail)
-async def get_application(application_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_application(
+    application_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AuthUser = Depends(require_user),
+):
     """Get single application details."""
     query = (
         select(Application, JobPosting, Company.name, Company.domain)
@@ -73,6 +86,7 @@ async def get_application(application_id: UUID, db: AsyncSession = Depends(get_d
         raise HTTPException(404, "Application not found")
         
     app, posting, company_name, company_domain = row
+    await assert_owner(db, user, app.candidate_id)
     app_data = ApplicationDetail.model_validate(app)
     job_data = JobPostingOut.model_validate(posting)
     job_data.company_name = company_name
@@ -86,6 +100,7 @@ async def update_application_status(
     application_id: UUID,
     data: ApplicationStatusUpdate,
     db: AsyncSession = Depends(get_db),
+    user: AuthUser = Depends(require_user),
 ):
     """Update status of a candidate match/application."""
     from app.agents.application.followup import ANSWERED, record_status
@@ -95,6 +110,7 @@ async def update_application_status(
     application = await db.get(Application, application_id)
     if not application:
         raise HTTPException(404, "Application not found")
+    await assert_owner(db, user, application.candidate_id)
 
     previous = application.status
     if data.status != previous:
@@ -124,7 +140,7 @@ async def update_application_status(
     return application
 
 
-@router.post("/match", status_code=202)
+@router.post("/match", status_code=202, dependencies=[Depends(require_admin)])
 async def trigger_qualification_and_matching():
     """Trigger the qualification and matching pipeline async (Celery)."""
     from app.agents.discovery.tasks import qualify_and_match_jobs
