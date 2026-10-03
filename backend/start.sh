@@ -32,9 +32,9 @@ EOF
     echo "[start] migrations de la base…"
     alembic upgrade head
     echo "[start] migrations à jour — API sur le port ${PORT:-8000}"
-    # « :: » écoute en IPv6 et en IPv4 : le réseau interne de Railway, d'où
-    # part le healthcheck, passe par IPv6.
-    exec uvicorn app.main:app --host :: --port "${PORT:-8000}" \
+    # 0.0.0.0, pas « :: » : asyncio ouvre « :: » en IPv6 seul
+    # (IPV6_V6ONLY), et le healthcheck de Railway arrive en IPv4.
+    exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" \
       --proxy-headers --forwarded-allow-ips='*'
     ;;
   worker)
