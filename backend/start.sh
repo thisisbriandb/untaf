@@ -7,10 +7,16 @@
 #   ROLE=beat    planificateur Celery (une seule instance, jamais plus)
 set -e
 
+echo "[start] rôle : ${ROLE:-web}"
+
 case "${ROLE:-web}" in
   web)
+    echo "[start] migrations de la base…"
     alembic upgrade head
-    exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" \
+    echo "[start] migrations à jour — API sur le port ${PORT:-8000}"
+    # « :: » écoute en IPv6 et en IPv4 : le réseau interne de Railway, d'où
+    # part le healthcheck, passe par IPv6.
+    exec uvicorn app.main:app --host :: --port "${PORT:-8000}" \
       --proxy-headers --forwarded-allow-ips='*'
     ;;
   worker)
