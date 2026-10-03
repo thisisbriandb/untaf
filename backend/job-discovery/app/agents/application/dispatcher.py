@@ -291,8 +291,9 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             if result["real"] and d.application_id:
                 app = await session.get(Application, d.application_id)
                 if app:
-                    app.status = ApplicationStatus.APPLIED
+                    from app.agents.application.followup import record_status
                     app.applied_at = d.sent_at
+                    record_status(app, ApplicationStatus.APPLIED, f"envoyée via {d.channel.value}")
         else:
             d.status = DispatchStatus.FAILED
             d.error = result.get("error", "échec inconnu")

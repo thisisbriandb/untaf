@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, ArrowUp, ArrowUpRight, ClipboardPaste, Mic, PanelRight, Plus, Radar,
@@ -16,6 +16,7 @@ import { MissionLauncher } from "./MissionLauncher";
 import { ImportJobDialog } from "./ImportJobDialog";
 import { fetchCurrentRun, type MissionRun } from "@/lib/mission-run-client";
 import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../alice-context";
+import { useToast } from "./Toaster";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -241,8 +242,14 @@ function workingLabelFor(query: string): string {
   return "Je m'en occupe…";
 }
 
-export function AliceView({ userName }: { userName: string }) {
-  const firstName = userName.split(" ")[0] || "Briand";
+export function AliceView({
+  userName,
+  onSelectTab,
+}: {
+  userName: string;
+  onSelectTab?: (tab: "candidatures" | "mission") => void;
+}) {
+  const firstName = userName.split(" ")[0];
   const [prompt, setPrompt] = useState("");
   const [workingLabel, setWorkingLabel] = useState("Je m'en occupe…");
   const {
@@ -255,12 +262,42 @@ export function AliceView({ userName }: { userName: string }) {
   const [showLauncher, setShowLauncher] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
+  /** Run vu se terminer pendant la visite : sa carte reste, en relais. */
+  const [finishedRunId, setFinishedRunId] = useState<string | null>(null);
+  const toast = useToast();
+
   useEffect(() => {
     if (!candidateId) return;
     fetchCurrentRun(candidateId).then(setRun);
   }, [candidateId]);
 
   const isRunLive = run?.status === "running" || run?.status === "preparing";
+
+  /**
+   * Suivi du run. Quand il se termine sous les yeux de l'utilisateur, Alice
+   * le dit dans le fil — c'est elle qui rend compte, pas un badge qui change
+   * de couleur — et la carte passe le relais à ce qui reste à faire.
+   */
+  const runRef = useRef<MissionRun | null>(null);
+  useEffect(() => {
+    runRef.current = run;
+  }, [run]);
+  const handleRunChange = useCallback(
+    (next: MissionRun | null) => {
+      const prev = runRef.current;
+      const wasLive = prev?.status === "running" || prev?.status === "preparing";
+      const nowDone = next && (next.status === "completed" || next.status === "interrupted");
+      if (wasLive && nowDone && next) {
+        setFinishedRunId(next.id);
+        if (next.report) sayAsAlice(next.report);
+        toast(next.status === "completed" ? "Mission terminée." : "Mission arrêtée.", "info");
+      }
+      setRun(next);
+    },
+    [sayAsAlice, toast],
+  );
+
+  const showRunCard = run && (isRunLive || run.id === finishedRunId);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
@@ -309,7 +346,7 @@ export function AliceView({ userName }: { userName: string }) {
           <div className="flex flex-col items-center text-center gap-3 shrink-0">
             <AlicePresence emotion={emotion} size="lg" />
             <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
-              Bonjour {firstName}.
+              Bonjour{firstName ? ` ${firstName}` : ""}.
             </h1>
           </div>
 
@@ -347,11 +384,25 @@ export function AliceView({ userName }: { userName: string }) {
           {/* Uniquement pendant qu'une mission tourne. Une mission terminée n'a
               rien à faire en permanence sur l'écran d'accueil : son compte rendu
               est dans le fil, et l'historique est dans l'onglet Mission. */}
-          {isRunLive && candidateId && run && (
-            <div className="w-full shrink-0">
-              <ActiveMissionCard candidateId={candidateId} run={run} onChange={setRun} />
-            </div>
-          )}
+          <AnimatePresence>
+            {showRunCard && candidateId && run && (
+              <motion.div
+                key={run.id}
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                className="w-full shrink-0"
+              >
+                <ActiveMissionCard
+                  candidateId={candidateId}
+                  run={run}
+                  onChange={handleRunChange}
+                  onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
+                  onDismiss={() => setFinishedRunId(null)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6 shrink-0">
             <AnimatePresence initial={false}>
@@ -444,6 +495,7 @@ export function AliceView({ userName }: { userName: string }) {
             onLaunched={(r) => {
               setRun(r);
               setShowLauncher(false);
+              toast("Mission lancée — tu peux fermer l'application, je t'écris à la fin.");
             }}
           />
         )}

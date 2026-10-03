@@ -102,6 +102,7 @@ async def send_application_email(
         return {
             "ok": True,
             "real": False,
+            "error": "l'envoi d'e-mails n'est pas configuré sur ce serveur (SMTP)",
             "proof": {
                 "simulated": True,
                 "to": to_email,

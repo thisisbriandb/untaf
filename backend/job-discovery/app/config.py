@@ -93,6 +93,25 @@ class Settings(BaseSettings):
     def can_send_email(self) -> bool:
         return bool(self.smtp_host and self.smtp_user and self.smtp_password)
 
+    # ── Notifications au candidat ────────────────────────
+    # Alice écrit au candidat (fin de mission, candidature partie, relances).
+    # Resend est essayé en premier — un service transactionnel délivre mieux
+    # qu'une boîte SMTP personnelle ; à défaut, le SMTP ci-dessus sert aussi.
+    # Sans l'un ni l'autre, la notification est enregistrée en SIMULATED.
+    resend_api_key: str = ""
+    notify_from_email: str = ""
+    notify_from_name: str = "Alice · Untaf"
+    #: Racine du frontend, pour les liens des e-mails.
+    frontend_url: str = "http://localhost:3000"
+
+    @property
+    def can_notify(self) -> bool:
+        return bool(self.resend_api_key and self.notify_from_email) or self.can_send_email
+
+    # ── Suivi des candidatures ───────────────────────────
+    #: Jours sans réponse après lesquels Alice propose une relance.
+    followup_after_days: int = 7
+
     # ── Candidature par pilotage navigateur ──────────────
     # Interrupteur volontairement distinct de l'autorisation du mandat. Le
     # mandat dit « tu peux postuler pour moi » ; ceci dit « ce déploiement a le

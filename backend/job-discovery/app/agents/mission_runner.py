@@ -19,7 +19,6 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.database import async_session
-from app.models.candidate import Candidate
 from app.models.company import ATSType
 from app.models.job_posting import JobPosting, PostingStatus
 from app.models.application import Application, ApplicationStatus
@@ -154,65 +153,47 @@ async def _step_match(run_id: UUID, candidate_id: UUID) -> int:
 
 
 async def _step_prepare(run_id: UUID, candidate_id: UUID) -> int:
-    """Rédaction des lettres pour les offres du haut du panier."""
-    from app.agents.discovery.cover_letter import write_cover_letter
+    """
+    Pack complet — CV adapté et lettre — pour les offres du haut du panier.
+
+    Le même pack que celui du Canvas : une candidature préparée en mission ne
+    doit pas valoir moins qu'une candidature préparée à la main.
+    """
+    from app.agents.application.pack import build_pack, is_pack_ready
     from app.models.company import Company
 
-    prepared = 0
-
     async with async_session() as session:
-        candidate = await session.get(Candidate, candidate_id)
         rows = (await session.execute(
-            select(Application, JobPosting, Company.name)
+            select(Application, JobPosting.title, Company.name)
             .join(JobPosting, Application.job_posting_id == JobPosting.id)
             .join(Company, JobPosting.company_id == Company.id)
             .where(Application.candidate_id == candidate_id)
             .where(Application.status == ApplicationStatus.MATCHED)
             .order_by(Application.match_score.desc())
-            .limit(LETTERS_PER_CYCLE)
+            .limit(LETTERS_PER_CYCLE * 4)
         )).all()
 
-    cv = (candidate.cv_content or {}) if candidate else {}
+    # Un pack déjà prêt n'est pas refait : on descend dans le classement.
+    todo = [(a, t, c) for a, t, c in rows if not is_pack_ready(a)][:LETTERS_PER_CYCLE]
 
-    for app, job, company in rows:
-        # Une lettre déjà rédigée n'est pas refaite.
-        if (app.metadata_json or {}).get("cover_letter"):
-            continue
-
+    prepared = 0
+    for app, title, company in todo:
         try:
-            letter = await write_cover_letter(
-                full_name=candidate.full_name or "",
-                email=candidate.email or "",
-                phone=candidate.phone or "",
-                linkedin_url=candidate.linkedin_url or "",
-                headline=candidate.headline or "",
-                skills=list(candidate.skills or []),
-                summary=cv.get("summary") or candidate.resume_raw or "",
-                experiences=cv.get("experiences") or [],
-                education=cv.get("education") or [],
-                job_title=job.title,
-                company_name=company,
-                location=job.location or "",
-                tech_stack=list((job.description_parsed or {}).get("tech_stack") or []),
-                job_excerpt=job.description_raw or "",
-                signature_image=candidate.signature_image,
-            )
+            pack = await build_pack(candidate_id, app.id)
         except Exception as e:  # noqa: BLE001
-            logger.error("Letter generation failed for %s: %s", job.id, e)
+            logger.error("Pack generation failed for %s: %s", app.id, e)
+            continue
+        if not pack:
             continue
 
         async with async_session() as session:
-            stored = await session.get(Application, app.id)
-            stored.metadata_json = {
-                **(stored.metadata_json or {}),
-                "cover_letter": letter.model_dump(),
-            }
             run_m = await session.get(MissionRun, run_id)
-            _bump(run_m, letters=1)
+            _bump(run_m, letters=1, packs=1)
             await _log(
                 session, run_m, candidate_id, MissionEventKind.LETTER_WRITTEN,
-                f"J'ai préparé la lettre pour « {job.title} » chez {company}.",
-                {"job_id": str(job.id), "company": company},
+                f"Pack prêt pour « {title} » chez {company} : CV adapté et lettre rédigée.",
+                {"job_id": str(app.job_posting_id), "application_id": str(app.id),
+                 "company": company, "score": app.match_score},
             )
             await session.commit()
 
@@ -221,46 +202,133 @@ async def _step_prepare(run_id: UUID, candidate_id: UUID) -> int:
     return prepared
 
 
-async def _step_apply(run_id: UUID, candidate_id: UUID, authorized: bool) -> int:
-    """
-    Envoi des candidatures.
+#: Envois tentés par cycle. Un formulaire rempli dans un navigateur prend du
+#: temps ; mieux vaut un rythme régulier qu'une rafale qui sature le worker.
+DISPATCHES_PER_CYCLE = 5
 
-    Sans autorisation explicite, on n'envoie pas et on le dit : les offres
-    prêtes passent en attente de validation. Rapporter un envoi qui n'a pas eu
-    lieu ruinerait la valeur du compte rendu.
+async def _step_apply(run_id: UUID, candidate_id: UUID, authorized: bool) -> dict:
     """
+    Envoi des candidatures dont le pack est prêt.
+
+    Chaque candidature passe par le dispatcher, qui applique le mandat
+    (autonomie, quota, canaux, entreprises bloquées). Sans autorisation
+    d'envoi pour ce run, rien ne part : les candidatures prêtes rejoignent la
+    file de validation, où l'utilisateur les retrouve — et non plus un simple
+    compteur sans rien derrière.
+    """
+    from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+    # Une candidature déjà passée par l'un de ces états n'est pas reproposée à
+    # chaque cycle : elle attend l'utilisateur, elle est partie, il l'a
+    # refusée, ou le dispatcher a déjà dit pourquoi elle ne peut pas partir.
+    settled = (
+        DispatchStatus.AWAITING_APPROVAL, DispatchStatus.APPROVED,
+        DispatchStatus.SENT, DispatchStatus.SIMULATED, DispatchStatus.REJECTED,
+        DispatchStatus.PREPARED,
+    )
+    tally = {"sent": 0, "simulated": 0, "awaiting_approval": 0, "blocked": 0, "failed": 0}
+
     async with async_session() as session:
         pending = (await session.execute(
             select(Application)
             .where(Application.candidate_id == candidate_id)
             .where(Application.status == ApplicationStatus.MATCHED)
+            .order_by(Application.match_score.desc())
         )).scalars().all()
+        handled = set((await session.execute(
+            select(ApplicationDispatch.application_id)
+            .where(ApplicationDispatch.candidate_id == candidate_id)
+            .where(ApplicationDispatch.status.in_(settled))
+        )).scalars().all())
 
-        ready = [a for a in pending if (a.metadata_json or {}).get("cover_letter")]
+    ready = [
+        a for a in pending
+        if (a.metadata_json or {}).get("cover_letter") and a.id not in handled
+    ][:DISPATCHES_PER_CYCLE]
 
+    for app in ready:
+        dispatch = await prepare_dispatch(candidate_id, app.id, run_id)
+        if not dispatch:
+            continue
+
+        if dispatch.status == DispatchStatus.APPROVED and not authorized:
+            # Le mandat le permettrait, mais l'utilisateur a demandé, pour
+            # cette mission, à valider lui-même : c'est la règle la plus
+            # stricte qui l'emporte.
+            async with async_session() as session:
+                d = await session.get(ApplicationDispatch, dispatch.id)
+                d.status = DispatchStatus.AWAITING_APPROVAL
+                d.error = "tu as choisi de valider chaque envoi pour cette mission"
+                await session.commit()
+            dispatch.status = DispatchStatus.AWAITING_APPROVAL
+
+        if dispatch.status == DispatchStatus.APPROVED:
+            notify = None
+            sent = await send_dispatch(dispatch.id)
+            status = sent.status if sent else DispatchStatus.FAILED
+            async with async_session() as session:
+                run = await session.get(MissionRun, run_id)
+                if status == DispatchStatus.SENT:
+                    tally["sent"] += 1
+                    await _log(
+                        session, run, candidate_id, MissionEventKind.APPLIED,
+                        f"Candidature envoyée à {sent.company_name} pour « {sent.job_title} ».",
+                        {"dispatch_id": str(sent.id), "channel": sent.channel.value},
+                    )
+                    notify = sent.id
+                elif status == DispatchStatus.SIMULATED:
+                    tally["simulated"] += 1
+                    await _log(
+                        session, run, candidate_id, MissionEventKind.APPLIED,
+                        f"Répétition pour {sent.company_name} : tout est prêt, rien n'est "
+                        f"parti ({sent.error}).",
+                        {"dispatch_id": str(sent.id), "simulated": True},
+                    )
+                else:
+                    tally["failed"] += 1
+                    await _log(
+                        session, run, candidate_id, MissionEventKind.ERROR,
+                        f"Envoi vers {dispatch.company_name} non abouti : "
+                        f"{(sent.error if sent else 'erreur inconnue')}. Le pack reste "
+                        f"téléchargeable pour finir à la main.",
+                        {"dispatch_id": str(dispatch.id)},
+                    )
+                await session.commit()
+            if notify:
+                from app.agents.notifications import notify_application_sent
+                await notify_application_sent(candidate_id, notify)
+        elif dispatch.status == DispatchStatus.AWAITING_APPROVAL:
+            tally["awaiting_approval"] += 1
+        else:
+            tally["blocked"] += 1
+
+    async with async_session() as session:
         run = await session.get(MissionRun, run_id)
-        if not authorized:
-            if ready:
-                await _log(
-                    session, run, candidate_id, MissionEventKind.AWAITING_APPROVAL,
-                    f"{len(ready)} candidature{'s sont prêtes' if len(ready) > 1 else ' est prête'} "
-                    f"à partir. Tu ne m'as pas autorisée à envoyer : elles attendent ton feu vert.",
-                    {"count": len(ready)},
-                )
-                run.stats = {**(run.stats or {}), "awaiting_approval": len(ready)}
-            await session.commit()
-            return 0
+        _bump(run, **{k: v for k, v in tally.items() if v})
 
-        await _log(
-            session, run, candidate_id, MissionEventKind.ERROR,
-            "L'envoi automatique n'est pas encore raccordé : je prépare les "
-            "dossiers, mais je ne peux pas les soumettre moi-même.",
-            {"ready": len(ready)},
-        )
-        run.stats = {**(run.stats or {}), "awaiting_approval": len(ready)}
+        # Un seul message pour toute la file, plutôt qu'une ligne par offre.
+        if tally["awaiting_approval"]:
+            n = tally["awaiting_approval"]
+            await _log(
+                session, run, candidate_id, MissionEventKind.AWAITING_APPROVAL,
+                f"{n} candidature{'s sont prêtes' if n > 1 else ' est prête'} à partir. "
+                + ("Elles attendent" if n > 1 else "Elle attend")
+                + " ton feu vert dans Candidatures.",
+                {"count": n},
+            )
+        if tally["blocked"]:
+            n = tally["blocked"]
+            await _log(
+                session, run, candidate_id, MissionEventKind.AWAITING_APPROVAL,
+                f"{n} pack{'s' if n > 1 else ''} prêt{'s' if n > 1 else ''} que je ne peux pas "
+                f"envoyer moi-même (canal hors de portée ou quota) : à finir à la main, "
+                f"tout est rédigé.",
+                {"count": n},
+            )
         await session.commit()
 
-    return 0
+    return tally
 
 
 # ── Boucle d'exécution ─────────────────────────────────────────────────────
@@ -390,6 +458,11 @@ async def finalize_run(
         )
         await session.commit()
 
+    # Le candidat a pu fermer l'application : c'est le moment de lui écrire.
+    # Ne lève jamais, et la clé de déduplication protège d'une double clôture.
+    from app.agents.notifications import notify_mission_report
+    await notify_mission_report(run_id)
+
 
 async def _write_report(
     title: str, minutes: int, status: RunStatus, stats: dict, timeline: list[str]
@@ -409,8 +482,14 @@ async def _write_report(
     fallback = (
         f"Mission terminée. J'ai relevé {stats.get('scanned', 0)} offres, "
         f"retenu {stats.get('shortlisted', 0)}, et préparé "
-        f"{stats.get('letters', 0)} lettre(s)."
+        f"{stats.get('packs', stats.get('letters', 0))} pack(s) de candidature."
     )
+    if stats.get("sent"):
+        fallback += f" {stats['sent']} candidature(s) sont parties."
+    if stats.get("awaiting_approval"):
+        fallback += (
+            f" {stats['awaiting_approval']} attendent ton feu vert dans Candidatures."
+        )
 
     if not settings.gemini_api_key:
         return fallback
@@ -448,6 +527,26 @@ Pas de titre, pas de liste : un paragraphe parlé."""
 STALE_AFTER_SECONDS = 15 * 60
 
 
+def is_orphaned(run: MissionRun, now: datetime) -> bool:
+    """
+    Plus personne ne s'occupe de ce run.
+
+    Le signe de vie fait foi, pas l'heure de fin : un cycle entamé avant
+    l'échéance se termine après, et le worker clôt alors lui-même, rapport
+    compris. Une échéance dépassée n'est un abandon qu'au-delà du même délai
+    de grâce.
+    """
+    if run.status not in (RunStatus.PREPARING, RunStatus.RUNNING):
+        return False
+    grace = timedelta(seconds=STALE_AFTER_SECONDS)
+    # Avant le premier battement, c'est la date de création qui fait foi : un
+    # run resté « en préparation » n'a jamais démarré.
+    last_sign = run.heartbeat_at or run.started_at or run.created_at
+    if last_sign and last_sign < now - grace:
+        return True
+    return bool(run.ends_at and run.ends_at < now - grace)
+
+
 async def sweep_stale_runs() -> int:
     """
     Clôt les missions dont plus personne ne s'occupe.
@@ -460,7 +559,6 @@ async def sweep_stale_runs() -> int:
     Retourne le nombre de runs clos.
     """
     now = datetime.now(timezone.utc)
-    stale_before = now - timedelta(seconds=STALE_AFTER_SECONDS)
 
     async with async_session() as session:
         candidates = (await session.execute(
@@ -469,14 +567,7 @@ async def sweep_stale_runs() -> int:
             )
         )).scalars().all()
 
-        orphans = []
-        for run in candidates:
-            # Avant le premier battement, c'est la date de création qui fait
-            # foi : un run resté « en préparation » n'a jamais démarré.
-            last_sign = run.heartbeat_at or run.started_at or run.created_at
-            expired = run.ends_at is not None and run.ends_at < now
-            if expired or (last_sign and last_sign < stale_before):
-                orphans.append((run.id, run.mission_id))
+        orphans = [(run.id, run.mission_id) for run in candidates if is_orphaned(run, now)]
 
     for run_id, _ in orphans:
         async with async_session() as session:

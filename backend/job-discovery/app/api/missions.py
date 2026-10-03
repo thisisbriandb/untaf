@@ -244,19 +244,17 @@ async def get_current_run(candidate_id: UUID, db: AsyncSession = Depends(get_db)
 
     # Un worker mort laisse un run « en cours » orphelin. Le balayage
     # périodique s'en charge, mais on ne peut pas afficher un travail fantôme
-    # en attendant son prochain passage : créneau écoulé ou battement de cœur
-    # périmé, on clôt ici aussi.
-    from app.agents.mission_runner import STALE_AFTER_SECONDS
+    # en attendant son prochain passage : battement de cœur périmé, on clôt
+    # ici aussi — par la clôture normale, pour que le compte rendu et l'e-mail
+    # existent.
+    #
+    # L'heure de fin dépassée ne suffit PAS : le dernier cycle déborde souvent
+    # de quelques minutes, et clore ici rendait sans effet la vraie clôture du
+    # worker — mission « interrompue », sans rapport ni notification.
+    from app.agents.mission_runner import is_orphaned
 
-    now = datetime.now(timezone.utc)
-    last_sign = run.heartbeat_at or run.started_at or run.created_at
-    if run.status == RunStatus.RUNNING and (
-        (run.ends_at and run.ends_at < now)
-        or (last_sign and (now - last_sign).total_seconds() > STALE_AFTER_SECONDS)
-    ):
-        run.status = RunStatus.INTERRUPTED
-        run.finished_at = datetime.now(timezone.utc)
-        await db.commit()
+    if is_orphaned(run, datetime.now(timezone.utc)):
+        await finalize_run(run.id, candidate_id, RunStatus.INTERRUPTED)
         await db.refresh(run)
 
     events = (await db.execute(

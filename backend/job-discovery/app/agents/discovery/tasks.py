@@ -252,6 +252,18 @@ def ingest_france_travail_daily(keywords: str | None = None):
         _release(loop)
 
 
+@celery_app.task(name="app.agents.discovery.tasks.reclassify_apply_contacts")
+def reclassify_apply_contacts():
+    """Remet d'aplomb le canal des offres dont le contact était mal lu."""
+    from app.agents.discovery.france_travail_task import reclassify_contacts
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(reclassify_contacts(batch=5000))
+    finally:
+        _release(loop)
+
+
 @celery_app.task(name="app.agents.discovery.tasks.scrape_company")
 def scrape_company(company_id: str, domain: str, ats_type: str, ats_slug: str):
     """On-demand task: scrape a single company."""

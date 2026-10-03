@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Square } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchCurrentRun,
@@ -10,20 +10,28 @@ import {
   stopRun,
   STEP_LABELS,
   type MissionRun,
+  type RunStep,
 } from "@/lib/mission-run-client";
 
 /** Cadence de rafraîchissement : assez vive pour paraître vivante, assez
  *  lente pour ne pas marteler l'API. Le compte à rebours, lui, tourne en local. */
 const POLL_MS = 8000;
 
+const STEPS: RunStep[] = ["scan", "qualify", "match", "prepare", "apply"];
+
 export function ActiveMissionCard({
   candidateId,
   run,
   onChange,
+  onOpenCandidatures,
+  onDismiss,
 }: {
   candidateId: string;
   run: MissionRun;
   onChange: (run: MissionRun | null) => void;
+  /** Passage de relais une fois la mission finie : ce qui reste à valider. */
+  onOpenCandidatures?: () => void;
+  onDismiss?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [remaining, setRemaining] = useState(run.seconds_remaining);
@@ -132,20 +140,100 @@ export function ActiveMissionCard({
           </div>
         </div>
 
+        {/* Étapes — où en est la pipeline, rendu visible */}
+        {isLive && run.status === "running" && (
+          <div className="flex items-center gap-1">
+            {STEPS.filter((st) => st !== "prepare" || run.objective !== "search")
+              .filter((st) => st !== "apply" || run.objective === "apply")
+              .map((st) => {
+                const order = STEPS.indexOf(st);
+                const current = run.current_step ? STEPS.indexOf(run.current_step) : -1;
+                return (
+                  <div key={st} className="flex-1 h-1 rounded-full bg-[#1A1918]/6 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-[#006045]"
+                      initial={false}
+                      animate={{
+                        width: order < current ? "100%" : order === current ? ["15%", "85%", "15%"] : "0%",
+                        opacity: order === current ? [0.55, 1, 0.55] : 1,
+                      }}
+                      transition={
+                        order === current
+                          ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+                          : { duration: 0.4 }
+                      }
+                    />
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
         {/* Compteurs — ce qu'elle a réellement fait */}
-        <div className="flex items-center gap-4">
-          {[
-            [stats.scanned ?? 0, "vues"],
-            [stats.shortlisted ?? 0, "retenues"],
-            [stats.letters ?? 0, "lettres"],
-            ...(stats.awaiting_approval ? [[stats.awaiting_approval, "à valider"]] : []),
-          ].map(([value, label]) => (
-            <div key={label as string} className="flex items-baseline gap-1">
-              <span className="text-sm text-[#1A1918] tabular-nums">{value}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {(
+            [
+              [stats.scanned ?? 0, "vues"],
+              [stats.shortlisted ?? 0, "retenues"],
+              [stats.packs ?? stats.letters ?? 0, "packs prêts"],
+              ...(stats.sent ? [[stats.sent, "envoyées"]] : []),
+              ...(stats.awaiting_approval ? [[stats.awaiting_approval, "à valider"]] : []),
+            ] as [number, string][]
+          ).map(([value, label]) => (
+            <div key={label} className="flex items-baseline gap-1">
+              <motion.span
+                key={value}
+                initial={{ y: -6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className={cn(
+                  "text-sm tabular-nums",
+                  label === "à valider" ? "text-amber-600" : "text-[#1A1918]",
+                )}
+              >
+                {value}
+              </motion.span>
               <span className="text-[11px] font-light text-[#1A1918]/45">{label}</span>
             </div>
           ))}
         </div>
+
+        {/* Mission finie : le relais, plutôt qu'une carte qui disparaît */}
+        {!isLive && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between gap-3 pt-1"
+          >
+            <span className="flex items-center gap-1.5 text-[11px] font-light text-[#006045]">
+              <Check className="h-3 w-3" />
+              {run.status === "completed" ? "Compte rendu dans le fil" : "Arrêtée — le travail fait est conservé"}
+            </span>
+            <span className="flex items-center gap-1">
+              {onOpenCandidatures && (
+                <button
+                  type="button"
+                  onClick={onOpenCandidatures}
+                  className="inline-flex items-center gap-1 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d38] cursor-pointer"
+                >
+                  {stats.awaiting_approval
+                    ? `Valider ${stats.awaiting_approval} candidature${stats.awaiting_approval > 1 ? "s" : ""}`
+                    : "Voir les candidatures"}
+                  <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
+              {onDismiss && (
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  aria-label="Fermer"
+                  className="p-1.5 rounded-full text-[#1A1918]/35 hover:text-[#1A1918] cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </span>
+          </motion.div>
+        )}
 
         <AnimatePresence>
           {expanded && (

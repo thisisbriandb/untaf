@@ -26,7 +26,7 @@ from app.models.company import Company
 from app.models.dispatch import ApplicationDispatch
 from app.models.job_posting import JobPosting
 from app.schemas.cover_letter import CoverLetterResult
-from app.schemas.cv_content import CvContentRequest, CvContentResult
+from app.schemas.cv_content import CvContentResult
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/candidates/{candidate_id}/apply", tags=["apply"])
@@ -76,19 +76,9 @@ async def _load(session, candidate_id: UUID, job_id: UUID):
 
 def _profile(candidate: Candidate) -> dict:
     """Le parcours du candidat, tel que les rédacteurs l'attendent."""
-    cv = candidate.cv_content or {}
-    return {
-        "full_name": candidate.full_name or "",
-        "email": candidate.email or "",
-        "phone": candidate.phone or "",
-        "linkedin_url": candidate.linkedin_url or "",
-        "headline": candidate.headline or "",
-        "skills": list(candidate.skills or []),
-        "summary": cv.get("summary") or candidate.resume_raw or "",
-        "experiences": cv.get("experiences") or [],
-        "education": cv.get("education") or [],
-        "signature_image": candidate.signature_image,
-    }
+    from app.agents.application.pack import candidate_profile
+
+    return candidate_profile(candidate)
 
 
 def _tailoring(application: Application | None) -> dict | None:
@@ -165,59 +155,20 @@ async def tailor_documents(candidate_id: UUID, job_id: UUID):
     candidatures gardent le CV général. Ce sont ce CV et cette lettre qui
     partiront à l'envoi.
     """
-    from app.agents.discovery.cover_letter import write_cover_letter
-    from app.agents.discovery.cv_writer import write_cv_content
+    from app.agents.application.pack import build_pack
 
     async with async_session() as session:
-        job, company_name, candidate, application = await _load(session, candidate_id, job_id)
+        job, _, candidate, application = await _load(session, candidate_id, job_id)
         if not job or not candidate:
             raise HTTPException(404, "Offre ou candidat introuvable")
         if not application:
             raise HTTPException(404, "Cette offre n'est pas dans ta liste.")
-        profile = _profile(candidate)
-        languages = (candidate.cv_content or {}).get("languages") or []
-        experience_years = candidate.experience_years
         app_id = application.id
 
-    tech_stack = list((job.description_parsed or {}).get("tech_stack") or job.tech_stack or [])
-    cv_request = CvContentRequest(
-        full_name=profile["full_name"],
-        headline=profile["headline"],
-        summary=profile["summary"],
-        skills=profile["skills"],
-        experience_years=experience_years,
-        experiences=profile["experiences"],
-        education=profile["education"],
-        languages=languages,
-        target_role=job.title,
-        job_title=job.title,
-        company_name=company_name,
-        job_excerpt=job.description_raw,
-        job_skills=tech_stack,
-    )
-    # Les deux rédactions sont indépendantes : l'une n'attend pas l'autre.
-    cv, letter = await asyncio.gather(
-        write_cv_content(cv_request),
-        write_cover_letter(
-            **profile,
-            job_title=job.title,
-            company_name=company_name or "",
-            location=job.location or "",
-            tech_stack=tech_stack,
-            job_excerpt=job.description_raw or "",
-        ),
-    )
-
-    async with async_session() as session:
-        stored = await session.get(Application, app_id)
-        stored.metadata_json = {
-            **(stored.metadata_json or {}),
-            "tailored_cv": {"headline": cv.headline, "summary": cv.summary},
-            "cover_letter": letter.model_dump(),
-        }
-        await session.commit()
-
-    return TailorOut(cv=cv, letter=letter)
+    pack = await build_pack(candidate_id, app_id)
+    if not pack:
+        raise HTTPException(404, "Offre ou candidat introuvable")
+    return TailorOut(cv=pack.cv, letter=pack.letter)
 
 
 @router.get("/{job_id}/cv")
@@ -485,6 +436,9 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
 
             sent = await send_dispatch(dispatch.id)
             real = sent and sent.status.value == "sent"
+            if real:
+                from app.agents.notifications import notify_application_sent
+                await notify_application_sent(candidate_id, sent.id)
 
             yield _sse("done", {
                 "dispatch_id": str(sent.id) if sent else None,

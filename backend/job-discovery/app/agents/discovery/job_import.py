@@ -13,7 +13,6 @@ liste publique comme le matching collectif l'excluent.
 
 import json
 import logging
-import re
 import uuid
 from datetime import datetime, timezone
 
@@ -21,6 +20,7 @@ from pydantic import Field
 from sqlalchemy import select
 
 from app import llm
+from app.agents.discovery.contact_extract import find_apply_email, find_apply_url, is_valid_email
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.france_travail_task import _slugify
 from app.agents.discovery.matching import evaluate_match
@@ -41,8 +41,6 @@ logger = logging.getLogger(__name__)
 IMPORT_DOMAIN_SUFFIX = ".import.local"
 
 UNKNOWN_COMPANY = "Entreprise non précisée"
-
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 
 _CONTRACTS = {
     "cdi": ContractType.CDI, "cdd": ContractType.CDD,
@@ -78,13 +76,12 @@ informations. N'invente rien : un champ absent de l'annonce reste vide ou null.
 def _heuristic(text: str) -> dict:
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     title = (lines[0] if lines else "Offre importée")[:200]
-    email = _EMAIL.search(text)
     return {
         **heuristic_qualify(title, text),
         "title": title,
         "company_name": "",
         "location": None,
-        "contact_email": email.group(0) if email else None,
+        "contact_email": find_apply_email(text),
         "apply_url": None,
     }
 
@@ -133,16 +130,23 @@ async def import_posting(
 
     title = (data.get("title") or "").strip()[:500] or "Offre importée"
     location = (data.get("location") or "").strip() or None
+    # L'adresse proposée par le modèle est contrôlée comme les autres : une
+    # boîte de plateforme ou une adresse inventée ferait partir la
+    # candidature dans le vide. À défaut, on la cherche dans le texte.
+    proposed = (data.get("contact_email") or "").strip()
+    email = proposed.lower() if is_valid_email(proposed) else find_apply_email(text)
     contact = {
         k: v for k, v in (
-            ("email", data.get("contact_email")),
-            ("apply_url", data.get("apply_url") or url),
+            ("email", email),
+            ("apply_url", data.get("apply_url") or url or find_apply_url(text)),
         ) if v
     }
     if contact.get("email"):
         channel, complexity = ApplyChannel.EMAIL, ApplyComplexity.SIMPLE
     elif contact.get("apply_url"):
-        channel, complexity = ApplyChannel.EXTERNAL_LINK, ApplyComplexity.MEDIUM
+        # Formulaire de l'employeur, et non portail France Travail : le
+        # classer EXTERNAL_LINK faisait annoncer un compte candidat requis.
+        channel, complexity = ApplyChannel.WEB_FORM, ApplyComplexity.MEDIUM
     else:
         channel, complexity = ApplyChannel.UNKNOWN, ApplyComplexity.COMPLEX
 

@@ -19,6 +19,7 @@ from app.api.missions import router as missions_router
 from app.api.dispatches import router as dispatches_router
 from app.api.apply import router as apply_router
 from app.api.chat import router as chat_router
+from app.api.pipeline import router as pipeline_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -49,6 +50,7 @@ _PENDING_COLUMNS = (
     "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS resume_name VARCHAR(255)",
     "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_subject VARCHAR(500)",
     "ALTER TABLE application_dispatches ADD COLUMN IF NOT EXISTS letter_body TEXT",
+    "ALTER TABLE candidates ADD COLUMN IF NOT EXISTS notification_prefs JSONB",
 )
 
 
@@ -110,6 +112,7 @@ app.include_router(missions_router, prefix="/api")
 app.include_router(dispatches_router, prefix="/api")
 app.include_router(apply_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
+app.include_router(pipeline_router, prefix="/api")
 
 
 @app.get("/health")

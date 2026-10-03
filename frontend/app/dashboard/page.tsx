@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "@/lib/config";
@@ -13,20 +13,12 @@ import { CandidaturesView } from "./components/CandidaturesView";
 import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
 import { CanvasPanel } from "./components/CanvasPanel";
+import { ToastProvider } from "./components/Toaster";
 import { AliceProvider, useAlice } from "./alice-context";
+import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 import type { ReactNode } from "react";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
-
-interface Application {
-  id: string;
-  candidate_id: string;
-  job_posting_id: string;
-  status: string;
-  match_score: number;
-  created_at: string;
-  job_posting: any;
-}
 
 interface Candidate {
   id: string;
@@ -35,6 +27,8 @@ interface Candidate {
   headline?: string;
   skills: string[];
 }
+
+const TABS: TabType[] = ["alice", "mission", "candidatures", "messages", "parametres"];
 
 /**
  * Largeur de lecture de la conversation. Resserrée quand le Canvas est ouvert
@@ -62,12 +56,16 @@ export default function DashboardPage() {
   // Data States
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingAppId, setUpdatingAppId] = useState<string | null>(null);
+  /** Ce qui attend l'utilisateur — affiché en pastille sur la cloche. */
+  const [awaitingCount, setAwaitingCount] = useState(0);
 
-  // 1. Load Candidate ID from localStorage or fallback
+  // 1. Load Candidate ID from localStorage, and the tab from the URL: the
+  //    e-mails d'Alice pointent sur `/dashboard?tab=candidatures`.
   useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab") as TabType | null;
+    if (tab && TABS.includes(tab)) setActiveTab(tab);
+
     const storedId = localStorage.getItem("candidate_id");
     if (!storedId) {
       setLoading(false);
@@ -76,28 +74,30 @@ export default function DashboardPage() {
     setCandidateId(storedId);
   }, []);
 
-  // 2. Fetch Candidate Profile & Applications from Backend
+  /** L'onglet suit l'URL : un rechargement ou un lien partagé y ramène. */
+  const selectTab = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === "alice") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  // 2. Fetch Candidate Profile from Backend
   useEffect(() => {
     if (!candidateId) return;
 
     const fetchData = async () => {
       try {
-        const [candRes, appsRes] = await Promise.all([
+        const [candRes, pipeline] = await Promise.all([
           fetch(`${API_BASE_URL}/api/candidates/${candidateId}`).catch(() => null),
-          fetch(`${API_BASE_URL}/api/applications/?candidate_id=${candidateId}`).catch(
-            () => null
-          ),
+          fetchPipeline(candidateId),
         ]);
 
         if (candRes && candRes.ok) {
-          const candData = await candRes.json();
-          setCandidate(candData);
+          setCandidate(await candRes.json());
         }
-
-        if (appsRes && appsRes.ok) {
-          const appsData = await appsRes.json();
-          setApplications(appsData);
-        }
+        if (pipeline) setAwaitingCount(pipeline.counts.awaiting ?? 0);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
       } finally {
@@ -108,34 +108,17 @@ export default function DashboardPage() {
     fetchData();
   }, [candidateId]);
 
+  const handlePipelineChange = useCallback(
+    (pipeline: Pipeline) => setAwaitingCount(pipeline.counts.awaiting ?? 0),
+    [],
+  );
+
   // Handle Logout
   const handleLogout = () => {
     localStorage.removeItem("candidate_id");
     localStorage.removeItem("candidate_email");
     localStorage.removeItem("candidate_name");
     router.push("/");
-  };
-
-  // Handle Application Status Update
-  const handleUpdateStatus = async (appId: string, newStatus: string) => {
-    setUpdatingAppId(appId);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/applications/${appId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (res.ok) {
-        setApplications((prev) =>
-          prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-        );
-      }
-    } catch (err) {
-      console.error("Failed to update status:", err);
-    } finally {
-      setUpdatingAppId(null);
-    }
   };
 
   if (loading) {
@@ -149,24 +132,32 @@ export default function DashboardPage() {
     );
   }
 
-  const userName = candidate?.full_name || "Briand";
+  const userName = candidate?.full_name || "";
   const userEmail = candidate?.email || "";
 
   return (
     <AliceProvider
       candidateId={candidateId}
-      onGoToConversation={() => setActiveTab("alice")}
+      onGoToConversation={() => selectTab("alice")}
     >
+      <ToastProvider>
       <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex flex-col overflow-hidden">
         {/* ═══ Barre d'application, pleine largeur ═══ */}
-        <DashboardHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+        <DashboardHeader
+          activeTab={activeTab}
+          onSelectTab={selectTab}
+          candidateId={candidateId}
+          awaitingCount={awaitingCount}
+        />
 
         {/* ═══ Ligne principale : conversation + canvas (dès lg) ═══ */}
         <main className="flex-1 min-h-0 flex justify-center overflow-hidden">
           <ConversationColumn>
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-4 md:px-8 pb-4 overflow-hidden">
               <AnimatePresence mode="wait">
-                {activeTab === "alice" && <AliceView key="alice" userName={userName} />}
+                {activeTab === "alice" && (
+                  <AliceView key="alice" userName={userName} onSelectTab={selectTab} />
+                )}
 
                 {activeTab === "mission" && <MissionView key="mission" />}
 
@@ -174,19 +165,18 @@ export default function DashboardPage() {
                   <CandidaturesView
                     key="candidatures"
                     candidateId={candidateId}
-                    applications={applications}
-                    updatingAppId={updatingAppId}
-                    onUpdateStatus={handleUpdateStatus}
+                    onPipelineChange={handlePipelineChange}
                   />
                 )}
 
                 {activeTab === "messages" && (
-                  <MessagesView key="messages" userName={userName} />
+                  <MessagesView key="messages" candidateId={candidateId} onSelectTab={selectTab} />
                 )}
 
                 {activeTab === "parametres" && (
                   <ParametresView
                     key="parametres"
+                    candidateId={candidateId}
                     userName={userName}
                     userEmail={userEmail}
                     onLogout={handleLogout}
@@ -200,6 +190,7 @@ export default function DashboardPage() {
           <CanvasPanel candidateId={candidateId} />
         </main>
       </div>
+      </ToastProvider>
     </AliceProvider>
   );
 }

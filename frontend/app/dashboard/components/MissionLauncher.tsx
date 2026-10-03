@@ -181,6 +181,16 @@ export function MissionLauncher({
             ))}
           </div>
 
+          {/* Le contrat de délégation, dit en clair avant de partir */}
+          <p className="text-xs font-light text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
+            Tu peux fermer l&apos;application : je continue sans toi.
+            {objective === "search"
+              ? " Je te présente les offres retenues à la fin."
+              : " Chaque offre retenue reçoit un CV adapté et sa lettre."}
+            {objective === "apply" && !allowSend && " Rien ne part sans ton feu vert."}
+            {" "}Je t&apos;écris quand c&apos;est fini.
+          </p>
+
           {error && <p className="text-xs text-red-600/80 text-center">{error}</p>}
 
           <div className="flex justify-center">

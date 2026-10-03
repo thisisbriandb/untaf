@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
+from app.agents.discovery.contact_extract import find_apply_email, find_apply_url
 from app.agents.discovery.scrapers.base import ScrapedJob
 from app.config import settings
 
@@ -231,9 +232,6 @@ def to_description_parsed(offer: dict) -> dict:
     }
 
 
-_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
-
-
 def _clean(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "")).strip()
 
@@ -270,8 +268,19 @@ def to_scraped_job(offer: dict) -> ScrapedJob:
     # Le champ `courriel` contient parfois une consigne en clair plutôt qu'une
     # adresse (« Pour postuler, utiliser le lien suivant : … »). Sans contrôle,
     # le verdict d'automatisation se croyait capable d'envoyer un email.
+    #
+    # Une adresse peut néanmoins s'y cacher (« Envoyer CV à rh@acme.fr »), ou
+    # dans les coordonnées, ou dans la description : on la cherche partout,
+    # par ordre de confiance, plutôt que de déclarer le canal vide.
     raw_email = (contact.get("courriel") or "").strip()
-    email = raw_email if _EMAIL_RE.fullmatch(raw_email) else None
+    coordinates = " ".join(
+        str(contact.get(k) or "") for k in ("coordonnees1", "coordonnees2", "coordonnees3")
+    )
+    email = (
+        find_apply_email(raw_email, coordinates)
+        or find_apply_email(offer.get("description"), min_score=2)
+    )
+    apply_url = contact.get("urlPostulation") or find_apply_url(raw_email, coordinates)
     if raw_email and not email:
         logger.debug("Champ courriel non exploitable, ignoré : %s", raw_email[:60])
 
@@ -280,7 +289,7 @@ def to_scraped_job(offer: dict) -> ScrapedJob:
             "email": email,
             "name": contact.get("nom"),
             "phone": contact.get("telephone"),
-            "apply_url": contact.get("urlPostulation"),
+            "apply_url": apply_url,
             "instructions": contact.get("coordonnees1") or (raw_email if not email else None),
         }.items() if v
     }
@@ -292,7 +301,7 @@ def to_scraped_job(offer: dict) -> ScrapedJob:
         description_raw="\n\n".join(p for p in parts if p),
         location=_clean(lieu.get("libelle")),
         department=_clean(offer.get("romeLibelle")),
-        apply_url=contact.get("urlPostulation") or origine.get("urlOrigine") or "",
+        apply_url=apply_url or origine.get("urlOrigine") or "",
         updated_at=offer.get("dateActualisation") or offer.get("dateCreation"),
         extra={
             "company_name": _clean(entreprise.get("nom")),

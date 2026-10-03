@@ -19,6 +19,7 @@ import {
 } from "react";
 import { sendMessageToAlice, type JobCardData, type UiBlock } from "@/lib/alice-client";
 import { fetchMission } from "@/lib/mission-client";
+import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 import type { CoverLetter } from "@/lib/letter-client";
 import type { AliceEmotion } from "../onboarding/components/AlicePresence";
 
@@ -101,17 +102,45 @@ function formatTime(date: Date): string {
  * texte est construit à partir du journal de mission réel — jamais inventé,
  * sinon la promesse d'autonomie devient un décor.
  */
-function briefingFrom(mission: Awaited<ReturnType<typeof fetchMission>>): string {
+function briefingFrom(
+  mission: Awaited<ReturnType<typeof fetchMission>>,
+  pipeline: Pipeline | null,
+): string {
   if (!mission) return "Je reprends là où j'en étais.";
 
+  // Ce qui attend une décision passe avant le récit : c'est la seule chose
+  // que l'utilisateur doit faire, et il doit l'apprendre en premier.
+  const awaiting = pipeline?.counts.awaiting ?? 0;
+  const followups = pipeline?.counts.followup_due ?? 0;
+  const interviews = pipeline?.counts.interview ?? 0;
+  const todo: string[] = [];
+  if (awaiting > 0) {
+    todo.push(
+      `${awaiting} candidature${awaiting > 1 ? "s attendent" : " attend"} ton feu vert — tout est rédigé`,
+    );
+  }
+  if (followups > 0) {
+    todo.push(`${followups} relance${followups > 1 ? "s sont prêtes" : " est prête"} à partir`);
+  }
+  const agenda = todo.length ? ` ${todo.join(", et ")}. Tout est dans Candidatures.` : "";
+  const congrats = interviews > 0
+    ? ` Et ${interviews} entretien${interviews > 1 ? "s" : ""} en cours : je peux t'aider à le${interviews > 1 ? "s" : ""} préparer.`
+    : "";
+
   if (mission.status === "paused") {
-    return "J'ai mis la recherche en pause, comme tu me l'as demandé. Dis-moi quand je reprends.";
+    return (
+      "J'ai mis la recherche en pause, comme tu me l'as demandé. Dis-moi quand je reprends." +
+      agenda
+    );
   }
 
   const { scanned_last_run: scanned, shortlisted, applied } = mission.stats;
 
   if (!mission.last_run_at || scanned === 0) {
-    return "Je n'ai pas encore lancé de veille sur ton mandat. Je m'y mets dès que tu me le dis.";
+    if (pipeline?.items.length) {
+      return `Je reprends là où j'en étais.${agenda}${congrats}`.trim();
+    }
+    return "Je n'ai pas encore lancé de veille sur ton mandat. Confie-moi une mission et je m'y mets.";
   }
 
   const parts: string[] = [`J'ai passé ${scanned} offres en revue`];
@@ -127,9 +156,10 @@ function briefingFrom(mission: Awaited<ReturnType<typeof fetchMission>>): string
 
   const report = parts.join(", ") + ".";
 
+  if (agenda) return `${report}${agenda}${congrats}`;
   return shortlisted > 0
-    ? `${report} Je te les montre ?`
-    : `${report} Je continue de chercher.`;
+    ? `${report}${congrats} Je te les montre ?`
+    : `${report}${congrats} Je continue de chercher.`;
 }
 
 export function AliceProvider({
@@ -154,7 +184,7 @@ export function AliceProvider({
     if (!candidateId) return;
     let alive = true;
 
-    fetchMission(candidateId).then((mission) => {
+    Promise.all([fetchMission(candidateId), fetchPipeline(candidateId)]).then(([mission, pipeline]) => {
       if (!alive) return;
       setMessages((prev) => {
         if (prev.some((m) => m.sender === "user")) return prev;
@@ -163,7 +193,7 @@ export function AliceProvider({
             id: "briefing",
             sender: "alice",
             timestamp: formatTime(new Date()),
-            text: briefingFrom(mission),
+            text: briefingFrom(mission, pipeline),
           },
         ];
       });

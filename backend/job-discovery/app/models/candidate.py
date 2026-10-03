@@ -90,6 +90,15 @@ class Candidate(Base):
                 "et pondérations. Null = dérivé du profil à la volée."
     )
 
+    # ── Notifications ─────────────────────────────────────
+    # Ce qu'Alice a le droit d'écrire au candidat, et à quel rythme. Null =
+    # réglages par défaut (voir `app.agents.notifications.DEFAULT_PREFS`).
+    notification_prefs: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment='{"enabled": bool, "mission_report": bool, "application_sent": bool, '
+                '"awaiting_approval": bool, "followups": bool, "digest": "off"|"daily"|"weekly"}',
+    )
+
     # ── Timestamps ────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

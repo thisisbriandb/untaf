@@ -33,6 +33,11 @@ export interface MissionRun {
     qualified?: number;
     shortlisted?: number;
     letters?: number;
+    packs?: number;
+    sent?: number;
+    simulated?: number;
+    blocked?: number;
+    failed?: number;
     awaiting_approval?: number;
   } | null;
   report: string | null;
@@ -50,13 +55,13 @@ export const STEP_LABELS: Record<RunStep, string> = {
   scan: "Je relève les offres",
   qualify: "Je lis les annonces",
   match: "Je compare à ton mandat",
-  prepare: "Je rédige les lettres",
-  apply: "Je prépare les envois",
+  prepare: "Je prépare les packs : CV adapté et lettre",
+  apply: "J'envoie ce que tu m'as autorisé",
 };
 
 export const OBJECTIVES: { id: RunObjective; label: string; detail: string }[] = [
   { id: "search", label: "Repérer des offres", detail: "Je cherche et je te présente ce qui tient la route." },
-  { id: "prepare", label: "Préparer les candidatures", detail: "Je vais jusqu'à rédiger les lettres." },
+  { id: "prepare", label: "Préparer les candidatures", detail: "J'adapte ton CV et je rédige la lettre pour chaque offre retenue." },
   { id: "apply", label: "Aller jusqu'à l'envoi", detail: "Je prépare tout et j'envoie si tu m'y autorises." },
 ];
 

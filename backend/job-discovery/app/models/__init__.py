@@ -14,6 +14,7 @@ from app.models.job_posting import (
 from app.models.candidate import Candidate
 from app.models.application import Application, ApplicationStatus
 from app.models.dispatch import ApplicationDispatch, DispatchChannel, DispatchStatus
+from app.models.notification import Notification, NotificationKind, NotificationStatus
 from app.models.mission import (
     Mission,
     MissionEvent,
@@ -45,4 +46,7 @@ __all__ = [
     "ApplicationDispatch",
     "DispatchChannel",
     "DispatchStatus",
+    "Notification",
+    "NotificationKind",
+    "NotificationStatus",
 ]

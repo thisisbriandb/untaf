@@ -96,9 +96,11 @@ Ce n'est pas un confort : les missions s'exécutent dans le worker, pas dans le
 process web. Sans lui, `POST /runs` répond **503** et le dit — plutôt que
 d'accepter une mission que personne n'exécutera.
 
-Le beat déclenche l'ingestion France Travail à 5h30, les scrapers ATS à partir
-de 6h, le rafraîchissement du registre des boards le lundi à 4h, et le balayage
-des missions orphelines toutes les 5 minutes.
+Le beat déclenche l'ingestion France Travail à 5h30, le reclassement des
+contacts de candidature à 5h50, les scrapers ATS à partir de 6h, le
+rafraîchissement du registre des boards le lundi à 4h, le balayage des missions
+orphelines toutes les 5 minutes, la détection des relances dues à 8h40 et les
+rapports d'activité (quotidien à 18h30, hebdomadaire le lundi à 8h50).
 
 Pour lancer les services à la main plutôt qu'en conteneur :
 
@@ -124,6 +126,9 @@ Toutes dans `backend/job-discovery/.env`.
 | `IDENTIFIER_FRANCE_TRAVAIL` | offres | `client_id` (format `PAR_…`) |
 | `FRANCE_TRAVAIL_API` | offres | `client_secret` |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | envois | Sans eux, les candidatures sont **simulées** |
+| `RESEND_API_KEY` / `NOTIFY_FROM_EMAIL` | notifications | E-mails d'Alice au candidat ; à défaut, le SMTP sert aussi |
+| `FRONTEND_URL` | notifications | Racine des liens dans les e-mails (`/dashboard?tab=…`) |
+| `FOLLOWUP_AFTER_DAYS` | — | Jours sans réponse avant de proposer une relance (défaut 7) |
 | `SIRENE_API_TOKEN` | — | Enrichissement entreprises |
 
 ### France Travail
@@ -220,35 +225,71 @@ Rien ne part sans autorisation du mandat, rien ne part deux fois, et un envoi
 simulé n'est **jamais** rapporté comme réel — `SIMULATED` et `SENT` sont deux
 états distincts.
 
+### Pack et envoi pendant une mission
+
+Une mission « préparer » ou « postuler » construit pour chaque offre du haut du
+panier un **pack** complet — CV adapté (accroche et synthèse) et lettre — par
+le même module que le bouton « adapter » du Canvas
+([`pack.py`](backend/job-discovery/app/agents/application/pack.py)). Une
+mission « postuler » passe ensuite chaque pack au dispatcher : ce que le mandat
+autorise part, le reste rejoint la **file de validation** (onglet
+Candidatures, « Tout valider » en un geste). Si l'utilisateur a demandé à
+valider chaque envoi pour cette mission, c'est la règle la plus stricte qui
+l'emporte. Une candidature n'est jamais reproposée d'un cycle à l'autre.
+
+### Contacts de candidature
+
+Les adresses sont cherchées partout où elles se cachent — champ `courriel`,
+consignes, coordonnées, description — par
+[`contact_extract.py`](backend/job-discovery/app/agents/discovery/contact_extract.py),
+qui écarte les boîtes de plateforme (`francetravail.fr`…) et les expéditeurs
+automatiques, et préfère l'adresse entourée de mots de candidature. Le stock
+existant est repassé chaque matin (`reclassify_apply_contacts`).
+
+### Après la candidature
+
+Chaque changement de statut est daté dans une frise. Sans réponse au bout de
+`FOLLOWUP_AFTER_DAYS` jours, Alice rédige une relance (courte, propre à
+l'offre) et la propose : le candidat l'envoie depuis sa messagerie en un clic.
+Elle ne l'envoie pas elle-même — un second contact engage davantage que le
+premier. Entretien, offre ou refus rejoignent le journal.
+
+### Notifications
+
+Alice écrit au candidat
+([`notifications/`](backend/job-discovery/app/agents/notifications)) : fin de
+mission (compte rendu et ce qui attend), candidature réellement envoyée,
+relances dues, rapport quotidien ou hebdomadaire. Chaque type se coupe dans
+Paramètres. La table `notifications` garde l'historique et sert de verrou
+anti-doublon (`dedupe_key` unique) ; sans service d'envoi configuré, la
+notification est enregistrée en `simulated`, jamais rapportée comme partie.
+
 ---
 
 ## État actuel
 
 **Fonctionne** : onboarding, collecte multi-sources, matching explicable,
 éditeur de CV avec choix de modèle, rédaction de lettres ancrée sur l'annonce,
-signature manuscrite, missions bornées avec journal, candidature par email.
+signature manuscrite, missions bornées avec journal, packs adaptés par offre,
+envoi pendant les missions et file de validation, candidature par email,
+relances, notifications par e-mail et rapports d'activité.
 
-**Simulé** : l'envoi, tant que SMTP n'est pas configuré. L'interface l'indique
-explicitement.
+**Simulé** : l'envoi, tant que SMTP n'est pas configuré ; les notifications,
+tant que ni Resend ni SMTP ne le sont. L'interface l'indique explicitement.
 
-**Absent** : connecteurs ATS, agent navigateur, suivi des réponses.
+**Absent** : lecture de la boîte de réception (les réponses des recruteurs sont
+consignées à la main depuis Candidatures), connexion France Travail.
 
 ---
 
 ## Limites connues
 
-- **Le canal e-mail ne couvre rien.** Les offres classées `EMAIL` viennent de
-  France Travail, dont le champ `courriel` contient une phrase (« Pour
-  postuler, utiliser le lien suivant : … ») et non une adresse. Sur le stock
-  actuel, **zéro** offre a une adresse exploitable : le seul canal implémenté
-  s'applique à un ensemble vide. À reclasser en `EXTERNAL_LINK` à l'ingestion.
+- **Le canal e-mail dépend de ce que publient les annonces.** Les adresses
+  sont désormais extraites des consignes et des descriptions, mais une offre
+  France Travail sans adresse ni lien employeur reste réservée au portail.
 - **Le pont `ALTER TABLE` de `main.py` fait doublon avec Alembic.** Il reste en
   place le temps de la bascule vers Supabase ; une fois la base migrée, c'est
   Alembic seul qui doit faire foi et le pont doit disparaître.
-- **Rien n'informe l'utilisateur** quand une mission se termine pendant son
-  absence. L'état est exact en base, mais il faut revenir le consulter : aucun
-  e-mail ni notification n'est envoyé. C'est le principal écart avec la
-  promesse « confie-moi une mission et va faire autre chose ».
 - **Les fichiers sont stockés dans Postgres** (`resume_file`, `resume_blob` en
   `bytea`, signature en base64). Chaque `pg_dump` les embarque, ce qui alourdit
   les sauvegardes et gonfle une base facturée à la taille. Leur place est
