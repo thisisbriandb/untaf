@@ -153,7 +153,7 @@ async def _send(
 
 
 async def notify_mission_report(run_id: UUID) -> Notification | None:
-    """Le compte rendu de mission, avec ce qui attend le candidat."""
+    from app.models.mission import Mission, MissionEvent, MissionEventKind, MissionRun, RunStatus
     from app.models.dispatch import ApplicationDispatch, DispatchStatus
     from app.models.mission import Mission, MissionRun, RunStatus
 
@@ -179,12 +179,27 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
             .where(ApplicationDispatch.status == DispatchStatus.SENT)
             .limit(8)
         )).scalars().all()
+        prepared = (await session.execute(
+            select(MissionEvent)
+            .where(MissionEvent.run_id == run_id)
+            .where(MissionEvent.kind == MissionEventKind.LETTER_WRITTEN)
+            .order_by(MissionEvent.created_at)
+            .limit(10)
+        )).scalars().all()
         stats = dict(run.stats or {})
         title, report, completed = run.title, run.report, run.status == RunStatus.COMPLETED
 
     items = [Item(d.job_title, d.company_name, "à valider") for d in waiting]
     items += [Item(d.job_title, d.company_name, "envoyée") for d in sent]
+    if not items:
+        # Mission « préparer » : rien n'est parti, mais chaque dossier est là.
+        items = [
+            Item((e.payload or {}).get("job_title") or e.summary,
+                 (e.payload or {}).get("company") or "", "dossier prêt")
+            for e in prepared
+        ]
     n_wait = stats.get("awaiting_approval", 0)
+    n_packs = stats.get("packs", stats.get("letters", 0))
 
     email = Email(
         subject=(
@@ -202,8 +217,9 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
         ],
         items_title="Ce qui t'attend" if items else "",
         items=items,
-        cta_label="Valider mes candidatures" if n_wait else "Voir le détail",
-        cta_url=link("candidatures" if n_wait else "mission"),
+        cta_label=("Valider mes candidatures" if n_wait
+                   else "Voir mes dossiers" if n_packs else "Voir le détail"),
+        cta_url=link("candidatures" if n_wait or n_packs else "mission"),
         footer=FOOTER,
     )
     return await _send(

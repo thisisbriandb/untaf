@@ -9,6 +9,7 @@ Deux règles :
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.mission import Mission, MissionEvent, MissionEventKind, MissionStatus
 
 logger = logging.getLogger(__name__)
+
+#: Une passe de veille identique à la précédente dans ce délai n'est pas redite.
+SCAN_REPEAT_WINDOW = timedelta(hours=12)
 
 
 async def get_or_create_mission(session: AsyncSession, candidate_id: UUID) -> Mission:
@@ -85,6 +89,20 @@ async def log_scan(
             f"J'ai passé {scanned} offres en revue et j'en ai retenu "
             f"{kept}{' (1 nouvelle)' if kept == 1 else ''}."
         )
+
+    # Une passe identique à la précédente (même stock, même verdict) n'apprend
+    # rien : elle remplissait le journal de la même ligne, dix fois de suite.
+    mission = await get_or_create_mission(session, candidate_id)
+    previous = (await session.execute(
+        select(MissionEvent)
+        .where(MissionEvent.mission_id == mission.id)
+        .where(MissionEvent.kind == MissionEventKind.SCAN)
+        .order_by(MissionEvent.created_at.desc())
+        .limit(1)
+    )).scalars().first()
+    if (previous and previous.summary == summary
+            and previous.created_at >= datetime.now(timezone.utc) - SCAN_REPEAT_WINDOW):
+        return
 
     await log_event(
         session, candidate_id, MissionEventKind.SCAN, summary,

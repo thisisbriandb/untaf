@@ -161,7 +161,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
             kept = 0
         targets = await _targets(candidate_id, count, sendable_first=objective == "apply")
         await _say(
-            run_id, candidate_id, MissionEventKind.SCAN,
+            run_id, candidate_id, MissionEventKind.SHORTLIST,
             (f"Je reprends tes offres retenues : je m'occupe des {len(targets)} meilleures."
              if targets else "Aucune offre de ton mandat n'attend de dossier pour l'instant."),
             {"kept": kept, "targets": len(targets)}, shortlisted=len(targets),
@@ -197,6 +197,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                 run_id, candidate_id, MissionEventKind.LETTER_WRITTEN,
                 f"Dossier prêt pour « {job.title} » chez {company} — {APPLY_MODE_LABELS[mode].lower()}.",
                 {"job_id": str(job.id), "application_id": str(app.id), "company": company,
+                 "job_title": job.title,
                  "score": app.match_score, "apply_mode": mode},
                 packs=1, letters=1,
             )
@@ -335,13 +336,16 @@ async def _write_report(
         f"Mission : {title}\n"
         f"Issue : {'terminée' if status == RunStatus.COMPLETED else 'interrompue'}\n"
         f"Compteurs : {stats}\n"
+        f"À valider par le candidat : {stats.get('awaiting_approval', 0)}\n"
+        f"Où trouver les dossiers : onglet Candidatures (CV adapté et lettre "
+        f"téléchargeables pour chaque offre)\n"
         f"Journal :\n" + "\n".join(f"- {t}" for t in timeline[-25:])
     )
 
     packs = stats.get("packs", stats.get("letters", 0))
     fallback = (
         f"C'est fait : j'ai préparé {packs} dossier{'s' if packs > 1 else ''} complet"
-        f"{'s' if packs > 1 else ''} (CV adapté et lettre)."
+        f"{'s' if packs > 1 else ''} (CV adapté et lettre), à retrouver dans Candidatures."
         if packs else "Je n'ai trouvé aucune offre de ton mandat à préparer pour l'instant."
     )
     if stats.get("sent"):
@@ -365,7 +369,9 @@ Tu rends compte d'une mission que tu viens de terminer.
 
 Rédige un compte rendu de 3 à 5 phrases, à la première personne, en français.
 Donne les chiffres réels. Si quelque chose attend une validation, dis-le
-clairement. N'invente aucune action qui ne figure pas dans le journal.
+clairement ; si rien n'attend de validation, ne prétends pas le contraire.
+Termine en disant où retrouver les dossiers (onglet Candidatures).
+N'invente aucune action qui ne figure pas dans le journal.
 Pas de titre, pas de liste : un paragraphe parlé."""
         )
         return response.strip() or fallback
