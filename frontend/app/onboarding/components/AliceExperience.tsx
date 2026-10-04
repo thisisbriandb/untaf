@@ -14,7 +14,7 @@ import {
   type CriteriaDraft,
 } from "./CriteriaStep";
 import { ApiUnreachableError, apiFetch, describeApiError } from "@/lib/api";
-import { AUTH_ENABLED, accessToken } from "@/lib/supabase";
+import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
 import Link from "next/link";
@@ -316,7 +316,7 @@ export function AliceExperience() {
     // Le profil appartient à un compte : sans session, on fait confirmer
     // l'adresse d'abord. Tout ce qui a été saisi reste en mémoire, et
     // l'activation reprend d'elle-même une fois la connexion faite.
-    if (AUTH_ENABLED && !(await accessToken())) {
+    if ((await authEnabled()) && !(await accessToken())) {
       setPendingAuthEmail(email);
       return;
     }
@@ -380,7 +380,7 @@ export function AliceExperience() {
       }
 
       if (!candidate) {
-        if (AUTH_ENABLED && res.status === 409) {
+        if (res.status === 409 && (await authEnabled())) {
           setActivationError("Cette adresse est déjà liée à un autre compte. Connecte-toi avec elle.");
           setIsActivating(false);
           return;
@@ -450,15 +450,30 @@ export function AliceExperience() {
   }, []);
 
   // Déjà connecté avec un profil : rien à refaire ici, direction l'espace.
+  // Un rechargement ne doit jamais renvoyer quelqu'un qui a déjà un espace
+  // au début de l'onboarding : avec une session, direction son espace ; sans
+  // session mais avec un profil connu sur ce navigateur, la connexion.
+  const [authOn, setAuthOn] = useState(false);
   useEffect(() => {
-    if (!AUTH_ENABLED) return;
     let alive = true;
-    accessToken().then(async (token) => {
-      if (!alive || !token) return;
+    (async () => {
+      const on = await authEnabled();
+      if (!alive) return;
+      setAuthOn(on);
+      if (!on) {
+        if (localStorage.getItem("candidate_id")) router.replace("/dashboard");
+        return;
+      }
+      const token = await accessToken();
+      if (!alive) return;
+      if (!token) {
+        if (localStorage.getItem("candidate_id")) router.replace("/login");
+        return;
+      }
       setIsSignedIn(true);
       const destination = await destinationAfterSignIn();
       if (alive && destination !== "/") router.replace(destination);
-    });
+    })();
     return () => {
       alive = false;
     };
@@ -468,7 +483,7 @@ export function AliceExperience() {
 
   return (
     <main className="min-h-screen bg-[#FAFAF8] text-[#1A1918] flex flex-col items-center justify-center relative overflow-hidden">
-      {AUTH_ENABLED && !isSignedIn && (
+      {authOn && !isSignedIn && (
         <Link
           href="/login"
           className="absolute top-5 right-6 z-10 text-xs font-light text-[#1A1918]/45 hover:text-[#006045] tracking-tight"

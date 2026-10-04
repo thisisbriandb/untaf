@@ -219,9 +219,14 @@ async def download_tailored_cv(
         raise HTTPException(404, "Offre ou candidat introuvable")
 
     # La compilation Typst occupe le processeur : hors de la boucle d'événements.
-    pdf, name, _ = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
+    pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
+    if origin == "render_failed":
+        from app.agents.incidents import report_incident
+        await report_incident("cv_render_failed", candidate_id, "téléchargement du CV adapté",
+                              context={"job": job.title})
     if not pdf:
-        raise HTTPException(404, "Aucun CV disponible — dépose-le dans l'éditeur.")
+        raise HTTPException(404, "Je n'ai pas pu produire ton CV — l'équipe est prévenue. "
+                                 "Dépose ton CV d'origine dans l'éditeur en attendant.")
     return Response(
         content=pdf,
         media_type="application/pdf",
@@ -266,9 +271,15 @@ async def download_pack(
     if sent and sent.resume_blob:
         files[sent.resume_name or "CV.pdf"] = sent.resume_blob
     else:
-        pdf, name, _ = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
+        pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
         if pdf:
             files[name] = pdf
+        if origin == "render_failed" or not pdf:
+            from app.agents.incidents import report_incident
+            await report_incident(
+                "cv_render_failed", candidate_id, "dossier téléchargé sans CV mis en page",
+                context={"job": job.title, "company": company_name},
+            )
 
     # ── Lettre ──
     company_slug = _safe_name(company_name or "entreprise")
@@ -561,7 +572,13 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
 
         except Exception as e:  # noqa: BLE001
             logger.error("Apply stream failed: %s", e, exc_info=True)
-            yield _sse("error", {"message": "Une erreur est survenue pendant l'envoi."})
+            from app.agents.incidents import report_incident
+            await report_incident("pack_failed", candidate_id, repr(e)[:300],
+                                  context={"job_id": str(job_id)})
+            yield _sse("error", {
+                "message": "Quelque chose a échoué pendant la candidature. L'équipe est prévenue ; "
+                           "réessaie dans un moment.",
+            })
 
     return StreamingResponse(
         steps(),

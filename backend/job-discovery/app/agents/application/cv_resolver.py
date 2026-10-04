@@ -171,4 +171,7 @@ def resolve_cv(
         # Un échec de compilation ne doit pas envoyer un document inattendu :
         # on retombe sur l'original en le signalant.
         logger.error("Génération du CV au modèle échouée : %s", e, exc_info=True)
-        return candidate.resume_file, candidate.resume_filename or "CV.pdf", "original"
+        # « render_failed » : l'appelant sait que la promesse (un CV mis en
+        # page) n'est pas tenue, et peut le dire au lieu de servir en silence
+        # l'original — ou rien du tout.
+        return candidate.resume_file, candidate.resume_filename or "CV.pdf", "render_failed"

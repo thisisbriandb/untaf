@@ -4,40 +4,33 @@
  * Atterrissage du lien de connexion.
  *
  * Souvent ouvert dans un nouvel onglet alors que l'onboarding attend dans le
- * premier : la session créée ici y est partagée automatiquement. On le dit,
- * pour que l'utilisateur ne recommence pas tout dans cet onglet-ci.
+ * premier : la session créée ici y est vue automatiquement. On le dit, pour
+ * que l'utilisateur ne recommence pas tout dans cet onglet-ci.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { AlicePresence } from "../../onboarding/components/AlicePresence";
-import { supabase } from "@/lib/supabase";
+import { verifyLogin } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 
 export default function ConfirmedPage() {
   const router = useRouter();
   const [state, setState] = useState<"waiting" | "ok" | "failed">("waiting");
+  const once = useRef(false);
 
   useEffect(() => {
-    if (!supabase) {
-      router.replace("/");
-      return;
-    }
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) setState("ok");
-    });
-    // Lien expiré ou déjà utilisé : aucune session n'arrive.
-    const timeout = setTimeout(
-      () => setState((s) => (s === "waiting" ? "failed" : s)),
-      6000,
+    if (once.current) return;
+    once.current = true;
+    const token = new URLSearchParams(window.location.search).get("token");
+    // Le jeton ne sert qu'une fois : on le retire de la barre d'adresse.
+    window.history.replaceState(null, "", "/auth/confirmed");
+    (token ? verifyLogin({ token }) : Promise.resolve(false)).then((ok) =>
+      setState(ok ? "ok" : "failed"),
     );
-    return () => {
-      data.subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, [router]);
+  }, []);
 
   return (
     <main className="min-h-[100dvh] bg-[#FAFAF8] flex flex-col items-center justify-center gap-6 px-6 text-center">

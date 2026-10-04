@@ -23,6 +23,7 @@ from app.api.chat import router as chat_router
 from app.api.pipeline import router as pipeline_router
 from app.api.me import router as me_router
 from app.api.conversations import router as conversations_router
+from app.api.auth_routes import router as auth_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -129,6 +130,7 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(pipeline_router, prefix="/api")
 app.include_router(me_router, prefix="/api")
 app.include_router(conversations_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/health")

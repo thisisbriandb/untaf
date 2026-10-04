@@ -129,7 +129,9 @@ Toutes dans `backend/job-discovery/.env`.
 | `IDENTIFIER_FRANCE_TRAVAIL` | offres | `client_id` (format `PAR_…`) |
 | `FRANCE_TRAVAIL_API` | offres | `client_secret` |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | envois | Sans eux, les candidatures sont **simulées** |
-| `RESEND_API_KEY` / `NOTIFY_FROM_EMAIL` | notifications | E-mails d'Alice au candidat ; à défaut, le SMTP sert aussi |
+| `RESEND_API_KEY` | e-mails | Candidatures, notifications, connexion, alertes (domaine `MAIL_DOMAIN`) |
+| `AUTH_SECRET` | oui | Signature des sessions de connexion |
+| `OPS_ALERT_EMAIL` | — | Alertes quand une promesse n'est pas tenue |
 | `FRONTEND_URL` | notifications | Racine des liens dans les e-mails (`/dashboard?tab=…`) |
 | `FOLLOWUP_AFTER_DAYS` | — | Jours sans réponse avant de proposer une relance (défaut 7) |
 | `SIRENE_API_TOKEN` | — | Enrichissement entreprises |
@@ -148,12 +150,17 @@ d'API ; c'est géré par le code mais mal documenté côté France Travail.
 
 ## Authentification
 
-Connexion sans mot de passe par Supabase Auth : un lien et un code reçus par
-e-mail. Côté frontend, `NEXT_PUBLIC_SUPABASE_URL` et
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` (voir `frontend/.env.example`) ; ajouter
-`<FRONTEND_URL>/auth/confirmed` aux *Redirect URLs* du projet. Pour que le
-code à 6 chiffres apparaisse dans l'e-mail, ajouter `{{ .Token }}` au modèle
-*Magic Link* (Authentication → Email Templates) ; sans lui, le lien suffit.
+Connexion sans mot de passe : un lien et un code à 6 chiffres envoyés depuis
+`alice@alice-agent.fr` (Resend) par
+[`api/auth_routes.py`](backend/job-discovery/app/api/auth_routes.py). L'API
+signe elle-même les sessions (`AUTH_SECRET`, `SESSION_DAYS`) ; rien à
+configurer côté frontend. Jetons à usage unique valables 15 minutes,
+empreintes seules en base, 5 essais de code, 5 demandes par adresse et par
+quart d'heure. Le lien ouvert dans un autre onglet fait reprendre l'onglet
+d'origine (l'onboarding en cours n'est pas perdu). Un rechargement garde la
+session ; sans session, `/` et `/dashboard` mènent à la connexion plutôt qu'à
+l'onboarding. Les jetons Supabase Auth restent acceptés si
+`SUPABASE_JWT_SECRET` est fourni.
 
 Chaque requête porte le jeton de session, vérifié par
 [`app/auth.py`](backend/job-discovery/app/auth.py). Un profil n'est accessible
@@ -167,13 +174,14 @@ qu'au compte auquel il est rattaché (`candidates.auth_user_id`) :
   réservés à `ADMIN_EMAILS` ;
 - les offres collées par un candidat ne sont lisibles que par lui ;
 - un profil créé avant l'authentification est rattaché à la première
-  connexion avec la même adresse. Le projet Supabase doit donc exiger la
-  confirmation de l'e-mail (réglage par défaut).
+  connexion avec la même adresse (la connexion prouve la possession de
+  l'adresse).
 
 L'onboarding reste ouvert jusqu'à l'activation : l'analyse du CV et la mise en
 forme ne demandent pas de compte. L'adresse est confirmée à la dernière étape,
-sans perdre ce qui a été saisi. Sans configuration, l'API refuse (503) plutôt
-que d'ouvrir ; `AUTH_DISABLED=true` sert au développement local.
+sans perdre ce qui a été saisi. Sans `AUTH_SECRET`, l'API refuse (503) plutôt
+que d'ouvrir — sauf en développement (`DEBUG=true`) ou avec
+`AUTH_DISABLED=true`.
 
 ---
 
@@ -289,6 +297,34 @@ Une mission « postuler » prépare d'abord les offres qu'Alice peut réellement
 envoyer. Quel que soit le mode, « Postuler » se termine toujours sur le
 dossier téléchargeable (CV adapté, lettre, annonce) et un bouton « J'ai
 postulé » qui fait entrer la candidature dans le suivi (relance comprise).
+
+### Missions
+
+Une mission est **une seule passe, sans durée** : reprendre les offres
+retenues (le repérage tourne chaque matin), préparer le dossier complet des
+3, 5 ou 10 meilleures, et — si l'utilisateur a choisi « Postuler pour moi » —
+envoyer ce qui peut l'être. Choisir l'envoi au lancement vaut autorisation pour
+cette mission (doublons, entreprises bloquées et quota restent appliqués).
+Chaque action est écrite au journal au moment où elle a lieu et diffusée en
+direct dans la conversation ; l'utilisateur peut fermer l'onglet, un e-mail
+rend compte à la fin. Sans worker Celery joignable, la mission tourne dans le
+processus de l'API plutôt que de ne pas tourner.
+
+### Promesses non tenues
+
+Quand Alice ne peut pas tenir une promesse (CV non composé, envoi échoué,
+dossier impossible, mission vide ou en erreur, e-mail non délivré),
+[`incidents.py`](backend/job-discovery/app/agents/incidents.py) l'écrit au
+journal du candidat avec une alternative concrète, et alerte
+`OPS_ALERT_EMAIL` (une fois par type, par candidat et par jour).
+
+### Conversations par offre
+
+Une question posée depuis une offre part dans la conversation de cette offre
+(une seule par offre) : Alice reçoit l'annonce, le statut et le dossier comme
+contexte, et la barre latérale (bouton à gauche de l'en-tête) range ces
+conversations sous le nom de l'entreprise, à côté du fil général. Les chiffres
+restent communs : ils sont relus en base à chaque tour.
 
 ### Pack et envoi pendant une mission
 

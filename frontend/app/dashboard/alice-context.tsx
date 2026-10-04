@@ -75,13 +75,16 @@ interface AliceContextValue {
   emotion: AliceEmotion;
   /** True once the user has said anything — drives the hero → thread layout. */
   hasConversation: boolean;
-  submitQuery: (text: string) => Promise<void>;
+  /** `job` : la question porte sur cette offre — elle part dans SA conversation. */
+  submitQuery: (text: string, opts?: { job?: JobCardData }) => Promise<void>;
   /** Post a line as Alice without a round-trip (used by the Canvas). */
   sayAsAlice: (text: string, canvasRef?: CanvasPayload) => void;
 
   // Conversations sauvegardées
   conversationId: string | null;
   conversations: ConversationSummary[];
+  /** L'offre dont parle la conversation affichée, s'il y en a une. */
+  activeJob: { id: string; company: string; title: string } | null;
   newConversation: () => void;
   openConversation: (id: string) => Promise<void>;
   refreshConversations: () => Promise<void>;
@@ -233,6 +236,15 @@ export function AliceProvider({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [briefing, setBriefing] = useState<ChatMessage | null>(null);
+  const [pendingJob, setPendingJob] = useState<JobCardData | null>(null);
+
+  const activeJob = useMemo(() => {
+    const conv = conversations.find((c) => c.id === conversationId);
+    if (conv?.job_id) {
+      return { id: conv.job_id, company: conv.company_name ?? "", title: conv.job_title ?? conv.title };
+    }
+    return pendingJob ? { id: pendingJob.id, company: pendingJob.company_name, title: pendingJob.title } : null;
+  }, [conversations, conversationId, pendingJob]);
 
   const hasConversation = messages.some((m) => m.sender === "user");
 
@@ -280,6 +292,7 @@ export function AliceProvider({
   }, [candidateId]);
 
   const newConversation = useCallback(() => {
+    setPendingJob(null);
     setConversationId(null);
     setMessages(briefing ? [briefing] : INITIAL_MESSAGES);
   }, [briefing]);
@@ -288,6 +301,7 @@ export function AliceProvider({
     async (id: string) => {
       if (!candidateId) return;
       const stored = await fetchConversationMessages(candidateId, id);
+      setPendingJob(null);
       setConversationId(id);
       setMessages(stored.length ? stored.map(fromStored) : briefing ? [briefing] : INITIAL_MESSAGES);
     },
@@ -312,9 +326,31 @@ export function AliceProvider({
   }, []);
 
   const submitQuery = useCallback(
-    async (userText: string) => {
+    async (userText: string, opts?: { job?: JobCardData }) => {
       const trimmed = userText.trim();
       if (!trimmed || isThinking) return;
+
+      // Une question sur une offre part dans la conversation de CETTE offre :
+      // son contexte reste séparé du fil général et des autres offres.
+      let targetConv = conversationId;
+      let jobId: string | null = null;
+      let baseMessages = messages;
+      if (opts?.job) {
+        const existing = conversations.find((c) => c.job_id === opts.job!.id);
+        jobId = opts.job.id;
+        if (existing?.id !== conversationId || !existing) {
+          targetConv = existing?.id ?? null;
+          baseMessages =
+            existing && candidateId
+              ? (await fetchConversationMessages(candidateId, existing.id)).map(fromStored)
+              : [];
+          setPendingJob(existing ? null : opts.job);
+          setConversationId(targetConv);
+          setMessages(baseMessages);
+        }
+      } else if (pendingJob && !conversationId) {
+        jobId = pendingJob.id;
+      }
 
       setEmotion("thinking");
       setIsThinking(true);
@@ -336,13 +372,15 @@ export function AliceProvider({
         const response = await sendMessageToAlice(
           candidateId,
           trimmed,
-          messages
+          baseMessages
             .filter((m) => m.text.trim() && m.id !== "briefing")
             .map((m) => ({ sender: m.sender, text: m.text })),
-          conversationId,
+          targetConv,
+          jobId,
         );
-        if (response.conversation_id && response.conversation_id !== conversationId) {
+        if (response.conversation_id && response.conversation_id !== targetConv) {
           setConversationId(response.conversation_id);
+          setPendingJob(null);
           void refreshConversations();
         }
 
@@ -389,7 +427,10 @@ export function AliceProvider({
         setIsThinking(false);
       }
     },
-    [candidateId, isThinking, messages, openCanvas, sayAsAlice, conversationId, refreshConversations],
+    [
+      candidateId, isThinking, messages, openCanvas, sayAsAlice, conversationId,
+      refreshConversations, conversations, pendingJob,
+    ],
   );
 
   const value = useMemo<AliceContextValue>(
@@ -404,6 +445,7 @@ export function AliceProvider({
       sayAsAlice,
       conversationId,
       conversations,
+      activeJob,
       newConversation,
       openConversation,
       refreshConversations,
@@ -423,6 +465,7 @@ export function AliceProvider({
       sayAsAlice,
       conversationId,
       conversations,
+      activeJob,
       newConversation,
       openConversation,
       refreshConversations,

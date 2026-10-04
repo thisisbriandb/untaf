@@ -53,24 +53,31 @@ export interface MissionRun {
 }
 
 export const STEP_LABELS: Record<RunStep, string> = {
-  scan: "Je relève les offres",
+  scan: "Je reprends tes offres",
   qualify: "Je lis les annonces",
-  match: "Je compare à ton mandat",
-  prepare: "Je prépare les packs : CV adapté et lettre",
+  match: "Je reprends tes offres retenues",
+  prepare: "Je prépare les dossiers",
   apply: "J'envoie ce que tu m'as autorisé",
 };
 
-export const OBJECTIVES: { id: RunObjective; label: string; detail: string }[] = [
-  { id: "search", label: "Repérer des offres", detail: "Je cherche et je te présente ce qui tient la route." },
-  { id: "prepare", label: "Préparer les candidatures", detail: "J'adapte ton CV et je rédige la lettre pour chaque offre retenue." },
-  { id: "apply", label: "Aller jusqu'à l'envoi", detail: "Je prépare tout et j'envoie si tu m'y autorises." },
+/**
+ * Le repérage des offres tourne chaque matin : le confier en mission ne
+ * produisait rien de plus. Une mission sert à agir sur ce qui est retenu.
+ */
+export const OBJECTIVES: { id: Exclude<RunObjective, "search">; label: string; detail: string }[] = [
+  {
+    id: "prepare",
+    label: "Préparer mes candidatures",
+    detail: "Pour chaque offre retenue : CV adapté et lettre. Tu envoies quand tu veux.",
+  },
+  {
+    id: "apply",
+    label: "Postuler pour moi",
+    detail: "Je prépare tout et j'envoie ce qui peut l'être ; je te dis ce qui reste à faire.",
+  },
 ];
 
-export const DURATIONS = [
-  { minutes: 30, label: "30 minutes" },
-  { minutes: 120, label: "2 heures" },
-  { minutes: 240, label: "Une demi-journée" },
-];
+export const COUNTS = [3, 5, 10];
 
 const base = (candidateId: string) =>
   `${API_BASE_URL}/api/candidates/${candidateId}/mission/runs`;
@@ -80,7 +87,7 @@ export async function startRun(
   payload: {
     title: string;
     objective: RunObjective;
-    duration_minutes: number;
+    count: number;
     allowed_actions: { send: boolean };
   },
 ): Promise<MissionRun | null> {
@@ -117,14 +124,4 @@ export async function stopRun(
   } catch {
     return null;
   }
-}
-
-export function formatRemaining(seconds: number): string {
-  if (seconds <= 0) return "terminé";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h} h ${String(m).padStart(2, "0")}`;
-  if (m > 0) return `${m} min ${String(s).padStart(2, "0")}`;
-  return `${s} s`;
 }

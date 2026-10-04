@@ -21,3 +21,13 @@ def test_sections_manquantes_nommees():
         skills=["Python"], resume_raw=None,
     )
     assert missing_sections(full) == []
+
+
+def test_renotation_ne_supprime_pas_un_dossier_prepare():
+    from app.agents.discovery.tasks import _protected
+    from app.models.application import Application, ApplicationStatus
+
+    assert _protected(Application(status=ApplicationStatus.MATCHED,
+                                  metadata_json={"cover_letter": {"body": "x"}}))
+    assert _protected(Application(status=ApplicationStatus.APPLIED, metadata_json=None))
+    assert not _protected(Application(status=ApplicationStatus.PENDING, metadata_json={"match": {}}))

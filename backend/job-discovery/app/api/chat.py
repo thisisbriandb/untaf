@@ -28,6 +28,11 @@ class ChatRequest(BaseModel):
         default=None,
         description="Conversation à poursuivre. Absente : une nouvelle est ouverte.",
     )
+    job_id: str | None = Field(
+        default=None,
+        description="Offre dont on parle : rouvre la conversation de cette offre, ou "
+                    "en ouvre une qui lui est rattachée.",
+    )
     message: str = Field(..., min_length=1, max_length=1000, description="User message to Alice")
     history: list[ChatTurn] = Field(
         default_factory=list,
@@ -71,9 +76,15 @@ async def chat_endpoint(req: ChatRequest, user: AuthUser = Depends(require_user)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    from app.agents.conversations import append_turn, history_for, open_conversation
+    from app.agents.conversations import append_turn, history_for, job_context, open_conversation
 
-    conversation = await open_conversation(candidate_id, req.conversation_id, req.message)
+    job_uuid = None
+    if req.job_id:
+        try:
+            job_uuid = UUID(req.job_id)
+        except ValueError:
+            job_uuid = None
+    conversation = await open_conversation(candidate_id, req.conversation_id, req.message, job_uuid)
     # Le fil vient de la base : il survit au changement d'appareil, et le
     # client ne peut pas réécrire ce qu'Alice « se rappelle ».
     history = await history_for(conversation.id) or [t.model_dump() for t in req.history]
@@ -83,6 +94,7 @@ async def chat_endpoint(req: ChatRequest, user: AuthUser = Depends(require_user)
         user_message=req.message,
         user_name=candidate.full_name or "l'utilisateur",
         history=history,
+        extra_context=await job_context(conversation, candidate_id),
     )
     await append_turn(conversation.id, req.message, result["reply"], result.get("ui_blocks", []))
 

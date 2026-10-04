@@ -219,11 +219,12 @@ _choose_cv_template_fn = FunctionDeclaration(
 _start_mission_fn = FunctionDeclaration(
     name="start_mission",
     description=(
-        "Ouvre l'assistant qui confie une mission bornée à Alice (chercher, "
-        "préparer les dossiers, ou aller jusqu'à l'envoi, pendant 30 min à une "
-        "demi-journée). Utilise-la quand l'utilisateur veut que tu travailles "
-        "pour lui pendant un moment, que tu postules à plusieurs offres, ou qu'il "
-        "parle de déléguer."
+        "Ouvre l'assistant de mission : Alice prépare les dossiers complets (CV "
+        "adapté + lettre) des 3, 5 ou 10 meilleures offres retenues, et peut aller "
+        "jusqu'à l'envoi. Une seule passe, sans durée ; l'utilisateur peut fermer "
+        "l'onglet, il reçoit un e-mail à la fin. Utilise-la quand il veut que tu "
+        "postules ou prépares plusieurs candidatures d'un coup, ou qu'il parle de "
+        "déléguer. Le repérage des offres, lui, tourne déjà chaque matin."
     ),
     parameters_json_schema={"type": "object", "properties": {}},
 )
@@ -695,7 +696,7 @@ réception.
 - statut des candidatures → get_applications_status ; valider des envois,
   relancer, noter une réponse → open_candidatures
 - bilan, point sur la recherche, ce que tu as fait, peu d'offres → get_mission_report
-- travailler pour lui pendant un moment, postuler à plusieurs offres → start_mission
+- préparer ou envoyer plusieurs candidatures d'un coup, déléguer → start_mission
 - audit du CV → get_cv_audit
 - modifier le contenu du CV → open_cv_editor ; changer sa mise en page → choose_cv_template
 - l'utilisateur te DONNE du contenu pour son CV (stage, expérience, formation,
@@ -746,6 +747,7 @@ async def chat_with_alice(
     user_message: str,
     user_name: str = "l'utilisateur",
     history: list[dict] | None = None,
+    extra_context: str | None = None,
 ) -> dict:
     """
     Point d'entrée de la conversation.
@@ -780,6 +782,7 @@ async def chat_with_alice(
               "chiffres que tu as le droit de citer. S'il t'en manque un, "
               "appelle l'outil qui le donne plutôt que de l'estimer :\n"
             + json.dumps(state.as_facts(), ensure_ascii=False, indent=2)
+            + (f"\n\n{extra_context}" if extra_context else "")
         ),
     )
 

@@ -14,9 +14,10 @@ import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
 import { CanvasPanel } from "./components/CanvasPanel";
 import { ToastProvider } from "./components/Toaster";
+import { ConversationSidebar } from "./components/ConversationSidebar";
 import { AliceProvider, useAlice } from "./alice-context";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
-import { AUTH_ENABLED, accessToken, signOut } from "@/lib/supabase";
+import { accessToken, authEnabled, signOut } from "@/lib/auth";
 import { clearLocalCandidate, destinationAfterSignIn } from "@/lib/session";
 import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
@@ -60,6 +61,8 @@ export default function DashboardPage() {
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Barre latérale des conversations, ouverte par le bouton de l'en-tête. */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   /** Ce qui attend l'utilisateur — affiché en pastille sur la cloche. */
   const [awaitingCount, setAwaitingCount] = useState(0);
 
@@ -72,19 +75,18 @@ export default function DashboardPage() {
     const tab = params.get("tab") as TabType | null;
     if (tab && TABS.includes(tab)) setActiveTab(tab);
 
-    if (!AUTH_ENABLED) {
-      const storedId = localStorage.getItem("candidate_id");
-      if (!storedId) {
-        setLoading(false);
-        return;
-      }
-      setCandidateId(storedId);
-      return;
-    }
-
     let alive = true;
     const here = window.location.pathname + window.location.search;
-    accessToken().then(async (token) => {
+    (async () => {
+      if (!(await authEnabled())) {
+        // Développement sans authentification : le profil du navigateur.
+        const storedId = localStorage.getItem("candidate_id");
+        if (!alive) return;
+        if (storedId) setCandidateId(storedId);
+        else setLoading(false);
+        return;
+      }
+      const token = await accessToken();
       if (!alive) return;
       if (!token) {
         router.replace(`/login?next=${encodeURIComponent(here)}`);
@@ -97,7 +99,7 @@ export default function DashboardPage() {
         return;
       }
       setCandidateId(localStorage.getItem("candidate_id"));
-    });
+    })();
 
     // Session révoquée en cours de route : retour à la connexion.
     const onUnauthorized = () => router.replace(`/login?next=${encodeURIComponent(here)}`);
@@ -161,7 +163,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await signOut();
     clearLocalCandidate();
-    router.push(AUTH_ENABLED ? "/login" : "/");
+    router.push((await authEnabled()) ? "/login" : "/");
   };
 
   if (loading) {
@@ -191,10 +193,13 @@ export default function DashboardPage() {
           onSelectTab={selectTab}
           candidateId={candidateId}
           awaitingCount={awaitingCount}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((v) => !v)}
         />
 
         {/* ═══ Ligne principale : conversation + canvas (dès lg) ═══ */}
         <main className="flex-1 min-h-0 flex justify-center overflow-hidden">
+          <ConversationSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <ConversationColumn>
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-4 md:px-8 pb-4 overflow-hidden">
               <AnimatePresence mode="wait">

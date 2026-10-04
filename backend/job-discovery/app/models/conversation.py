@@ -27,6 +27,13 @@ class Conversation(Base):
         UUID(as_uuid=True), ForeignKey("candidates.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
+    #: Offre dont parle la conversation, quand elle en a une : son contexte
+    #: (annonce, dossier) est donné à Alice, et la barre latérale l'affiche
+    #: sous le nom de l'entreprise.
+    job_posting_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_postings.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
     #: Tiré du premier message — c'est ce qui permet de s'y retrouver.
     title: Mapped[str] = mapped_column(String(200), nullable=False, default="Conversation")
     created_at: Mapped[datetime] = mapped_column(

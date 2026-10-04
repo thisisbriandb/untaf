@@ -59,7 +59,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 }
 
 export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; autoApply?: boolean }) {
-  const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice } = useAlice();
+  const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice, goToConversation } = useAlice();
   const [adapting, setAdapting] = useState(false);
   const [tailored, setTailored] = useState<TailoredDocuments | null>(null);
 
@@ -265,7 +265,11 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               <button
                 key={q}
                 type="button"
-                onClick={() => void submitQuery(q)}
+                onClick={() => {
+                  // La question part dans la conversation de cette offre.
+                  void submitQuery(q, { job });
+                  goToConversation();
+                }}
                 disabled={isThinking}
                 className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-light text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40 text-left"
               >

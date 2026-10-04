@@ -463,6 +463,16 @@ _LOCKED_STATUSES = {
 }
 
 
+def _protected(app: Application) -> bool:
+    """
+    Une candidature sur laquelle du travail existe ne disparaît pas d'une
+    re-notation : déjà traitée (statut verrouillé) ou dossier préparé. La
+    supprimer emportait aussi ses envois en attente de validation.
+    """
+    meta = app.metadata_json or {}
+    return app.status in _LOCKED_STATUSES or bool(meta.get("cover_letter") or meta.get("tailored_cv"))
+
+
 async def _match_candidate_to_existing_jobs(candidate_id):
     """
     (Re)score a candidate against every active, qualified posting.
@@ -534,7 +544,7 @@ async def _match_candidate_to_existing_jobs(candidate_id):
                     if match.rejections else "score insuffisant"
                 )
                 reasons[motif] = reasons.get(motif, 0) + 1
-                if current and current.status not in _LOCKED_STATUSES:
+                if current and not _protected(current):
                     await session.delete(current)
                     pruned += 1
                 continue
@@ -562,7 +572,11 @@ async def _match_candidate_to_existing_jobs(candidate_id):
             elif current.status not in _LOCKED_STATUSES:
                 current.status = status
                 current.match_score = match.score
-                current.metadata_json = metadata
+                # Fusion, jamais remplacement : la métadonnée porte aussi le
+                # dossier préparé (CV adapté, lettre), la frise et la relance.
+                # L'écraser à chaque re-notation effaçait chaque matin le
+                # travail fait la veille.
+                current.metadata_json = {**(current.metadata_json or {}), **metadata}
             else:
                 # Keep the status, refresh the score so the UI stays honest.
                 current.match_score = match.score
@@ -573,7 +587,7 @@ async def _match_candidate_to_existing_jobs(candidate_id):
         # or never qualified so it is not in `rows`. Without this they survive
         # every re-match, because the loop above never visits them.
         for job_id, app in existing.items():
-            if job_id in seen or app.status in _LOCKED_STATUSES:
+            if job_id in seen or _protected(app):
                 continue
             await session.delete(app)
             pruned += 1

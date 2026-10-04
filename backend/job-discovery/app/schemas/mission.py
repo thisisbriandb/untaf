@@ -27,13 +27,18 @@ class MissionEventOut(BaseModel):
 class RunCreate(BaseModel):
     """Les paramètres que l'utilisateur confirme avant le lancement."""
 
-    title: str = Field(default="Recherche d'offres", max_length=255)
+    title: str = Field(default="Préparer mes candidatures", max_length=255)
     objective: Literal["search", "prepare", "apply"] = Field(
-        default="search",
-        description="search = repérer · prepare = rédiger les lettres · "
-                    "apply = aller jusqu'à l'envoi.",
+        default="prepare",
+        description="prepare = dossiers complets (CV adapté + lettre) · apply = jusqu'à "
+                    "l'envoi. « search » est accepté pour compatibilité et vaut prepare : "
+                    "le repérage est fait chaque matin.",
     )
-    duration_minutes: int = Field(default=30, ge=5, le=480)
+    #: Nombre d'offres à traiter. La mission n'a plus de durée : elle fait
+    #: une passe et rend compte.
+    count: int = Field(default=5, ge=1, le=10)
+    #: Ignoré, conservé pour les anciens clients.
+    duration_minutes: int | None = Field(default=None)
     allowed_actions: dict = Field(
         default_factory=dict,
         description='{"send": bool} — l\'envoi n\'a lieu que s\'il est autorisé.',

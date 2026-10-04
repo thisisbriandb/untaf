@@ -30,7 +30,7 @@ from app.models.candidate import Candidate
 from app.models.company import Company
 from app.models.dispatch import ApplicationDispatch, DispatchStatus
 from app.models.job_posting import JobPosting
-from app.models.notification import Notification
+from app.models.notification import Notification, NotificationKind
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/candidates/{candidate_id}", tags=["pipeline"])
@@ -392,6 +392,8 @@ async def notification_history(
     rows = (await db.execute(
         select(Notification)
         .where(Notification.candidate_id == candidate_id)
+        # Les alertes adressées à l'équipe ne sont pas des messages au candidat.
+        .where(Notification.kind != NotificationKind.INCIDENT)
         .order_by(desc(Notification.created_at))
         .limit(limit)
     )).scalars().all()

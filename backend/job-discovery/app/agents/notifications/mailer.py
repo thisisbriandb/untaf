@@ -1,11 +1,11 @@
 """
-Acheminement des e-mails d'Alice vers le candidat.
+Acheminement de tous les e-mails : candidatures, notifications, liens de
+connexion, alertes.
 
-Distinct de `application/email_sender.py` : là, le candidat écrit à un
-recruteur, sous son nom. Ici, Alice écrit au candidat. Le transport est le
-même souci — ne jamais prétendre avoir envoyé — avec un ordre de préférence
-différent : un service transactionnel (Resend) délivre mieux qu'une boîte
-SMTP personnelle, qui reste le repli.
+Un seul transport pour tout ce qui part, pour qu'il n'y ait qu'un endroit où
+la délivrabilité se joue : Resend sur le domaine vérifié (alice-agent.fr),
+avec le SMTP comme repli. Sans l'un ni l'autre, rien ne part et le résultat
+le dit — ne jamais prétendre avoir envoyé.
 
 Ne lève jamais. Renvoie `{ok, real, provider, error?, id?}`.
 """
@@ -13,9 +13,11 @@ Ne lève jamais. Renvoie `{ok, real, provider, error?, id?}`.
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import smtplib
 import ssl
+from dataclasses import dataclass, field
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
@@ -28,25 +30,52 @@ logger = logging.getLogger(__name__)
 RESEND_URL = "https://api.resend.com/emails"
 
 
-def _sender() -> tuple[str, str]:
-    address = settings.notify_from_email or settings.smtp_user or "alice@localhost"
-    return settings.notify_from_name, address
+@dataclass
+class Attachment:
+    filename: str
+    content: bytes
+    mime: str = "application/pdf"
 
 
-async def _via_resend(to: str, subject: str, html: str, text: str) -> dict:
-    name, address = _sender()
+@dataclass
+class Mail:
+    to: str
+    subject: str
+    text: str
+    html: str | None = None
+    #: (nom affiché, adresse). L'adresse doit appartenir au domaine vérifié.
+    sender: tuple[str, str] | None = None
+    reply_to: str | None = None
+    attachments: list[Attachment] = field(default_factory=list)
+
+
+def _default_sender() -> tuple[str, str]:
+    return settings.notify_from_name, settings.notify_sender
+
+
+async def _via_resend(mail: Mail) -> dict:
+    name, address = mail.sender or _default_sender()
+    payload: dict = {
+        "from": formataddr((name, address)),
+        "to": [mail.to],
+        "subject": mail.subject,
+        "text": mail.text,
+    }
+    if mail.html:
+        payload["html"] = mail.html
+    if mail.reply_to:
+        payload["reply_to"] = mail.reply_to
+    if mail.attachments:
+        payload["attachments"] = [
+            {"filename": a.filename, "content": base64.b64encode(a.content).decode()}
+            for a in mail.attachments
+        ]
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 RESEND_URL,
                 headers={"Authorization": f"Bearer {settings.resend_api_key}"},
-                json={
-                    "from": formataddr((name, address)),
-                    "to": [to],
-                    "subject": subject,
-                    "html": html,
-                    "text": text,
-                },
+                json=payload,
             )
         if response.status_code >= 400:
             return {"ok": False, "real": False, "provider": "resend",
@@ -58,15 +87,23 @@ async def _via_resend(to: str, subject: str, html: str, text: str) -> dict:
         return {"ok": False, "real": False, "provider": "resend", "error": str(e)[:200]}
 
 
-def _smtp_send(to: str, subject: str, html: str, text: str) -> dict:
-    name, address = _sender()
+def _smtp_send(mail: Mail) -> dict:
+    name, _ = mail.sender or _default_sender()
     message = EmailMessage()
-    message["Subject"] = subject
-    message["To"] = to
-    message["From"] = formataddr((name, settings.smtp_user or address))
+    message["Subject"] = mail.subject
+    message["To"] = mail.to
+    # En SMTP, l'adresse d'expédition doit être celle de la boîte connectée.
+    message["From"] = formataddr((name, settings.smtp_user))
     message["Message-ID"] = make_msgid()
-    message.set_content(text)
-    message.add_alternative(html, subtype="html")
+    if mail.reply_to:
+        message["Reply-To"] = mail.reply_to
+    message.set_content(mail.text)
+    if mail.html:
+        message.add_alternative(mail.html, subtype="html")
+    for a in mail.attachments:
+        maintype, _, subtype = a.mime.partition("/")
+        message.add_attachment(a.content, maintype=maintype, subtype=subtype or "octet-stream",
+                               filename=a.filename)
     try:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
             if settings.smtp_use_tls:
@@ -75,22 +112,24 @@ def _smtp_send(to: str, subject: str, html: str, text: str) -> dict:
             server.send_message(message)
         return {"ok": True, "real": True, "provider": "smtp", "id": message["Message-ID"]}
     except Exception as e:  # noqa: BLE001
-        logger.error("Notification SMTP vers %s échouée : %s", to, e)
+        logger.error("Envoi SMTP vers %s échoué : %s", mail.to, e)
         return {"ok": False, "real": False, "provider": "smtp", "error": str(e)[:200]}
 
 
-async def deliver(to: str, subject: str, html: str, text: str) -> dict:
+async def send_mail(mail: Mail) -> dict:
     """Envoie par le meilleur transport disponible, ou simule en le disant."""
-    if not to:
+    if not mail.to:
         return {"ok": False, "real": False, "provider": None, "error": "aucun destinataire"}
-
-    if settings.resend_api_key and settings.notify_from_email:
-        return await _via_resend(to, subject, html, text)
-
-    if settings.can_send_email:
+    if settings.resend_api_key:
+        return await _via_resend(mail)
+    if settings.smtp_configured:
         # smtplib est bloquant : hors de la boucle d'événements.
-        return await asyncio.to_thread(_smtp_send, to, subject, html, text)
-
-    logger.info("Notification « %s » vers %s non envoyée (aucun transport).", subject, to)
+        return await asyncio.to_thread(_smtp_send, mail)
+    logger.info("E-mail « %s » vers %s non envoyé (aucun transport).", mail.subject, mail.to)
     return {"ok": True, "real": False, "provider": None,
             "error": "aucun service d'envoi configuré"}
+
+
+async def deliver(to: str, subject: str, html: str, text: str) -> dict:
+    """Notification au candidat — expéditeur Alice."""
+    return await send_mail(Mail(to=to, subject=subject, text=text, html=html))

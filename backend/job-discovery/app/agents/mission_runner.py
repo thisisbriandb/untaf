@@ -1,10 +1,9 @@
 """
-Exécution d'une mission bornée dans le temps.
+Exécution d'une mission : une passe, du dossier à l'envoi.
 
-La pipeline fait du travail réel à chaque étape où c'est possible : collecte
-sur les plateformes, qualification des annonces, confrontation au mandat,
-rédaction des lettres. L'envoi passe par le CandidateAgent, en simulation tant
-que l'utilisateur ne l'a pas explicitement autorisé.
+Préparer les dossiers des meilleures offres retenues, et, si l'utilisateur l'a
+demandé, les envoyer. Chaque action est écrite au journal au moment où elle a
+lieu ; l'interface la diffuse en direct et un e-mail rend compte à la fin.
 
 Rien n'est mimé. Une étape qui ne peut pas s'exécuter est consignée comme telle
 plutôt que rapportée comme faite : c'est la seule manière de rendre un compte
@@ -18,23 +17,16 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import async_session
-from app.models.company import ATSType
 from app.models.job_posting import JobPosting, PostingStatus
-from app.models.application import Application, ApplicationStatus
+from app.models.application import Application
 from app.models.mission import (
     Mission, MissionEvent, MissionEventKind, MissionRun, RunStatus, RunStep,
 )
 
 logger = logging.getLogger(__name__)
 
-#: Intervalle entre deux cycles quand la durée n'est pas écoulée. Alice
-#: continue de surveiller : de nouvelles offres peuvent apparaître.
-CYCLE_PAUSE_SECONDS = 120
-
-#: Nombre de lettres préparées par cycle — au-delà, on sature l'API du modèle
-#: pour un bénéfice nul.
-LETTERS_PER_CYCLE = 3
 
 
 async def _log(session, run: MissionRun, candidate_id: UUID, kind: MissionEventKind,
@@ -55,116 +47,57 @@ def _bump(run: MissionRun, **deltas: int) -> None:
     run.stats = stats
 
 
-# ── Étapes ─────────────────────────────────────────────────────────────────
+# ── Mission : une passe, sans durée ────────────────────────────────────────
+#
+# L'ancienne mission tournait « 30 minutes » en boucle : re-scrapait des
+# sources déjà collectées chaque matin, ne préparait que les offres au-dessus
+# du seuil de présélection (souvent aucune), et n'envoyait jamais faute de
+# canaux autorisés. Elle occupait l'écran sans rien produire.
+#
+# Désormais une mission est une seule passe, du début à la fin :
+#   1. reprendre les offres retenues (le repérage, lui, est fait chaque matin) ;
+#   2. préparer le dossier complet des N meilleures (CV adapté + lettre) ;
+#   3. si la mission va jusqu'à l'envoi : envoyer ce qui peut l'être, mettre le
+#      reste en file de validation ;
+#   4. rendre compte — dans le fil et par e-mail.
+# Chaque action réelle est écrite au journal au moment où elle a lieu : c'est
+# ce que l'interface diffuse en direct.
 
-async def _step_scan(run_id: UUID, candidate_id: UUID) -> int:
-    """
-    Collecte des offres.
+#: Nombre de dossiers par défaut, et plafond : au-delà, une mission devient
+#: une rafale qu'on ne relit plus.
+DEFAULT_TARGETS = 5
+MAX_TARGETS = 10
 
-    France Travail est la source principale : officielle, gratuite, et couvrant
-    tout le marché français. Les ATS ne donnent accès qu'aux entreprises qu'on a
-    explicitement référencées — ils restent en complément.
-    """
-    from app.agents.discovery.france_travail_task import ingest_for_candidate
-    from app.agents.discovery.tasks import _scrape_platform
 
-    total = 0
-    detail: dict = {}
-
-    report = await ingest_for_candidate(candidate_id)
-    if report.get("ok"):
-        total += report["processed"]
-        detail["france_travail"] = report["processed"]
-    else:
-        detail["france_travail_error"] = report.get("reason")
-        logger.warning("France Travail indisponible pendant le run : %s", report)
-
-    for ats in (ATSType.GREENHOUSE, ATSType.LEVER, ATSType.ASHBY):
-        try:
-            count = await _scrape_platform(ats)
-            total += count
-            detail[ats.value] = count
-        except Exception as e:  # noqa: BLE001
-            logger.error("Scrape %s failed during run: %s", ats.value, e)
-
+async def _heartbeat(run_id: UUID, step: RunStep | None = None) -> bool:
+    """Signe de vie + étape courante. Faux si la mission a été arrêtée."""
     async with async_session() as session:
         run = await session.get(MissionRun, run_id)
-        _bump(run, scanned=total)
-
-        if detail.get("france_travail_error"):
-            # Dire que la source principale est muette plutôt que de laisser
-            # croire que la veille a couvert tout le marché.
-            summary = (
-                f"J'ai relevé {total} offres, mais France Travail ne me répond "
-                f"pas — il me manque une partie du marché."
-            )
-        else:
-            summary = f"J'ai relevé {total} offres, dont {detail.get('france_travail', 0)} via France Travail."
-
-        await _log(
-            session, run, candidate_id, MissionEventKind.SCAN, summary,
-            {"scraped": total, **detail},
-        )
+        if not run or run.status != RunStatus.RUNNING:
+            return False
+        run.heartbeat_at = datetime.now(timezone.utc)
+        if step is not None:
+            run.current_step = step
         await session.commit()
-
-    return total
-
-
-async def _step_qualify(run_id: UUID, candidate_id: UUID) -> int:
-    """Lecture et structuration des annonces non encore qualifiées."""
-    from app.agents.discovery.tasks import _qualify_and_match_all
-
-    try:
-        qualified, _ = await _qualify_and_match_all()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Qualification failed during run: %s", e, exc_info=True)
-        qualified = 0
-
-    if qualified:
-        async with async_session() as session:
-            run = await session.get(MissionRun, run_id)
-            _bump(run, qualified=qualified)
-            await _log(
-                session, run, candidate_id, MissionEventKind.SCAN,
-                f"J'ai lu et structuré {qualified} nouvelles annonces.",
-                {"qualified": qualified},
-            )
-            await session.commit()
-
-    return qualified
+        return True
 
 
-async def _step_match(run_id: UUID, candidate_id: UUID) -> int:
-    """Confrontation au mandat du candidat."""
-    from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
-
-    try:
-        kept = await _match_candidate_to_existing_jobs(candidate_id)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Matching failed during run: %s", e, exc_info=True)
-        kept = 0
-
+async def _say(run_id: UUID, candidate_id: UUID, kind: MissionEventKind, summary: str,
+               payload: dict | None = None, **stats: int) -> None:
     async with async_session() as session:
         run = await session.get(MissionRun, run_id)
-        run.stats = {**(run.stats or {}), "shortlisted": kept}
+        if stats:
+            _bump(run, **stats)
+        await _log(session, run, candidate_id, kind, summary, payload)
         await session.commit()
 
-    return kept
 
-
-async def _step_prepare(
-    run_id: UUID, candidate_id: UUID, prioritize_sendable: bool = False,
-) -> int:
-    """
-    Pack complet — CV adapté et lettre — pour les offres du haut du panier.
-
-    Le même pack que celui du Canvas : une candidature préparée en mission ne
-    doit pas valoir moins qu'une candidature préparée à la main.
-    """
-    from app.agents.application.pack import build_pack, is_pack_ready
-    from app.models.company import Company
-
+async def _targets(candidate_id: UUID, count: int, sendable_first: bool):
+    """Les offres à traiter : retenues, pas encore parties, les meilleures d'abord."""
+    from app.agents.alice_state import OPEN_STATUSES
     from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode
+    from app.models.company import Company
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
 
     async with async_session() as session:
         rows = (await session.execute(
@@ -172,185 +105,36 @@ async def _step_prepare(
             .join(JobPosting, Application.job_posting_id == JobPosting.id)
             .join(Company, JobPosting.company_id == Company.id)
             .where(Application.candidate_id == candidate_id)
-            .where(Application.status == ApplicationStatus.MATCHED)
+            # PENDING compris : le seuil de présélection (78) laissait la
+            # mission sans rien à préparer alors que des offres à 70 % étaient là.
+            .where(Application.status.in_(OPEN_STATUSES))
+            .where(Application.match_score >= settings.match_min_score)
+            .where(JobPosting.status == PostingStatus.ACTIVE)
             .order_by(Application.match_score.desc())
-            .limit(LETTERS_PER_CYCLE * 6)
+            .limit(count * 8)
         )).all()
-
-    # Un pack déjà prêt n'est pas refait : on descend dans le classement.
-    pending = [(a, j, c) for a, j, c in rows if not is_pack_ready(a)]
-    if prioritize_sendable:
-        # Mission « postuler » : les offres qu'Alice peut réellement envoyer
-        # passent d'abord. Préparer en priorité des offres qu'il faudra finir
-        # à la main, c'est trahir la promesse de candidater.
-        pending.sort(key=lambda r: (APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
-    todo = [(a, j.title, c) for a, j, c in pending][:LETTERS_PER_CYCLE]
-
-    prepared = 0
-    for app, title, company in todo:
-        try:
-            pack = await build_pack(candidate_id, app.id)
-        except Exception as e:  # noqa: BLE001
-            logger.error("Pack generation failed for %s: %s", app.id, e)
-            continue
-        if not pack:
-            continue
-
-        async with async_session() as session:
-            run_m = await session.get(MissionRun, run_id)
-            _bump(run_m, letters=1, packs=1)
-            await _log(
-                session, run_m, candidate_id, MissionEventKind.LETTER_WRITTEN,
-                f"Pack prêt pour « {title} » chez {company} : CV adapté et lettre rédigée.",
-                {"job_id": str(app.job_posting_id), "application_id": str(app.id),
-                 "company": company, "score": app.match_score},
-            )
-            await session.commit()
-
-        prepared += 1
-
-    return prepared
-
-
-#: Envois tentés par cycle. Un formulaire rempli dans un navigateur prend du
-#: temps ; mieux vaut un rythme régulier qu'une rafale qui sature le worker.
-DISPATCHES_PER_CYCLE = 5
-
-async def _step_apply(run_id: UUID, candidate_id: UUID, authorized: bool) -> dict:
-    """
-    Envoi des candidatures dont le pack est prêt.
-
-    Chaque candidature passe par le dispatcher, qui applique le mandat
-    (autonomie, quota, canaux, entreprises bloquées). Sans autorisation
-    d'envoi pour ce run, rien ne part : les candidatures prêtes rejoignent la
-    file de validation, où l'utilisateur les retrouve — et non plus un simple
-    compteur sans rien derrière.
-    """
-    from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
-    from app.models.dispatch import ApplicationDispatch, DispatchStatus
-
-    # Une candidature déjà passée par l'un de ces états n'est pas reproposée à
-    # chaque cycle : elle attend l'utilisateur, elle est partie, il l'a
-    # refusée, ou le dispatcher a déjà dit pourquoi elle ne peut pas partir.
-    settled = (
-        DispatchStatus.AWAITING_APPROVAL, DispatchStatus.APPROVED,
-        DispatchStatus.SENT, DispatchStatus.SIMULATED, DispatchStatus.REJECTED,
-        DispatchStatus.PREPARED,
-    )
-    tally = {"sent": 0, "simulated": 0, "awaiting_approval": 0, "blocked": 0, "failed": 0}
-
-    async with async_session() as session:
-        pending = (await session.execute(
-            select(Application)
-            .where(Application.candidate_id == candidate_id)
-            .where(Application.status == ApplicationStatus.MATCHED)
-            .order_by(Application.match_score.desc())
-        )).scalars().all()
-        handled = set((await session.execute(
+        settled = set((await session.execute(
             select(ApplicationDispatch.application_id)
             .where(ApplicationDispatch.candidate_id == candidate_id)
-            .where(ApplicationDispatch.status.in_(settled))
+            .where(ApplicationDispatch.status.in_((
+                DispatchStatus.AWAITING_APPROVAL, DispatchStatus.APPROVED,
+                DispatchStatus.SENT, DispatchStatus.REJECTED,
+            )))
         )).scalars().all())
 
-    ready = [
-        a for a in pending
-        if (a.metadata_json or {}).get("cover_letter") and a.id not in handled
-    ][:DISPATCHES_PER_CYCLE]
+    rows = [r for r in rows if r[0].id not in settled]
+    if sendable_first:
+        # Mission « postuler » : d'abord ce qu'Alice peut réellement envoyer.
+        rows.sort(key=lambda r: (APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
+    return rows[:count]
 
-    for app in ready:
-        dispatch = await prepare_dispatch(candidate_id, app.id, run_id)
-        if not dispatch:
-            continue
-
-        if dispatch.status == DispatchStatus.APPROVED and not authorized:
-            # Le mandat le permettrait, mais l'utilisateur a demandé, pour
-            # cette mission, à valider lui-même : c'est la règle la plus
-            # stricte qui l'emporte.
-            async with async_session() as session:
-                d = await session.get(ApplicationDispatch, dispatch.id)
-                d.status = DispatchStatus.AWAITING_APPROVAL
-                d.error = "tu as choisi de valider chaque envoi pour cette mission"
-                await session.commit()
-            dispatch.status = DispatchStatus.AWAITING_APPROVAL
-
-        if dispatch.status == DispatchStatus.APPROVED:
-            notify = None
-            sent = await send_dispatch(dispatch.id)
-            status = sent.status if sent else DispatchStatus.FAILED
-            async with async_session() as session:
-                run = await session.get(MissionRun, run_id)
-                if status == DispatchStatus.SENT:
-                    tally["sent"] += 1
-                    await _log(
-                        session, run, candidate_id, MissionEventKind.APPLIED,
-                        f"Candidature envoyée à {sent.company_name} pour « {sent.job_title} ».",
-                        {"dispatch_id": str(sent.id), "channel": sent.channel.value},
-                    )
-                    notify = sent.id
-                elif status == DispatchStatus.SIMULATED:
-                    tally["simulated"] += 1
-                    await _log(
-                        session, run, candidate_id, MissionEventKind.APPLIED,
-                        f"Répétition pour {sent.company_name} : tout est prêt, rien n'est "
-                        f"parti ({sent.error}).",
-                        {"dispatch_id": str(sent.id), "simulated": True},
-                    )
-                else:
-                    tally["failed"] += 1
-                    await _log(
-                        session, run, candidate_id, MissionEventKind.ERROR,
-                        f"Envoi vers {dispatch.company_name} non abouti : "
-                        f"{(sent.error if sent else 'erreur inconnue')}. Le pack reste "
-                        f"téléchargeable pour finir à la main.",
-                        {"dispatch_id": str(dispatch.id)},
-                    )
-                await session.commit()
-            if notify:
-                from app.agents.notifications import notify_application_sent
-                await notify_application_sent(candidate_id, notify)
-        elif dispatch.status == DispatchStatus.AWAITING_APPROVAL:
-            tally["awaiting_approval"] += 1
-        else:
-            tally["blocked"] += 1
-
-    async with async_session() as session:
-        run = await session.get(MissionRun, run_id)
-        _bump(run, **{k: v for k, v in tally.items() if v})
-
-        # Un seul message pour toute la file, plutôt qu'une ligne par offre.
-        if tally["awaiting_approval"]:
-            n = tally["awaiting_approval"]
-            await _log(
-                session, run, candidate_id, MissionEventKind.AWAITING_APPROVAL,
-                f"{n} candidature{'s sont prêtes' if n > 1 else ' est prête'} à partir. "
-                + ("Elles attendent" if n > 1 else "Elle attend")
-                + " ton feu vert dans Candidatures.",
-                {"count": n},
-            )
-        if tally["blocked"]:
-            n = tally["blocked"]
-            await _log(
-                session, run, candidate_id, MissionEventKind.AWAITING_APPROVAL,
-                f"{n} pack{'s' if n > 1 else ''} prêt{'s' if n > 1 else ''} que je ne peux pas "
-                f"envoyer moi-même (canal hors de portée ou quota) : à finir à la main, "
-                f"tout est rédigé.",
-                {"count": n},
-            )
-        await session.commit()
-
-    return tally
-
-
-# ── Boucle d'exécution ─────────────────────────────────────────────────────
 
 async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
-    """
-    Déroule la pipeline jusqu'à la fin de la durée impartie.
+    """Déroule la mission en une passe, en écrivant chaque action au journal."""
+    from app.agents.application.feasibility import APPLY_MODE_LABELS, apply_mode
+    from app.agents.application.pack import build_pack, is_pack_ready
+    from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
 
-    Chaque cycle refait une passe complète : de nouvelles offres peuvent
-    apparaître pendant que la mission tourne, et c'est précisément ce qui
-    justifie de la laisser travailler dans la durée.
-    """
     async with async_session() as session:
         run = await session.get(MissionRun, run_id)
         if not run:
@@ -358,79 +142,145 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         run.status = RunStatus.RUNNING
         run.started_at = datetime.now(timezone.utc)
         run.heartbeat_at = run.started_at
-        run.ends_at = run.started_at + timedelta(minutes=run.duration_minutes)
+        run.ends_at = None
         run.stats = {}
-        await _log(
-            session, run, candidate_id, MissionEventKind.MISSION_CREATED,
-            f"Je démarre : {run.title}. Je travaille dessus pendant "
-            f"{run.duration_minutes} minutes.",
-            {"duration_minutes": run.duration_minutes},
-        )
-        await session.commit()
-        ends_at = run.ends_at
-        objective = run.objective
+        objective = run.objective if run.objective in ("prepare", "apply") else "prepare"
         allowed = run.allowed_actions or {}
+        count = max(1, min(MAX_TARGETS, int(allowed.get("count") or DEFAULT_TARGETS)))
+        send = objective == "apply" and bool(allowed.get("send"))
+        await session.commit()
 
     try:
-        while datetime.now(timezone.utc) < ends_at:
-            async with async_session() as session:
-                run = await session.get(MissionRun, run_id)
-                if not run or run.status != RunStatus.RUNNING:
-                    return
-                # Signe de vie à chaque tour : c'est ce qui distingue une
-                # mission qui travaille d'une mission dont le worker est mort.
-                run.heartbeat_at = datetime.now(timezone.utc)
-                await session.commit()
+        # 1. Les offres du jour, confrontées au mandat actuel.
+        if not await _heartbeat(run_id, RunStep.MATCH):
+            return
+        try:
+            kept = await _match_candidate_to_existing_jobs(candidate_id)
+        except Exception as e:  # noqa: BLE001 — on travaille sur le stock déjà noté
+            logger.warning("Re-notation impossible pendant la mission : %s", e)
+            kept = 0
+        targets = await _targets(candidate_id, count, sendable_first=objective == "apply")
+        await _say(
+            run_id, candidate_id, MissionEventKind.SCAN,
+            (f"Je reprends tes offres retenues : je m'occupe des {len(targets)} meilleures."
+             if targets else "Aucune offre de ton mandat n'attend de dossier pour l'instant."),
+            {"kept": kept, "targets": len(targets)}, shortlisted=len(targets),
+        )
+        if not targets:
+            from app.agents.incidents import report_incident
+            await report_incident("mission_empty", candidate_id, f"objectif {objective}",
+                                  notify_user=False)
+            await finalize_run(run_id, candidate_id, RunStatus.COMPLETED)
+            return
 
-            for step, coro in (
-                (RunStep.SCAN, lambda: _step_scan(run_id, candidate_id)),
-                (RunStep.QUALIFY, lambda: _step_qualify(run_id, candidate_id)),
-                (RunStep.MATCH, lambda: _step_match(run_id, candidate_id)),
-            ):
-                async with async_session() as s:
-                    r = await s.get(MissionRun, run_id)
-                    if not r or r.status != RunStatus.RUNNING:
-                        return
-                    r.current_step = step
-                    # Un cycle complet peut durer bien plus longtemps qu'un
-                    # seuil de péremption : qualifier plusieurs centaines
-                    # d'annonces prend des minutes. Sans battement à chaque
-                    # étape, le balayage conclurait à la mort d'une mission
-                    # en plein travail.
-                    r.heartbeat_at = datetime.now(timezone.utc)
-                    await s.commit()
-                await coro()
+        # 2. Un dossier complet par offre.
+        prepared = []
+        for app, job, company in targets:
+            if not await _heartbeat(run_id, RunStep.PREPARE):
+                return
+            mode = apply_mode(job)
+            if not is_pack_ready(app):
+                try:
+                    pack = await build_pack(candidate_id, app.id)
+                except Exception as e:  # noqa: BLE001
+                    logger.error("Pack impossible pour %s : %s", app.id, e)
+                    pack = None
+                if not pack:
+                    from app.agents.incidents import report_incident
+                    await report_incident("pack_failed", candidate_id, f"{job.title} — {company}",
+                                          notify_user=False)
+                    await _say(run_id, candidate_id, MissionEventKind.ERROR,
+                               f"Je n'ai pas pu préparer le dossier pour « {job.title} » "
+                               f"chez {company}. Je passe à la suivante.")
+                    continue
+            await _say(
+                run_id, candidate_id, MissionEventKind.LETTER_WRITTEN,
+                f"Dossier prêt pour « {job.title} » chez {company} — {APPLY_MODE_LABELS[mode].lower()}.",
+                {"job_id": str(job.id), "application_id": str(app.id), "company": company,
+                 "score": app.match_score, "apply_mode": mode},
+                packs=1, letters=1,
+            )
+            prepared.append((app, job, company))
 
-            if objective in ("prepare", "apply"):
-                async with async_session() as s:
-                    r = await s.get(MissionRun, run_id)
-                    r.current_step = RunStep.PREPARE
-                    await s.commit()
-                await _step_prepare(run_id, candidate_id, prioritize_sendable=objective == "apply")
-
-            if objective == "apply":
-                async with async_session() as s:
-                    r = await s.get(MissionRun, run_id)
-                    r.current_step = RunStep.APPLY
-                    await s.commit()
-                await _step_apply(run_id, candidate_id, bool(allowed.get("send")))
-
-            # Il reste du temps : on repasse plus tard plutôt que de boucler
-            # à vide sur les mêmes offres.
-            remaining = (ends_at - datetime.now(timezone.utc)).total_seconds()
-            if remaining <= 0:
-                break
-            await asyncio.sleep(min(CYCLE_PAUSE_SECONDS, remaining))
+        # 3. L'envoi, si la mission va jusque-là.
+        if objective == "apply" and prepared:
+            if not await _heartbeat(run_id, RunStep.APPLY):
+                return
+            await _dispatch_all(run_id, candidate_id, prepared, send)
 
     except asyncio.CancelledError:
         await finalize_run(run_id, candidate_id, RunStatus.INTERRUPTED)
         raise
     except Exception as e:  # noqa: BLE001
         logger.error("Mission run %s failed: %s", run_id, e, exc_info=True)
+        from app.agents.incidents import report_incident
+        await report_incident("mission_failed", candidate_id, repr(e)[:300],
+                              context={"run_id": str(run_id)})
         await finalize_run(run_id, candidate_id, RunStatus.INTERRUPTED)
         return
 
     await finalize_run(run_id, candidate_id, RunStatus.COMPLETED)
+
+
+async def _dispatch_all(run_id: UUID, candidate_id: UUID, prepared: list, send: bool) -> None:
+    """
+    Envoie ce qui peut partir, met le reste en file de validation.
+
+    Choisir « postule pour moi » au lancement EST l'autorisation : on ne
+    redemande pas un réglage de canaux introuvable. Restent appliqués : pas de
+    doublon, entreprises bloquées, quota hebdomadaire, mission en pause.
+    """
+    from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+    awaiting, manual = 0, 0
+    for app, job, company in prepared:
+        if not await _heartbeat(run_id):
+            return
+        dispatch = await prepare_dispatch(candidate_id, app.id, run_id, run_authorized=send)
+        if not dispatch:
+            continue
+
+        if dispatch.status == DispatchStatus.APPROVED and not send:
+            async with async_session() as session:
+                d = await session.get(ApplicationDispatch, dispatch.id)
+                d.status = DispatchStatus.AWAITING_APPROVAL
+                d.error = "tu valides chaque envoi pour cette mission"
+                await session.commit()
+            dispatch.status = DispatchStatus.AWAITING_APPROVAL
+
+        if dispatch.status == DispatchStatus.APPROVED:
+            sent = await send_dispatch(dispatch.id)
+            status = sent.status if sent else DispatchStatus.FAILED
+            if status == DispatchStatus.SENT:
+                await _say(run_id, candidate_id, MissionEventKind.APPLIED,
+                           f"Candidature envoyée chez {company} pour « {job.title} ».",
+                           {"dispatch_id": str(sent.id), "channel": sent.channel.value}, sent=1)
+                from app.agents.notifications import notify_application_sent
+                await notify_application_sent(candidate_id, sent.id)
+            elif status == DispatchStatus.SIMULATED:
+                await _say(run_id, candidate_id, MissionEventKind.AWAITING_APPROVAL,
+                           f"Tout est prêt pour {company}, mais rien n'est parti : "
+                           f"{sent.error}. Le dossier t'attend dans Candidatures.",
+                           {"dispatch_id": str(sent.id), "simulated": True}, simulated=1)
+            else:
+                await _say(run_id, candidate_id, MissionEventKind.ERROR,
+                           f"L'envoi chez {company} a échoué. Le dossier reste prêt pour "
+                           f"finir à la main.", {"dispatch_id": str(dispatch.id)}, failed=1)
+        elif dispatch.status == DispatchStatus.AWAITING_APPROVAL:
+            awaiting += 1
+        else:
+            manual += 1
+
+    if awaiting:
+        await _say(run_id, candidate_id, MissionEventKind.AWAITING_APPROVAL,
+                   f"{awaiting} candidature{'s attendent' if awaiting > 1 else ' attend'} ton feu "
+                   f"vert dans Candidatures.", {"count": awaiting}, awaiting_approval=awaiting)
+    if manual:
+        await _say(run_id, candidate_id, MissionEventKind.AWAITING_APPROVAL,
+                   f"{manual} dossier{'s' if manual > 1 else ''} à envoyer toi-même sur le site "
+                   f"de l'employeur (portail ou formulaire propre) — tout est rédigé.",
+                   {"count": manual}, blocked=manual)
 
 
 async def finalize_run(
@@ -483,16 +333,16 @@ async def _write_report(
 
     facts = (
         f"Mission : {title}\n"
-        f"Durée prévue : {minutes} minutes\n"
         f"Issue : {'terminée' if status == RunStatus.COMPLETED else 'interrompue'}\n"
         f"Compteurs : {stats}\n"
         f"Journal :\n" + "\n".join(f"- {t}" for t in timeline[-25:])
     )
 
+    packs = stats.get("packs", stats.get("letters", 0))
     fallback = (
-        f"Mission terminée. J'ai relevé {stats.get('scanned', 0)} offres, "
-        f"retenu {stats.get('shortlisted', 0)}, et préparé "
-        f"{stats.get('packs', stats.get('letters', 0))} pack(s) de candidature."
+        f"C'est fait : j'ai préparé {packs} dossier{'s' if packs > 1 else ''} complet"
+        f"{'s' if packs > 1 else ''} (CV adapté et lettre)."
+        if packs else "Je n'ai trouvé aucune offre de ton mandat à préparer pour l'instant."
     )
     if stats.get("sent"):
         fallback += f" {stats['sent']} candidature(s) sont parties."

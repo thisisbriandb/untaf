@@ -6,7 +6,7 @@ import { ArrowRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
 import {
-  DURATIONS,
+  COUNTS,
   OBJECTIVES,
   startRun,
   type MissionRun,
@@ -29,14 +29,13 @@ export function MissionLauncher({
   onClose: () => void;
 }) {
   const [step, setStep] = useState(0);
-  const [objective, setObjective] = useState<RunObjective>("search");
-  const [duration, setDuration] = useState(30);
+  const [objective, setObjective] = useState<RunObjective>("prepare");
+  const [count, setCount] = useState(5);
   const [allowSend, setAllowSend] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const objectiveLabel = OBJECTIVES.find((o) => o.id === objective)!;
-  const durationLabel = DURATIONS.find((d) => d.minutes === duration)?.label ?? `${duration} min`;
+  const objectiveLabel = OBJECTIVES.find((o) => o.id === objective) ?? OBJECTIVES[0];
 
   // La question de l'envoi n'a de sens que si la mission va jusque-là.
   const steps = objective === "apply" ? 4 : 3;
@@ -47,7 +46,7 @@ export function MissionLauncher({
     const run = await startRun(candidateId, {
       title: objectiveLabel.label,
       objective,
-      duration_minutes: duration,
+      count,
       allowed_actions: { send: allowSend },
     });
     setIsLaunching(false);
@@ -96,27 +95,32 @@ export function MissionLauncher({
       ),
     },
     {
-      prompt: "Pendant combien de temps ?",
+      prompt: "Sur combien d'offres ?",
       content: (
-        <div className="flex flex-wrap gap-2">
-          {DURATIONS.map((d) => (
-            <button
-              key={d.minutes}
-              type="button"
-              onClick={() => {
-                setDuration(d.minutes);
-                setStep(2);
-              }}
-              className={cn(
-                "px-4 py-2 rounded-full border text-sm transition-colors cursor-pointer",
-                duration === d.minutes
-                  ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
-                  : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
-              )}
-            >
-              {d.label}
-            </button>
-          ))}
+        <div className="space-y-3">
+          <div className="flex flex-wrap justify-center gap-2">
+            {COUNTS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  setCount(n);
+                  setStep(2);
+                }}
+                className={cn(
+                  "px-5 py-2 rounded-full border text-sm transition-colors cursor-pointer",
+                  count === n
+                    ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
+                    : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
+                )}
+              >
+                {n} offres
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-[11px] font-light text-[#1A1918]/40">
+            Les meilleures de tes offres retenues, dans l&apos;ordre de correspondance.
+          </p>
         </div>
       ),
     },
@@ -167,7 +171,7 @@ export function MissionLauncher({
           <div className="border-t border-b border-[#1A1918]/10 divide-y divide-[#1A1918]/8 text-sm">
             {[
               ["Mission", objectiveLabel.label],
-              ["Durée", durationLabel],
+              ["Offres", `Les ${count} meilleures`],
               ...(objective === "apply"
                 ? [["Envoi", allowSend ? "J'envoie moi-même" : "Tu valides chaque envoi"]]
                 : []),
@@ -183,12 +187,9 @@ export function MissionLauncher({
 
           {/* Le contrat de délégation, dit en clair avant de partir */}
           <p className="text-xs font-light text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
-            Tu peux fermer l&apos;application : je continue sans toi.
-            {objective === "search"
-              ? " Je te présente les offres retenues à la fin."
-              : " Chaque offre retenue reçoit un CV adapté et sa lettre."}
+            Tu peux fermer l&apos;onglet : je continue sans toi et je t&apos;écris quand c&apos;est
+            fini.
             {objective === "apply" && !allowSend && " Rien ne part sans ton feu vert."}
-            {" "}Je t&apos;écris quand c&apos;est fini.
           </p>
 
           {error && <p className="text-xs text-red-600/80 text-center">{error}</p>}

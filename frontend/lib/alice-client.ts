@@ -92,6 +92,7 @@ export async function sendMessageToAlice(
   message: string,
   history: ChatTurn[] = [],
   conversationId: string | null = null,
+  jobId: string | null = null,
 ): Promise<AliceResponse> {
   const res = await apiFetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
@@ -99,6 +100,7 @@ export async function sendMessageToAlice(
     body: JSON.stringify({
       candidate_id: candidateId,
       conversation_id: conversationId,
+      job_id: jobId,
       message,
       // Le fil de la discussion seulement : les chiffres sont relus côté
       // serveur depuis la base à chaque tour.
@@ -124,6 +126,10 @@ export interface ConversationSummary {
   id: string;
   title: string;
   updated_at: string;
+  /** Offre dont parle la conversation, s'il y en a une. */
+  job_id?: string | null;
+  company_name?: string | null;
+  job_title?: string | null;
 }
 
 export interface StoredMessage {

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { AlicePresence } from "../onboarding/components/AlicePresence";
 import { EmailSignIn } from "../auth/EmailSignIn";
-import { AUTH_ENABLED } from "@/lib/supabase";
+import { authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 
 export default function LoginPage() {
@@ -14,7 +14,9 @@ export default function LoginPage() {
 
   // Sans authentification configurée (développement), rien à faire ici.
   useEffect(() => {
-    if (!AUTH_ENABLED) router.replace("/dashboard");
+    authEnabled().then((on) => {
+      if (!on) router.replace("/dashboard");
+    });
   }, [router]);
 
   const handleSignedIn = useCallback(async () => {

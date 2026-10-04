@@ -18,7 +18,11 @@ class ConversationOut(BaseModel):
     id: UUID
     title: str
     updated_at: datetime
-    model_config = {"from_attributes": True}
+    #: Offre dont parle la conversation — la barre latérale l'affiche sous le
+    #: nom de l'entreprise.
+    job_id: UUID | None = None
+    company_name: str | None = None
+    job_title: str | None = None
 
 
 class MessageOut(BaseModel):
@@ -36,12 +40,24 @@ async def list_conversations(
     limit: int = Query(default=30, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    return (await db.execute(
-        select(Conversation)
+    from app.models.company import Company
+    from app.models.job_posting import JobPosting
+
+    rows = (await db.execute(
+        select(Conversation, JobPosting.title, Company.name)
+        .outerjoin(JobPosting, Conversation.job_posting_id == JobPosting.id)
+        .outerjoin(Company, JobPosting.company_id == Company.id)
         .where(Conversation.candidate_id == candidate_id)
         .order_by(desc(Conversation.updated_at))
         .limit(limit)
-    )).scalars().all()
+    )).all()
+    return [
+        ConversationOut(
+            id=c.id, title=c.title, updated_at=c.updated_at,
+            job_id=c.job_posting_id, company_name=company, job_title=job_title,
+        )
+        for c, job_title, company in rows
+    ]
 
 
 async def _owned(db: AsyncSession, candidate_id: UUID, conversation_id: UUID) -> Conversation:

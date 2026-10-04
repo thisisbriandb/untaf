@@ -25,8 +25,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import jwt
 from fastapi import Depends, HTTPException, Request
@@ -53,8 +54,29 @@ class AuthUser:
 DEV_USER = AuthUser(id=UUID(int=0), email=None)
 
 
+#: Émetteur des sessions signées par l'API elle-même.
+ISSUER = "alice-agent"
+
+
 def auth_configured() -> bool:
-    return bool(settings.supabase_jwt_secret or settings.supabase_url)
+    return bool(settings.auth_secret or settings.supabase_jwt_secret or settings.supabase_url)
+
+
+def user_id_for(email: str) -> UUID:
+    """Identifiant stable d'un compte : dérivé de l'adresse, sans table d'utilisateurs."""
+    return uuid5(NAMESPACE_URL, f"mailto:{email.strip().lower()}")
+
+
+def issue_session(email: str) -> tuple[str, datetime]:
+    """Session signée par l'API après preuve de possession de l'adresse."""
+    email = email.strip().lower()
+    expires = datetime.now(timezone.utc) + timedelta(days=settings.session_days)
+    token = jwt.encode(
+        {"sub": str(user_id_for(email)), "email": email, "aud": AUDIENCE,
+         "iss": ISSUER, "exp": expires},
+        settings.auth_secret, algorithm="HS256",
+    )
+    return token, expires
 
 
 @lru_cache(maxsize=1)
@@ -70,6 +92,13 @@ def _decode(token: str) -> dict:
     options = {"require": ["exp", "sub"]}
 
     if alg == "HS256":
+        # Nos propres sessions d'abord, puis celles d'un projet Supabase.
+        unverified = jwt.decode(token, options={"verify_signature": False})
+        if unverified.get("iss") == ISSUER:
+            if not settings.auth_secret:
+                raise jwt.InvalidTokenError("session maison mais AUTH_SECRET absent")
+            return jwt.decode(token, settings.auth_secret, algorithms=["HS256"],
+                              audience=AUDIENCE, issuer=ISSUER, options=options)
         if not settings.supabase_jwt_secret:
             raise jwt.InvalidTokenError("jeton HS256 mais SUPABASE_JWT_SECRET absent")
         return jwt.decode(

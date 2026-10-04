@@ -5,17 +5,13 @@ Le canal le plus simple et le seul irréprochable : le candidat écrit à une
 adresse que le recruteur a lui-même publiée. Ni scraping, ni contournement,
 ni conditions d'utilisation à négocier.
 
-Sans configuration SMTP, la fonction ne prétend pas avoir envoyé : elle renvoie
+Sans transport configuré (Resend ou SMTP), la fonction ne prétend pas avoir envoyé : elle renvoie
 `real=False`, et l'appelant enregistre une simulation. Un envoi fictif rapporté
 comme réel serait la pire trahison possible pour un agent qui agit au nom de
 quelqu'un.
 """
 
 import logging
-import smtplib
-import ssl
-from email.message import EmailMessage
-from email.utils import formataddr, make_msgid
 
 from app.config import settings
 
@@ -69,18 +65,6 @@ async def send_application_email(
     subject = (letter or {}).get("subject") or f"Candidature — {job_title}"
     body = _plain_text(letter, candidate, job_title, company_name)
 
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["To"] = to_email
-    message["Message-ID"] = make_msgid()
-    message["From"] = formataddr((
-        candidate.full_name or settings.smtp_from_name,
-        settings.smtp_user or "candidature@localhost",
-    ))
-    if candidate.email:
-        message["Reply-To"] = candidate.email
-    message.set_content(body)
-
     # Le CV joint est celui figé à la préparation de l'envoi — adapté à
     # l'offre le cas échéant. À défaut, il suit le choix de présentation du
     # candidat, pas seulement le fichier déposé à l'inscription.
@@ -89,51 +73,42 @@ async def send_application_email(
     else:
         from app.agents.application.cv_resolver import resolve_cv
         cv_bytes, cv_name, cv_origin = resolve_cv(candidate)
-    if cv_bytes:
-        message.add_attachment(
-            cv_bytes, maintype="application", subtype="pdf", filename=cv_name,
-        )
+
+    proof = {
+        "to": to_email,
+        "subject": subject,
+        "attachments": [cv_name] if cv_bytes else [],
+        "cv_origin": cv_origin,
+    }
 
     if not settings.can_send_email:
-        logger.warning(
-            "SMTP non configuré — candidature vers %s NON envoyée (simulation).",
-            to_email,
-        )
+        logger.warning("Aucun transport e-mail — candidature vers %s NON envoyée.", to_email)
         return {
             "ok": True,
             "real": False,
-            "error": "l'envoi d'e-mails n'est pas configuré sur ce serveur (SMTP)",
-            "proof": {
-                "simulated": True,
-                "to": to_email,
-                "subject": subject,
-                "attachments": [cv_name] if cv_bytes else [],
-                "cv_origin": cv_origin,
-                "body_preview": body[:400],
-            },
+            "error": "l'envoi d'e-mails n'est pas configuré sur ce serveur",
+            "proof": {**proof, "simulated": True, "body_preview": body[:400]},
         }
 
-    try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
-            if settings.smtp_use_tls:
-                server.starttls(context=context)
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.send_message(message)
+    # « Camille Martin via Alice » depuis le domaine vérifié : délivrable, et
+    # honnête sur l'expéditeur. La réponse du recruteur va au candidat.
+    from app.agents.notifications.mailer import Attachment, Mail, send_mail
 
-        logger.info("Candidature envoyée à %s (%s)", to_email, job_title)
-        return {
-            "ok": True,
-            "real": True,
-            "proof": {
-                "message_id": message["Message-ID"],
-                "to": to_email,
-                "subject": subject,
-                "attachments": [cv_name] if cv_bytes else [],
-                "cv_origin": cv_origin,
-            },
-        }
+    result = await send_mail(Mail(
+        to=to_email,
+        subject=subject,
+        text=body,
+        sender=(f"{candidate.full_name or 'Candidat'} via Alice", settings.application_sender),
+        reply_to=candidate.email or None,
+        attachments=[Attachment(cv_name, cv_bytes)] if cv_bytes else [],
+    ))
+    if not result["ok"]:
+        return {"ok": False, "real": False, "error": result.get("error") or "échec d'envoi"}
 
-    except Exception as e:  # noqa: BLE001
-        logger.error("Envoi email vers %s échoué : %s", to_email, e, exc_info=True)
-        return {"ok": False, "real": False, "error": str(e)[:300]}
+    logger.info("Candidature envoyée à %s (%s) via %s", to_email, job_title, result.get("provider"))
+    return {
+        "ok": True,
+        "real": bool(result["real"]),
+        "error": None if result["real"] else result.get("error"),
+        "proof": {**proof, "message_id": result.get("id"), "provider": result.get("provider")},
+    }

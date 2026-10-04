@@ -4,15 +4,15 @@
  * Connexion par e-mail, sans mot de passe : un lien et un code.
  *
  * Le lien s'ouvre souvent dans un autre onglet ; la session y est créée puis
- * partagée avec cet onglet-ci par le client Supabase, qui reprend alors la
- * main (`onSignedIn`). Le code à 6 chiffres permet de rester sur place —
+ * vue par cet onglet-ci (événement `storage`), qui reprend alors la main
+ * (`onSignedIn`). Le code à 6 chiffres permet de rester sur place —
  * utile sur mobile, où le lien ouvre parfois un autre navigateur.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Loader2, Mail } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { onSessionChange, requestLoginLink, sessionEmail, verifyLogin } from "@/lib/auth";
 
 export function EmailSignIn({
   initialEmail = "",
@@ -34,19 +34,19 @@ export function EmailSignIn({
   const signedIn = useRef(false);
   const autoSent = useRef(false);
 
+  // Déjà connecté, ou connexion faite dans un autre onglet (clic sur le lien) :
+  // on reprend la main ici.
   useEffect(() => {
-    if (!supabase) return;
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION") && !signedIn.current) {
-        signedIn.current = true;
-        onSignedIn();
-      }
-    });
-    return () => data.subscription.unsubscribe();
+    const done = () => {
+      if (signedIn.current) return;
+      signedIn.current = true;
+      onSignedIn();
+    };
+    if (sessionEmail()) done();
+    return onSessionChange((on) => on && done());
   }, [onSignedIn]);
 
   const send = async (address: string) => {
-    if (!supabase) return;
     const target = address.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
       setError("Cette adresse ne semble pas valide.");
@@ -54,16 +54,15 @@ export function EmailSignIn({
     }
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: target,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirmed` },
-    });
+    const err = await requestLoginLink(target);
     setBusy(false);
     if (err) {
       setError(
-        err.status === 429
-          ? "Trop de demandes rapprochées. Réessaie dans une minute."
-          : "Je n'ai pas pu envoyer le lien. Réessaie.",
+        err === "rate_limited"
+          ? "Trop de demandes rapprochées. Réessaie dans quelques minutes."
+          : err === "invalid"
+            ? "Cette adresse ne semble pas valide."
+            : "Je n'ai pas pu envoyer le lien. Réessaie dans un moment.",
       );
       return;
     }
@@ -79,16 +78,12 @@ export function EmailSignIn({
   }, [autoSend, initialEmail]);
 
   const verify = async () => {
-    if (!supabase || !sentTo) return;
+    if (!sentTo) return;
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.verifyOtp({
-      email: sentTo,
-      token: code.trim(),
-      type: "email",
-    });
+    const ok = await verifyLogin({ email: sentTo, code: code.trim() });
     setBusy(false);
-    if (err) setError("Ce code ne correspond pas, ou il a expiré.");
+    if (!ok) setError("Ce code ne correspond pas, ou il a expiré.");
   };
 
   return (
@@ -128,7 +123,7 @@ export function EmailSignIn({
               </button>
             </div>
             <p className="text-center text-[11px] font-light text-[#1A1918]/40 tracking-tight">
-              Pas de mot de passe : je t&apos;envoie un lien et un code.
+              Pas de mot de passe : je t&apos;envoie un lien et un code, depuis alice@alice-agent.fr.
             </p>
           </motion.form>
         ) : (

@@ -11,7 +11,7 @@ import type {
 } from "@/lib/alice-client";
 import { JobCardList } from "./JobCard";
 import { Markdown } from "./Markdown";
-import { ActiveMissionCard } from "./ActiveMissionCard";
+import { MissionStream } from "./MissionStream";
 import { MissionLauncher } from "./MissionLauncher";
 import { ImportJobDialog } from "./ImportJobDialog";
 import { fetchCurrentRun, type MissionRun } from "@/lib/mission-run-client";
@@ -382,25 +382,7 @@ export function AliceView({
           {/* Uniquement pendant qu'une mission tourne. Une mission terminée n'a
               rien à faire en permanence sur l'écran d'accueil : son compte rendu
               est dans le fil, et l'historique est dans l'onglet Mission. */}
-          <AnimatePresence>
-            {showRunCard && candidateId && run && (
-              <motion.div
-                key={run.id}
-                initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                className="w-full shrink-0"
-              >
-                <ActiveMissionCard
-                  candidateId={candidateId}
-                  run={run}
-                  onChange={handleRunChange}
-                  onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
-                  onDismiss={() => setFinishedRunId(null)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+
 
           <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-3 shrink-0">
             <ConversationMenu />
@@ -418,6 +400,17 @@ export function AliceView({
                 </motion.div>
               ))}
             </AnimatePresence>
+            {/* La mission se raconte ici, dans le fil, au fil de l'eau */}
+            {showRunCard && candidateId && run && (
+              <MissionStream
+                key={run.id}
+                candidateId={candidateId}
+                run={run}
+                onChange={handleRunChange}
+                onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
+                onDismiss={() => setFinishedRunId(null)}
+              />
+            )}
             {isThinking && (
               <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
                 <span className="animate-pulse">{workingLabel}</span>
@@ -502,7 +495,7 @@ export function AliceView({
             onLaunched={(r) => {
               setRun(r);
               setShowLauncher(false);
-              toast("Mission lancée — tu peux fermer l'application, je t'écris à la fin.");
+              toast("C'est parti — tu peux fermer l'onglet, je t'écris quand c'est fini.");
             }}
           />
         )}

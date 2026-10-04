@@ -8,7 +8,7 @@
  */
 
 import { API_BASE_URL } from "./config";
-import { accessToken } from "./supabase";
+import { accessToken } from "./auth";
 
 /**
  * Le serveur d'Alice ne répond pas du tout (éteint, mauvaise adresse, CORS).

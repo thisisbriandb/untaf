@@ -137,6 +137,12 @@ async def _send(
                 # Deux clôtures concurrentes : l'autre a déjà enregistré.
                 await session.rollback()
                 return None
+        if status == NotificationStatus.FAILED:
+            from app.agents.incidents import report_incident
+            await report_incident(
+                "notification_failed", candidate_id, result.get("error") or "",
+                context={"kind": kind.value, "subject": email.subject},
+            )
         return record
     except Exception as e:  # noqa: BLE001 — notifier ne casse jamais l'action
         logger.error("Notification %s impossible : %s", kind.value, e, exc_info=True)

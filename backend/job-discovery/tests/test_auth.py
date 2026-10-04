@@ -105,3 +105,19 @@ def test_cles_asymetriques_via_jwks(monkeypatch):
     other = ec.generate_private_key(ec.SECP256R1())
     with pytest.raises(HTTPException):
         _user(jwt.encode(claims, other, algorithm="ES256"))
+
+
+def test_session_maison_signee_par_l_api(monkeypatch):
+    monkeypatch.setattr(settings, "auth_secret", "un-secret-maison-assez-long-pour-hs256-0123456789")
+    token, _ = auth.issue_session("Ada@Example.fr")
+    user = _user(token)
+    assert user.email == "ada@example.fr"
+    assert user.id == auth.user_id_for("ada@example.fr")  # stable, sans table d'utilisateurs
+
+
+def test_session_maison_refusee_si_secret_change(monkeypatch):
+    monkeypatch.setattr(settings, "auth_secret", "secret-un-assez-long-pour-hs256-0123456789abcdef")
+    token, _ = auth.issue_session("ada@example.fr")
+    monkeypatch.setattr(settings, "auth_secret", "secret-deux-assez-long-pour-hs256-0123456789abcd")
+    with pytest.raises(HTTPException):
+        _user(token)

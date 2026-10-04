@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { Bell, Send, Settings } from "lucide-react";
+import { Bell, PanelLeft, Send, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchJournal, type MissionEvent } from "@/lib/mission-client";
 import { markJournalRead } from "@/lib/pipeline-client";
@@ -14,6 +14,8 @@ const NAV: { id: TabType; label: string }[] = [
   { id: "candidatures", label: "Candidatures" },
   { id: "messages", label: "Messages" },
 ];
+
+const IMPORTANT = new Set(["applied", "reply", "awaiting_approval", "error", "status_changed"]);
 
 /** Assez vif pour qu'une fin de mission apparaisse sans recharger. */
 const POLL_MS = 30_000;
@@ -45,11 +47,15 @@ export function DashboardHeader({
   onSelectTab,
   candidateId,
   awaitingCount = 0,
+  sidebarOpen = false,
+  onToggleSidebar,
 }: {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
   candidateId: string | null;
   awaitingCount?: number;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }) {
   const [events, setEvents] = useState<MissionEvent[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -75,7 +81,10 @@ export function DashboardHeader({
     return () => document.removeEventListener("mousedown", close);
   }, [showNotifs]);
 
-  const unread = events.filter((e) => !e.is_read).length;
+  // La pastille ne s'allume que pour ce qui demande un regard : un envoi, une
+  // réponse, une validation, un échec, un compte rendu. Une veille ou un
+  // dossier préparé se consultent, ils ne réclament pas d'attention.
+  const unread = events.filter((e) => !e.is_read && IMPORTANT.has(e.kind)).length;
   const badge = unread + (awaitingCount > 0 ? 1 : 0);
 
   const markAllRead = async () => {
@@ -86,6 +95,21 @@ export function DashboardHeader({
 
   return (
     <header className="shrink-0 z-50 flex items-center justify-between gap-3 px-4 md:px-10 py-4 select-none">
+      <div className="flex items-center gap-1.5">
+      {onToggleSidebar && (
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Masquer les conversations" : "Afficher les conversations"}
+          title="Conversations"
+          className={cn(
+            "p-2 rounded-full transition-colors cursor-pointer",
+            sidebarOpen ? "text-[#006045] bg-[#006045]/10" : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
+          )}
+        >
+          <PanelLeft className="w-4 h-4 stroke-[1.4]" />
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onSelectTab("alice")}
@@ -93,6 +117,7 @@ export function DashboardHeader({
       >
         alice
       </button>
+      </div>
 
       {/* Navigation — l'indicateur glisse d'un onglet à l'autre */}
       <LayoutGroup id="dashboard-nav">
@@ -138,7 +163,12 @@ export function DashboardHeader({
         <div className="relative" ref={panelRef}>
           <button
             type="button"
-            onClick={() => setShowNotifs((v) => !v)}
+            onClick={() => {
+              const opening = !showNotifs;
+              setShowNotifs(opening);
+              // Ouvrir le panneau, c'est avoir vu : la pastille ne s'attarde pas.
+              if (opening && unread > 0) setTimeout(() => void markAllRead(), 1200);
+            }}
             aria-label="Notifications"
             className="relative p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
           >

@@ -26,6 +26,7 @@ class NotificationKind(str, enum.Enum):
     FOLLOWUP_DUE = "followup_due"            # Une relance est à faire
     DIGEST = "digest"                        # Rapport d'activité périodique
     TEST = "test"                            # Envoi d'essai depuis les paramètres
+    INCIDENT = "incident"                    # Alerte équipe : promesse non tenue
 
 
 class NotificationStatus(str, enum.Enum):
