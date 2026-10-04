@@ -206,12 +206,19 @@ async def prepare_dispatch(
         cv_bytes, cv_name, cv_mode = resolve_cv(
             candidate, (application.metadata_json or {}).get("tailored_cv"),
         )
+        cv_missing = cv_mode == "render_failed" or not cv_bytes
         if cv_mode == "render_failed":
             from app.agents.incidents import report_incident
             await report_incident(
                 "cv_render_failed", candidate_id, "composition Typst échouée à l'assemblage",
                 context={"job": job.title, "company": company_name},
             )
+        if cv_missing and status != DispatchStatus.PREPARED:
+            # Une candidature ne part jamais sans le CV adapté — ni avec
+            # l'original glissé à sa place.
+            status = DispatchStatus.PREPARED
+            verdict = Decision(False, "CV adapté indisponible pour l'instant, rien n'est parti",
+                               verdict.channel, verdict.destination)
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
 
         dispatch = ApplicationDispatch(

@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev \
+    gcc libpq-dev fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # ── cv-engine (Typst + polices) ─────────────────────────────

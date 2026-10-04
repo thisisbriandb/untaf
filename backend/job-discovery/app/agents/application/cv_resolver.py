@@ -72,38 +72,61 @@ def resolve_cv(
         )
 
     if not HAS_ENGINE:
-        logger.warning("Modèle demandé mais cv-engine absent — repli sur l'original.")
+        logger.error("Modèle demandé mais cv-engine absent.")
+        # Un CV adapté ne se remplace pas par l'original : ce serait livrer
+        # le document que le candidat avait déjà, sous le nom de « pack ».
+        if tailored:
+            return None, f"CV_{_safe_name(candidate.full_name)}.pdf", "render_failed"
         return candidate.resume_file, candidate.resume_filename or "CV.pdf", "original"
 
     cv = candidate.cv_content or {}
     summary = (tailoring.get("summary") if tailored else None) or cv.get("summary")
     headline = (tailoring.get("headline") if tailored else None) or candidate.headline
+    # Titres affichés tels quels (le moteur ne retouche pas une clé accentuée
+    # ou capitalisée) : un CV français ne titre pas « Experience ».
     sections: dict = {}
     if summary:
-        sections["profil"] = [summary]
+        sections["Profil"] = [summary]
+
+    # Ce que l'offre demande et que le parcours prouve — la partie la plus
+    # visiblement adaptée du document.
+    strengths = [s for s in (tailoring.get("strengths") or []) if s] if tailored else []
+    if strengths:
+        sections["Points forts pour ce poste"] = [{"bullet": s} for s in strengths[:4]]
+
+    # Réalisations reformulées pour l'offre, expérience par expérience.
+    rewritten = (tailoring.get("experiences") or []) if tailored else []
 
     experiences = []
-    for exp in cv.get("experiences") or []:
+    for i, exp in enumerate(cv.get("experiences") or []):
         highlights = exp.get("highlights") or []
         if isinstance(highlights, str):
             highlights = [h.strip() for h in highlights.split("\n") if h.strip()]
+        description = exp.get("description") or ""
+        adapted = rewritten[i] if i < len(rewritten) and isinstance(rewritten[i], dict) else {}
+        if adapted.get("highlights"):
+            highlights = [h for h in adapted["highlights"] if isinstance(h, str) and h.strip()]
+            # La description d'origine est déjà fondue dans les puces adaptées.
+            description = ""
         experiences.append({
             "company": exp.get("company") or "Entreprise",
             "position": exp.get("jobTitle") or exp.get("position") or "Poste",
             "location": exp.get("location") or "",
             "start_date": exp.get("startDate") or "",
             "end_date": "present" if exp.get("isCurrent") else (exp.get("endDate") or ""),
-            "summary": exp.get("description") or "",
+            "summary": description,
             "highlights": highlights,
         })
     if experiences:
-        sections["experience"] = experiences
+        sections["Expérience"] = experiences
 
     education = [
         {
             "institution": e.get("institution") or "",
-            "area": e.get("degree") or "",
-            "degree": e.get("degree") or "",
+            # Le diplôme en intitulé, pas dans la colonne étroite des
+            # abréviations (« BUT Infor-ma-tique » sur quatre lignes).
+            "area": e.get("degree") or e.get("field") or "",
+            "degree": "",
             "location": e.get("location") or "",
             "start_date": e.get("startYear") or "",
             "end_date": e.get("endYear") or "",
@@ -111,7 +134,7 @@ def resolve_cv(
         for e in (cv.get("education") or [])
     ]
     if education:
-        sections["education"] = education
+        sections["Formation"] = education
 
     # Toutes les compétences, dans l'ordre choisi pour l'offre s'il y en a un.
     skills = list(candidate.skills or [])
@@ -119,14 +142,14 @@ def resolve_cv(
     if order:
         skills = [s for s in order if s in skills] + [s for s in skills if s not in order]
     if skills:
-        sections["competences"] = [", ".join(skills)]
+        sections["Compétences"] = [", ".join(skills)]
 
     languages = [
         f"**{l.get('language')}** — {l.get('level')}" if l.get("level") else f"**{l.get('language')}**"
         for l in (cv.get("languages") or []) if l.get("language")
     ]
     if languages:
-        sections["langues"] = languages
+        sections["Langues"] = languages
 
     color = design.get("color_hex") or "#234C6A"
     data = {
@@ -174,4 +197,7 @@ def resolve_cv(
         # « render_failed » : l'appelant sait que la promesse (un CV mis en
         # page) n'est pas tenue, et peut le dire au lieu de servir en silence
         # l'original — ou rien du tout.
+        if tailored:
+            # Jamais l'original à la place du CV adapté : l'appelant le dit.
+            return None, f"CV_{_safe_name(candidate.full_name)}.pdf", "render_failed"
         return candidate.resume_file, candidate.resume_filename or "CV.pdf", "render_failed"

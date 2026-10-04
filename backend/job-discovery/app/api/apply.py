@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.outcome import build_outcome
+from app.agents.application.pack import is_pack_ready
 from app.agents.application.requirements import detect_requirements
 from app.database import async_session, get_db
 from app.models.application import Application
@@ -219,14 +220,18 @@ async def download_tailored_cv(
         raise HTTPException(404, "Offre ou candidat introuvable")
 
     # La compilation Typst occupe le processeur : hors de la boucle d'événements.
+    if application and not is_pack_ready(application):
+        from app.agents.application.pack import build_pack
+        if await build_pack(candidate_id, application.id):
+            await db.refresh(application)
+
     pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
-    if origin == "render_failed":
+    if origin == "render_failed" or not pdf:
         from app.agents.incidents import report_incident
         await report_incident("cv_render_failed", candidate_id, "téléchargement du CV adapté",
                               context={"job": job.title})
-    if not pdf:
-        raise HTTPException(404, "Je n'ai pas pu produire ton CV — l'équipe est prévenue. "
-                                 "Dépose ton CV d'origine dans l'éditeur en attendant.")
+        raise HTTPException(503, "Je n'ai pas pu mettre en page ton CV adapté. L'équipe est "
+                                 "prévenue ; réessaie dans quelques minutes.")
     return Response(
         content=pdf,
         media_type="application/pdf",
@@ -267,19 +272,30 @@ async def download_pack(
 
     files: dict[str, bytes] = {}
 
+    # Le pack, c'est le CV et la lettre écrits pour CETTE offre. Pas encore
+    # rédigé : on le rédige maintenant plutôt que de servir le CV général.
+    if not sent and application and not is_pack_ready(application):
+        from app.agents.application.pack import build_pack
+        if await build_pack(candidate_id, application.id):
+            await db.refresh(application)
+
     # ── CV ──
     if sent and sent.resume_blob:
         files[sent.resume_name or "CV.pdf"] = sent.resume_blob
     else:
         pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
-        if pdf:
-            files[name] = pdf
         if origin == "render_failed" or not pdf:
             from app.agents.incidents import report_incident
             await report_incident(
-                "cv_render_failed", candidate_id, "dossier téléchargé sans CV mis en page",
+                "cv_render_failed", candidate_id, "pack demandé, CV adapté impossible à composer",
                 context={"job": job.title, "company": company_name},
             )
+            # Mieux vaut le dire que glisser l'original dans le « pack ».
+            raise HTTPException(
+                503, "Je n'ai pas pu mettre en page ton CV adapté. L'équipe est prévenue ; "
+                     "réessaie dans quelques minutes.",
+            )
+        files[name] = pdf
 
     # ── Lettre ──
     company_slug = _safe_name(company_name or "entreprise")

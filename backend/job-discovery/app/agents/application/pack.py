@@ -134,6 +134,10 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
                 "skills_order": order_skills_for_job(
                     profile["skills"], tech_stack, job.description_raw or "",
                 ),
+                # Réalisations reformulées pour l'offre et points forts : ce
+                # qui distingue ce CV de celui que le candidat avait déjà.
+                "experiences": cv.experiences,
+                "strengths": cv.differentiators[:4] if cv.tailored_to_job else [],
             },
             "cover_letter": letter.model_dump(),
             "pack_ready_at": datetime.now(timezone.utc).isoformat(),
