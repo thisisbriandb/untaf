@@ -99,6 +99,11 @@ def detect_requirements(job: JobPosting, candidate: Candidate,
             "render_failed": "ton document d’origine — la mise en page a échoué",
         }.get(cv_origin, "généré depuis ton modèle")
         reqs.append(Requirement("resume", "CV", "satisfied", f"{cv_name} — {origin}"))
+    elif cv_origin == "render_failed":
+        reqs.append(Requirement(
+            "resume", "CV", "missing",
+            "Ton CV adapté n'a pas pu être mis en page — l'équipe est prévenue, réessaie bientôt.",
+        ))
     else:
         reqs.append(Requirement(
             "resume", "CV", "missing",
@@ -135,7 +140,9 @@ def detect_requirements(job: JobPosting, candidate: Candidate,
 
     # Le verdict d'automatisation vient d'un seul endroit, pour que le message
     # affiché soit le même partout.
-    verdict = assess(job, has_resume=bool(candidate.resume_file))
+    # Le CV qui partira, pas seulement un PDF déposé : un parcours saisi
+    # suffit à composer le CV adapté.
+    verdict = assess(job, has_resume=bool(cv_bytes))
     plan.complexity = verdict.complexity
     plan.fallback_url = verdict.fallback_url
     plan.summary = verdict.summary

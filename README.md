@@ -146,6 +146,26 @@ distincte de la création de l'application. Sans lui, l'authentification renvoie
 Le scope OAuth doit contenir `application_{client_id}` en plus des scopes
 d'API ; c'est géré par le code mais mal documenté côté France Travail.
 
+### La bonne alternance
+
+`LBA_API_KEY` : clé d'un compte développeur sur
+[api.apprentissage.beta.gouv.fr](https://api.apprentissage.beta.gouv.fr).
+
+- **Clé production** : la recherche d'offres marche tout de suite, sans
+  habilitation.
+- **Envoi des candidatures** : exige une habilitation accordée à
+  l'organisation, sur demande à
+  contact-api@labonnealternance.apprentissage.beta.gouv.fr. Sans elle, l'API
+  répond 403 : l'envoi échoue proprement (dossier prêt, alerte
+  `OPS_ALERT_EMAIL`) et rien n'est rapporté comme parti.
+- **Clé sandbox** : pour tester l'envoi avant l'habilitation. Tous les
+  échanges, recherche comprise, passent alors par un environnement de test :
+  les offres ne sont pas réelles. À réserver au développement, jamais en
+  production.
+
+Lire leurs CGU avant la mise en production (consentement du candidat à
+l'envoi en son nom).
+
 ---
 
 ## Authentification
@@ -235,6 +255,7 @@ Chaque offre écartée l'est avec un motif lisible, consultable dans le journal.
 | Canal | Complexité | État |
 | --- | --- | --- |
 | Email | `simple` | Implémenté ; adresses extraites des annonces |
+| La bonne alternance | `simple` | Transmis par l'API de l'État (`POST /job/v1/apply`) |
 | Greenhouse / Lever / Ashby | `medium` | Formulaire rempli dans un navigateur |
 | Formulaire employeur | `complex` | Socle commun rempli, le reste signalé |
 | Portail France Travail | `impossible` | Compte candidat requis |
@@ -270,8 +291,12 @@ simulé n'est **jamais** rapporté comme réel — `SIMULATED` et `SENT` sont de
 ### Adapter un CV — ce que ça veut dire
 
 Adapter un CV à une offre, c'est réécrire l'accroche et la présentation pour ce
-poste, et placer en tête les compétences que l'annonce demande. **Rien n'est
-retiré** : expériences, formation et langues restent toutes. Le CV général du
+poste, ouvrir le CV sur les **points forts pour ce poste**, reformuler les
+réalisations de chaque expérience vers ce que l'annonce demande (reformuler,
+regrouper, réordonner — jamais ajouter un outil, un chiffre ou une
+responsabilité absents du parcours) et placer en tête les compétences
+demandées. **Rien n'est retiré** : expériences, formation et langues restent
+toutes. Le CV général du
 candidat ne bouge pas ; la version adaptée est rangée sur la candidature.
 
 Le parcours vit côté serveur (`candidates.cv_content`) : l'onboarding l'envoie
@@ -281,7 +306,15 @@ encore une section alors qu'un CV a été déposé, il est relu depuis ce PDF
 sans écraser ce qui a été saisi. Les sections encore vides sont signalées.
 
 Un PDF déposé ne se réécrit pas : l'adapter passe par un modèle de mise en
-page (classique par défaut), et l'interface propose d'en choisir un.
+page (classique par défaut), et l'interface propose d'en choisir un. Le pack
+ne contient **jamais** le CV d'origine à la place du CV adapté : si la mise en
+page échoue, le téléchargement le dit et aucun envoi ne part. Les paquets
+Typst (cv-engine, fontawesome) sont embarqués dans le dépôt : la mise en page
+ne dépend d'aucun téléchargement au moment du rendu.
+
+L'état d'un dossier est unique et partagé (`GET …/apply/{job_id}/state`) : la
+fiche d'une offre, le panneau de candidature et la liste le lisent tous, et
+une candidature déjà préparée ne propose plus jamais « Préparer ».
 
 ### Qui envoie la candidature
 
@@ -289,22 +322,24 @@ Chaque offre porte un mode, affiché partout (`feasibility.apply_mode`) :
 
 | Mode | Quand | Ce qui se passe |
 | --- | --- | --- |
-| « Alice postule » | adresse e-mail publiée + SMTP, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
+| « Alice postule » | adresse e-mail publiée + Resend/SMTP, offre La bonne alternance + clé, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
 | « Prêt en un clic » | ATS ou formulaire sans envoi automatique, e-mail sans SMTP | tout est rempli, le candidat confirme |
 | « À finir sur le site » | portail France Travail, canal inconnu | le dossier est prêt, le candidat l'envoie |
 
-Une mission « postuler » prépare d'abord les offres qu'Alice peut réellement
-envoyer. Quel que soit le mode, « Postuler » se termine toujours sur le
+Une mission traite d'abord les offres qu'Alice peut réellement envoyer. Quel que soit le mode, « Postuler » se termine toujours sur le
 dossier téléchargeable (CV adapté, lettre, annonce) et un bouton « J'ai
 postulé » qui fait entrer la candidature dans le suivi (relance comprise).
 
 ### Missions
 
-Une mission est **une seule passe, sans durée** : reprendre les offres
-retenues (le repérage tourne chaque matin), préparer le dossier complet des
-3, 5 ou 10 meilleures, et — si l'utilisateur a choisi « Postuler pour moi » —
-envoyer ce qui peut l'être. Choisir l'envoi au lancement vaut autorisation pour
-cette mission (doublons, entreprises bloquées et quota restent appliqués).
+Une mission est **une seule passe, sans durée, et un seul objectif** :
+préparer et postuler sont les deux temps du même geste. Elle cherche de
+nouvelles offres (France Travail, La bonne alternance), prépare le dossier
+complet des 3, 5 ou 10 meilleures — celles qu'Alice peut envoyer en premier —
+puis envoie ce qui peut partir. Seule question au lancement : envoyer
+directement, ou présenter d'abord chaque envoi. Choisir l'envoi vaut
+autorisation pour cette mission (doublons, entreprises bloquées et quota
+restent appliqués).
 Chaque action est écrite au journal au moment où elle a lieu et diffusée en
 direct dans la conversation ; l'utilisateur peut fermer l'onglet, un e-mail
 rend compte à la fin. Sans worker Celery joignable, la mission tourne dans le
@@ -328,11 +363,11 @@ restent communs : ils sont relus en base à chaque tour.
 
 ### Pack et envoi pendant une mission
 
-Une mission « préparer » ou « postuler » construit pour chaque offre du haut du
-panier un **pack** complet — CV adapté (accroche et synthèse) et lettre — par
+Une mission construit pour chaque offre du haut du panier un **pack** complet
+— CV adapté et lettre — par
 le même module que le bouton « adapter » du Canvas
 ([`pack.py`](backend/job-discovery/app/agents/application/pack.py)). Une
-mission « postuler » passe ensuite chaque pack au dispatcher : ce que le mandat
+mission passe ensuite chaque pack au dispatcher : ce que le mandat
 autorise part, le reste rejoint la **file de validation** (onglet
 Candidatures, « Tout valider » en un geste). Si l'utilisateur a demandé à
 valider chaque envoi pour cette mission, c'est la règle la plus stricte qui
@@ -399,9 +434,15 @@ consignées à la main depuis Candidatures), connexion France Travail.
   Il exige le compte candidat de l'utilisateur, et il n'existe pas d'API
   « postuler ». La seule voie serait une session navigateur autorisée par
   l'utilisateur lui-même (voir `frontend/spec/moteur_candidature.md`, P1).
-- **Le rendu des CV au modèle télécharge des paquets Typst** (icônes) au
-  premier usage : le serveur doit pouvoir joindre `packages.typst.org`, ou
-  ces paquets doivent être pré-installés dans l'image.
+- **Recruitee n'est pas encore branché.** Son API de site carrière accepte
+  les candidatures sans clé employeur, mais le format exact de la pièce jointe
+  n'a pas pu être vérifié et les boards (sous-domaines) ne s'énumèrent pas
+  comme ceux des autres ATS. Prochaine source à intégrer après La bonne
+  alternance.
+- **Les ATS (Greenhouse, Lever, Ashby) ne sont collectés que par le beat
+  Celery.** Sans services `worker` et `beat` déployés, seules les sources
+  interrogées à la demande (France Travail, La bonne alternance) alimentent
+  les offres.
 
 ---
 

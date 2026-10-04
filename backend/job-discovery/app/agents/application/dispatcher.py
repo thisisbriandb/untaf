@@ -18,6 +18,7 @@ from uuid import UUID
 
 from sqlalchemy import select, func
 
+from app.config import settings
 from app.database import async_session
 from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
@@ -29,12 +30,17 @@ from app.models.mission import AutonomyLevel, Mission, MissionStatus
 logger = logging.getLogger(__name__)
 
 #: Canal de l'offre → canal d'envoi.
+#: Destination d'un envoi La bonne alternance : `lba:<recipient_id>`.
+LBA_PREFIX = "lba:"
+
 CHANNEL_MAP = {
     ApplyChannel.EMAIL: DispatchChannel.EMAIL,
     ApplyChannel.GREENHOUSE_API: DispatchChannel.ATS_API,
     ApplyChannel.LEVER_API: DispatchChannel.ATS_API,
     ApplyChannel.ASHBY_API: DispatchChannel.ATS_API,
     ApplyChannel.WORKABLE_API: DispatchChannel.ATS_API,
+    # La bonne alternance : transmission par l'API publique, sans navigateur.
+    ApplyChannel.LBA_API: DispatchChannel.ATS_API,
     ApplyChannel.WEB_FORM: DispatchChannel.WEB_FORM,
     # Absent de la table, EXTERNAL_LINK retombait sur MANUAL et produisait le
     # message « canal manual pas encore automatisable » — incompréhensible.
@@ -88,6 +94,13 @@ async def decide(
     destination = contact.get("email") if channel == DispatchChannel.EMAIL else (
         contact.get("apply_url") or job.apply_url
     )
+    if job.apply_channel == ApplyChannel.LBA_API:
+        # L'API ne connaît que le destinataire qu'elle a publié.
+        recipient = contact.get("lba_recipient_id")
+        destination = f"{LBA_PREFIX}{recipient}" if recipient else None
+        if not settings.lba_configured:
+            return Decision(False, "l'envoi via La bonne alternance n'est pas configuré "
+                                   "sur ce serveur", channel, destination)
 
     if mission.status != MissionStatus.ACTIVE:
         return Decision(False, "mission en pause", channel, destination)
@@ -206,12 +219,19 @@ async def prepare_dispatch(
         cv_bytes, cv_name, cv_mode = resolve_cv(
             candidate, (application.metadata_json or {}).get("tailored_cv"),
         )
+        cv_missing = cv_mode == "render_failed" or not cv_bytes
         if cv_mode == "render_failed":
             from app.agents.incidents import report_incident
             await report_incident(
                 "cv_render_failed", candidate_id, "composition Typst échouée à l'assemblage",
                 context={"job": job.title, "company": company_name},
             )
+        if cv_missing and status != DispatchStatus.PREPARED:
+            # Une candidature ne part jamais sans le CV adapté — ni avec
+            # l'original glissé à sa place.
+            status = DispatchStatus.PREPARED
+            verdict = Decision(False, "CV adapté indisponible pour l'instant, rien n'est parti",
+                               verdict.channel, verdict.destination)
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
 
         dispatch = ApplicationDispatch(
@@ -273,6 +293,8 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             resume=dispatch.resume_blob,
             resume_name=dispatch.resume_name,
         )
+    elif (dispatch.destination or "").startswith(LBA_PREFIX):
+        result = await _send_via_lba(dispatch, candidate)
     elif dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
         # Formulaire public : on le remplit dans un navigateur, guidé par le
         # schéma que l'ATS publie quand il en publie un.
@@ -309,7 +331,9 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
                 if app:
                     from app.agents.application.followup import record_status
                     app.applied_at = d.sent_at
-                    record_status(app, ApplicationStatus.APPLIED, f"envoyée via {d.channel.value}")
+                    via = ("La bonne alternance" if (d.destination or "").startswith(LBA_PREFIX)
+                           else d.channel.value)
+                    record_status(app, ApplicationStatus.APPLIED, f"envoyée via {via}")
         else:
             d.status = DispatchStatus.FAILED
             d.error = result.get("error", "échec inconnu")
@@ -325,3 +349,46 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
                      "dispatch_id": str(d.id)},
         )
     return d
+
+
+async def _send_via_lba(dispatch: ApplicationDispatch, candidate: Candidate) -> dict:
+    """
+    Transmet la candidature par l'API La bonne alternance : le CV adapté
+    figé à la préparation et la lettre en message. Même contrat de retour que
+    l'envoi par e-mail.
+    """
+    from app.agents.discovery.labonnealternance import (
+        LbaError, build_application, send_application,
+    )
+
+    recipient = (dispatch.destination or "")[len(LBA_PREFIX):]
+    proof = {"via": "La bonne alternance", "recipient_id": recipient,
+             "attachments": [dispatch.resume_name] if dispatch.resume_blob else []}
+    if not dispatch.resume_blob:
+        return {"ok": False, "real": False, "error": "CV adapté absent : rien n'est parti"}
+    if not candidate.phone:
+        return {"ok": False, "real": False,
+                "error": "La bonne alternance exige un numéro de téléphone : ajoute-le à ton profil"}
+    try:
+        body = build_application(
+            recipient_id=recipient,
+            full_name=candidate.full_name or "",
+            email=candidate.email or "",
+            phone=candidate.phone,
+            resume=dispatch.resume_blob,
+            resume_name=dispatch.resume_name or "CV.pdf",
+            message=dispatch.letter_body or "",
+        )
+        lba_id = await send_application(body)
+    except ValueError as e:
+        return {"ok": False, "real": False, "error": str(e)}
+    except LbaError as e:
+        reason = (
+            "la permission d'envoi n'est pas encore accordée à Alice par La bonne alternance"
+            if e.status in (401, 403) else f"La bonne alternance a refusé l'envoi ({e.status})"
+        )
+        return {"ok": False, "real": False, "error": reason, "proof": {**proof, "detail": e.detail}}
+    except Exception as e:  # noqa: BLE001
+        logger.error("Envoi La bonne alternance impossible : %s", e, exc_info=True)
+        return {"ok": False, "real": False, "error": "La bonne alternance injoignable"}
+    return {"ok": True, "real": True, "proof": {**proof, "lba_application_id": lba_id}}

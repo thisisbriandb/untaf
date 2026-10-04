@@ -45,6 +45,9 @@ class CvContentResult(BaseModel):
         default_factory=list,
         description="Faits du parcours qui distinguent le candidat.",
     )
+    #: Réalisations reformulées pour l'offre, alignées sur l'ordre des
+    #: expériences reçues : [{"highlights": [...]}, ...]. Vide sans offre.
+    experiences: list[dict] = Field(default_factory=list)
     source: Literal["llm", "llm_generic", "fallback"] = "llm"
     #: Vrai quand la rédaction a été ciblée sur une offre précise.
     tailored_to_job: bool = False

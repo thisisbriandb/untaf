@@ -43,10 +43,10 @@ def _slugify(name: str) -> str:
     return slug[:60] or "anonyme"
 
 
-async def _get_or_create_company(session, name: str) -> Company:
-    """L'employeur, créé au premier besoin."""
+async def _get_or_create_company(session, name: str, suffix: str = FT_DOMAIN_SUFFIX) -> Company:
+    """L'employeur, créé au premier besoin (domaine fictif propre à la source)."""
     clean_name = (name or "").strip() or ANONYMOUS_NAME
-    domain = f"{_slugify(clean_name)}{FT_DOMAIN_SUFFIX}"
+    domain = f"{_slugify(clean_name)}{suffix}"
 
     company = (await session.execute(
         select(Company).where(Company.domain == domain)
@@ -254,23 +254,36 @@ async def ingest_for_candidate(candidate_id) -> dict:
         plans.append({"rome_codes": rome_codes, "max_results": 600})
 
     total, fetched, companies = 0, 0, 0
+    ft_report: dict = {"ok": True}
     for plan in plans:
         report = await ingest_france_travail(
             contract_types=None,   # le tri fin revient au moteur de matching
             **plan,
         )
         if not report.get("ok"):
-            return report
+            ft_report = report
+            break
         total += report["processed"]
         fetched += report.get("fetched", 0)
         companies += report.get("new_companies", 0)
 
+    # La bonne alternance : les offres auxquelles Alice peut transmettre la
+    # candidature elle-même. Une panne d'une source n'empêche pas l'autre.
+    from app.agents.discovery.labonnealternance_task import ingest_lba_for_candidate
+    lba = await ingest_lba_for_candidate(candidate_id)
+    direct = lba.get("processed", 0) if lba.get("ok") else 0
+
+    if not ft_report.get("ok") and not lba.get("ok"):
+        return ft_report
     return {
         "ok": True,
-        "processed": total,
+        "processed": total + direct,
         "fetched": fetched,
         "new_companies": companies,
         "plans": len(plans),
+        "france_travail": total,
+        #: Offres où Alice envoie elle-même (La bonne alternance).
+        "direct_apply": direct,
     }
 
 

@@ -328,14 +328,16 @@ def render_cv(
     # Render sections
     sections = cv_data.get("sections", {})
     phrases = locale_dict.get("phrases", {})
-    show_time_spans_in = _deep_get(design_cfg, "sections", "show_time_spans_in", default=["experience"])
+    show_time_spans_in = _deep_get(
+        design_cfg, "sections", "show_time_spans_in", default=["experience", "expérience"],
+    )
 
     theme = design_cfg.get("theme", "classic")
     is_sidebar_layout = theme in ("tech", "creative", "left-sidebar", "compact")
 
     main_section_codes = []
     sidebar_section_codes = []
-    sidebar_keys = {"competences", "skills", "langues", "languages", "certifications"}
+    sidebar_keys = {"competences", "compétences", "skills", "langues", "languages", "certifications"}
 
     for section_key, entries in sections.items():
         section_title = format_section_title(section_key)

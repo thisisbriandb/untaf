@@ -144,16 +144,37 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         run.heartbeat_at = run.started_at
         run.ends_at = None
         run.stats = {}
-        objective = run.objective if run.objective in ("prepare", "apply") else "prepare"
+        # Une seule mission : préparer et envoyer sont les deux temps du même
+        # geste. On ne postule pas sans dossier, et un dossier qu'Alice peut
+        # envoyer ne doit pas attendre une seconde mission. Seule question :
+        # envoyer directement, ou présenter d'abord (`send`).
+        objective = "apply"
         allowed = run.allowed_actions or {}
         count = max(1, min(MAX_TARGETS, int(allowed.get("count") or DEFAULT_TARGETS)))
-        send = objective == "apply" and bool(allowed.get("send"))
+        send = bool(allowed.get("send"))
         await session.commit()
 
     try:
-        # 1. Les offres du jour, confrontées au mandat actuel.
+        # 0. De nouvelles offres, dont celles où Alice envoie elle-même
+        #    (La bonne alternance). Une source en panne ne bloque pas la suite.
         if not await _heartbeat(run_id, RunStep.MATCH):
             return
+        try:
+            from app.agents.discovery.france_travail_task import ingest_for_candidate
+            fresh = await ingest_for_candidate(candidate_id)
+        except Exception as e:  # noqa: BLE001 — on travaille sur le stock
+            logger.warning("Recherche d'offres impossible pendant la mission : %s", e)
+            fresh = {}
+        if fresh.get("ok") and fresh.get("processed"):
+            direct = fresh.get("direct_apply", 0)
+            await _say(
+                run_id, candidate_id, MissionEventKind.SCAN,
+                f"J'ai relevé {fresh['processed']} offres"
+                + (f", dont {direct} où je peux postuler moi-même." if direct else "."),
+                {"processed": fresh["processed"], "scanned": fresh["processed"], "direct_apply": direct},
+            )
+
+        # 1. Les offres du jour, confrontées au mandat actuel.
         try:
             kept = await _match_candidate_to_existing_jobs(candidate_id)
         except Exception as e:  # noqa: BLE001 — on travaille sur le stock déjà noté

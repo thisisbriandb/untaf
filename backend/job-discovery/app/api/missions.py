@@ -192,7 +192,8 @@ async def start_run(
     run = MissionRun(
         mission_id=mission.id,
         title=data.title,
-        objective="prepare" if data.objective == "search" else data.objective,
+        # Préparer et postuler ne font plus qu'une mission (voir mission_runner).
+        objective="apply",
         duration_minutes=0,
         allowed_actions={**(data.allowed_actions or {}), "count": data.count},
         status=RunStatus.PREPARING,

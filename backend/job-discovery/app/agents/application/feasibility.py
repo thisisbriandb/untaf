@@ -41,7 +41,7 @@ class Feasibility:
 #: Ce qui est réellement implémenté aujourd'hui. Distinct de ce qui serait
 #: techniquement possible : promettre l'un pour l'autre serait mentir.
 IMPLEMENTED = {"email", "web_form", "greenhouse_api", "lever_api",
-               "ashby_api", "workable_api"}
+               "ashby_api", "workable_api", "lba_api"}
 
 #: Canaux dont le formulaire est public et dont l'ATS publie le schéma des
 #: champs : ce sont ceux que le remplissage guidé couvre le mieux.
@@ -73,6 +73,17 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
         return Feasibility(
             "simple", not blockers,
             f"J'envoie ta candidature par email à {email}.",
+            blockers, link, channel,
+        )
+
+    # ── La bonne alternance : transmission par l'API de l'État ──
+    if channel == "lba_api":
+        if not settings.lba_configured:
+            blockers.append("L'envoi via La bonne alternance n'est pas configuré sur ce serveur.")
+        return Feasibility(
+            "simple", not blockers,
+            "Je transmets ta candidature au recruteur par La bonne alternance, "
+            "le service public de l'alternance : CV adapté et lettre.",
             blockers, link, channel,
         )
 
@@ -151,6 +162,8 @@ APPLY_MODE_RANK = {"auto": 0, "assisted": 1, "manual": 2}
 def apply_mode(job: JobPosting) -> str:
     channel = job.apply_channel.value if job.apply_channel else "unknown"
     contact = job.contact_json or {}
+    if channel == "lba_api":
+        return "auto" if settings.lba_configured else "manual"
     if is_valid_email(contact.get("email")):
         return "auto" if settings.can_send_email else "assisted"
     if channel in AUTOMATABLE_SOON:

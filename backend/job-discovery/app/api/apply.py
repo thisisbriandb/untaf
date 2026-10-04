@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.outcome import build_outcome
+from app.agents.application.pack import is_pack_ready
 from app.agents.application.requirements import detect_requirements
 from app.database import async_session, get_db
 from app.models.application import Application
@@ -219,14 +220,18 @@ async def download_tailored_cv(
         raise HTTPException(404, "Offre ou candidat introuvable")
 
     # La compilation Typst occupe le processeur : hors de la boucle d'événements.
+    if application and not is_pack_ready(application):
+        from app.agents.application.pack import build_pack
+        if await build_pack(candidate_id, application.id):
+            await db.refresh(application)
+
     pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
-    if origin == "render_failed":
+    if origin == "render_failed" or not pdf:
         from app.agents.incidents import report_incident
         await report_incident("cv_render_failed", candidate_id, "téléchargement du CV adapté",
                               context={"job": job.title})
-    if not pdf:
-        raise HTTPException(404, "Je n'ai pas pu produire ton CV — l'équipe est prévenue. "
-                                 "Dépose ton CV d'origine dans l'éditeur en attendant.")
+        raise HTTPException(503, "Je n'ai pas pu mettre en page ton CV adapté. L'équipe est "
+                                 "prévenue ; réessaie dans quelques minutes.")
     return Response(
         content=pdf,
         media_type="application/pdf",
@@ -267,19 +272,30 @@ async def download_pack(
 
     files: dict[str, bytes] = {}
 
+    # Le pack, c'est le CV et la lettre écrits pour CETTE offre. Pas encore
+    # rédigé : on le rédige maintenant plutôt que de servir le CV général.
+    if not sent and application and not is_pack_ready(application):
+        from app.agents.application.pack import build_pack
+        if await build_pack(candidate_id, application.id):
+            await db.refresh(application)
+
     # ── CV ──
     if sent and sent.resume_blob:
         files[sent.resume_name or "CV.pdf"] = sent.resume_blob
     else:
         pdf, name, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application))
-        if pdf:
-            files[name] = pdf
         if origin == "render_failed" or not pdf:
             from app.agents.incidents import report_incident
             await report_incident(
-                "cv_render_failed", candidate_id, "dossier téléchargé sans CV mis en page",
+                "cv_render_failed", candidate_id, "pack demandé, CV adapté impossible à composer",
                 context={"job": job.title, "company": company_name},
             )
+            # Mieux vaut le dire que glisser l'original dans le « pack ».
+            raise HTTPException(
+                503, "Je n'ai pas pu mettre en page ton CV adapté. L'équipe est prévenue ; "
+                     "réessaie dans quelques minutes.",
+            )
+        files[name] = pdf
 
     # ── Lettre ──
     company_slug = _safe_name(company_name or "entreprise")
@@ -672,4 +688,70 @@ async def download_dispatch_letter(
         content=body.encode("utf-8"),
         media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="Lettre_{slug}.txt"'},
+    )
+
+
+# ── État partagé d'une candidature ─────────────────────────────────────────
+
+
+class ApplicationState(BaseModel):
+    """
+    Où en est la candidature à CETTE offre — la seule source que lisent la
+    fiche de l'offre, le panneau de candidature et la liste des candidatures.
+    Un dossier déjà rédigé ne se « prépare » plus nulle part.
+    """
+
+    application_id: UUID | None = None
+    #: to_prepare · ready · awaiting · simulated · manual · applied · interview · offer · rejected · closed
+    stage: str = "to_prepare"
+    apply_mode: str = "manual"
+    pack_ready: bool = False
+    pack_ready_at: str | None = None
+    headline: str | None = None
+    letter: CoverLetterResult | None = None
+    applied_at: str | None = None
+    dispatch_status: str | None = None
+
+
+@router.get("/{job_id}/state", response_model=ApplicationState)
+async def application_state(
+    candidate_id: UUID, job_id: UUID, db: AsyncSession = Depends(get_db),
+):
+    from app.agents.application.feasibility import apply_mode
+    from app.api.pipeline import _stage
+    from app.models.dispatch import DispatchStatus
+
+    job, _, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate:
+        raise HTTPException(404, "Offre ou candidat introuvable")
+    if not application:
+        return ApplicationState(apply_mode=apply_mode(job))
+
+    dispatches = (await db.execute(
+        select(ApplicationDispatch)
+        .where(ApplicationDispatch.application_id == application.id)
+        .where(ApplicationDispatch.status != DispatchStatus.REJECTED)
+        .order_by(ApplicationDispatch.created_at)
+    )).scalars().all()
+    latest = None
+    for d in dispatches:  # le plus récent, sans jamais masquer un envoi réel
+        if not latest or latest.status != DispatchStatus.SENT:
+            latest = d
+
+    meta = application.metadata_json or {}
+    letter = meta.get("cover_letter")
+    try:
+        letter_out = CoverLetterResult(**letter) if letter else None
+    except Exception:  # noqa: BLE001 — une lettre ancienne au format incomplet
+        letter_out = None
+    return ApplicationState(
+        application_id=application.id,
+        stage=_stage(application, latest),
+        apply_mode=apply_mode(job),
+        pack_ready=is_pack_ready(application),
+        pack_ready_at=meta.get("pack_ready_at"),
+        headline=(meta.get("tailored_cv") or {}).get("headline"),
+        letter=letter_out,
+        applied_at=application.applied_at.isoformat() if application.applied_at else None,
+        dispatch_status=latest.status.value if latest else None,
     )

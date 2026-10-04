@@ -37,6 +37,7 @@ import { APPLY_MODE_LABELS } from "@/lib/alice-client";
 import { useAlice } from "../alice-context";
 import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
+import { invalidateApplication } from "@/lib/application-state";
 
 // ── Filtres ───────────────────────────────────────────────────────────────
 
@@ -244,6 +245,7 @@ function Row({
     setBusy(key);
     await action();
     setBusy(null);
+    invalidateApplication(item.job_id);
     onRefresh();
   };
 
@@ -522,6 +524,7 @@ export function CandidaturesView({
     if (r.sent) toast(`${r.sent} candidature${r.sent > 1 ? "s envoyées" : " envoyée"}.`);
     if (r.simulated) toast(`${r.simulated} en répétition : rien n'est parti.`, "info");
     if (r.failed) toast(`${r.failed} non abouti${r.failed > 1 ? "s" : ""} — pack disponible pour finir à la main.`, "warning");
+    invalidateApplication();
     void refresh();
   };
 

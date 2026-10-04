@@ -121,6 +121,20 @@ class Settings(BaseSettings):
     def france_travail_client_secret(self) -> str:
         return self.france_travail_api.strip()
 
+    # ── La bonne alternance (API Apprentissage) ──────────
+    # Clé gratuite d'un compte développeur sur api.apprentissage.beta.gouv.fr.
+    # Clé production : la recherche d'offres marche sans habilitation. L'envoi
+    # des candidatures exige une habilitation (contact-api@labonnealternance.
+    # apprentissage.beta.gouv.fr) ; sans elle, l'API répond 403 et Alice le
+    # signale. Une clé sandbox route tout, recherche comprise, vers un
+    # environnement de test : offres fictives, développement seulement.
+    lba_api_key: str = ""
+    lba_api_url: str = "https://api.apprentissage.beta.gouv.fr/api"
+
+    @property
+    def lba_configured(self) -> bool:
+        return bool(self.lba_api_key.strip())
+
     # ── Gemini API (LLM) ─────────────────────────────────
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"

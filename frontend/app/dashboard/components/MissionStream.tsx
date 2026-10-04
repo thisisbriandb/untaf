@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchCurrentRun, stopRun, STEP_LABELS, type MissionRun } from "@/lib/mission-run-client";
+import { invalidateApplication } from "@/lib/application-state";
 
 /** Assez vif pour paraître diffusé en direct. */
 const POLL_MS = 2500;
@@ -49,6 +50,11 @@ export function MissionStream({
     }, POLL_MS);
     return () => clearInterval(id);
   }, [candidateId, live, onChange]);
+
+  // Une mission terminée a rédigé des dossiers : les fiches ouvertes le savent.
+  useEffect(() => {
+    if (!live) invalidateApplication();
+  }, [live]);
 
   // Le journal arrive du plus récent au plus ancien ; on le raconte dans
   // l'ordre. Le compte rendu final est posté à part, comme un message.

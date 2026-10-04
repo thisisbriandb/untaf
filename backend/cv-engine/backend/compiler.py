@@ -38,14 +38,21 @@ def _setup_package_cache(typst_lib_dir: pathlib.Path) -> pathlib.Path:
     shutil.copy2(typst_lib_dir / "lib.typ", pkg_dir / "lib.typ")
     shutil.copy2(typst_lib_dir / "typst.toml", pkg_dir / "typst.toml")
 
-    # Also install fontawesome if available
+    # Fontawesome est vendu dans le dépôt : sans lui, Typst le télécharge à
+    # chaque démarrage sur packages.typst.org, et un réseau filtré faisait
+    # échouer tout CV mis en page — le pack repartait alors avec l'original.
     fontawesome_dir = typst_lib_dir / "fontawesome"
     if fontawesome_dir.exists():
-        fa_version = "0.6.0"  # Default fontawesome version
+        fa_version = "0.6.0"
+        fa_toml = fontawesome_dir / "typst.toml"
+        if fa_toml.exists():
+            fa_version = tomllib.loads(fa_toml.read_text(encoding="utf-8")).get(
+                "package", {}).get("version", fa_version)
         fa_dir = temp_dir / "preview" / "fontawesome" / fa_version
         fa_dir.mkdir(parents=True, exist_ok=True)
-        for f in fontawesome_dir.glob("*.typ"):
-            shutil.copy2(f, fa_dir / f.name)
+        for f in fontawesome_dir.iterdir():
+            if f.is_file():
+                shutil.copy2(f, fa_dir / f.name)
 
     _GLOBAL_PKG_PATH = temp_dir
     return temp_dir

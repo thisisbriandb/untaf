@@ -27,7 +27,7 @@ def _format_experiences(experiences: list[dict]) -> str:
         return "Aucune expérience renseignée."
 
     blocks = []
-    for exp in experiences:
+    for i, exp in enumerate(experiences):
         title = exp.get("jobTitle") or exp.get("position") or "Poste non précisé"
         company = exp.get("company") or "Entreprise non précisée"
         start = exp.get("startDate") or exp.get("start_date") or "?"
@@ -36,7 +36,7 @@ def _format_experiences(experiences: list[dict]) -> str:
         )
         location = exp.get("location") or ""
 
-        lines = [f"- {title} — {company} ({start} → {end}){f', {location}' if location else ''}"]
+        lines = [f"[{i}] {title} — {company} ({start} → {end}){f', {location}' if location else ''}"]
 
         highlights = exp.get("highlights") or []
         if isinstance(highlights, str):
@@ -110,9 +110,47 @@ TRAVAIL DEMANDÉ
 4. Liste 2 à 4 éléments différenciants, formulés comme des faits vérifiables
    tirés du parcours, sans adjectif de personnalité.
 
+{experience_task}
 Réponds en JSON strict, en français :
-{{"headline": str, "summary": str, "differentiators": [str]}}
+{{"headline": str, "summary": str, "differentiators": [str]{experience_schema}}}
 """
+
+#: Seulement quand une offre est visée : c'est ce qui fait d'un CV « adapté »
+#: autre chose qu'un CV remis en page.
+EXPERIENCE_TASK = """5. Pour chaque expérience numérotée [i] qui a des réalisations ou une
+   description, réécris 2 à 4 puces orientées vers CETTE offre : commence par
+   ce qui répond à ses besoins, emploie son vocabulaire quand il décrit une
+   réalité du parcours, garde les chiffres existants. Chaque puce reprend un
+   fait présent dans le parcours — reformuler, regrouper, réordonner, oui ;
+   ajouter un outil, un chiffre ou une responsabilité absents, jamais.
+   Une puce = une ligne, commence par un verbe d'action, 18 mots au plus.
+   Une expérience sans aucun contenu : renvoie une liste vide pour elle.
+"""
+EXPERIENCE_SCHEMA = ', "experiences": [{"index": int, "highlights": [str]}]'
+
+
+def _adapted_experiences(raw, experiences: list[dict]) -> list[dict]:
+    """Aligne les puces renvoyées sur les expériences reçues, sans en créer."""
+    adapted: list[dict] = [{} for _ in experiences]
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            i = int(item.get("index"))
+        except (TypeError, ValueError):
+            continue
+        source = experiences[i] if 0 <= i < len(experiences) else None
+        # Rien à reformuler : une puce sur une expérience vide serait inventée.
+        if not source or not (source.get("highlights") or source.get("description")):
+            continue
+        bullets = [
+            b.strip() for b in (item.get("highlights") or [])
+            if isinstance(b, str) and b.strip()
+        ][:4]
+        if bullets:
+            adapted[i] = {"highlights": [b[:220] for b in bullets]}
+    return adapted if any(adapted) else []
+
 
 
 def _sounds_generic(text: str) -> bool:
@@ -192,6 +230,8 @@ async def write_cv_content(req: CvContentRequest) -> CvContentResult:
             summary=req.summary or "Aucune",
             target=target,
             job_context=job_context,
+            experience_task=EXPERIENCE_TASK if tailored and req.experiences else "",
+            experience_schema=EXPERIENCE_SCHEMA if tailored and req.experiences else "",
         ), json=True)
 
         data = json.loads(response)
@@ -199,6 +239,10 @@ async def write_cv_content(req: CvContentRequest) -> CvContentResult:
             headline=(data.get("headline") or "").strip(),
             summary=(data.get("summary") or "").strip(),
             differentiators=[d for d in (data.get("differentiators") or []) if d],
+            experiences=(
+                _adapted_experiences(data.get("experiences"), req.experiences or [])
+                if tailored else []
+            ),
             source="llm",
             tailored_to_job=tailored,
         )
