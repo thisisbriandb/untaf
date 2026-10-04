@@ -25,7 +25,20 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+        """
+        Origines autorisées : CORS_ORIGINS, plus le site de FRONTEND_URL avec
+        et sans « www. ». Oublier CORS_ORIGINS faisait refuser au navigateur
+        chaque appel du site (OPTIONS → 400) alors que FRONTEND_URL, lui,
+        était renseigné pour les e-mails.
+        """
+        origins = [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+        front = self.frontend_url.strip().rstrip("/")
+        if front.startswith(("http://", "https://")):
+            scheme, _, host = front.partition("://")
+            host = host.split("/", 1)[0]
+            bare = host.removeprefix("www.")
+            origins += [f"{scheme}://{bare}", f"{scheme}://www.{bare}"]
+        return list(dict.fromkeys(origins))
 
     # ── Database (PostgreSQL) ────────────────────────────
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/job_discovery"
