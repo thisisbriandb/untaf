@@ -26,6 +26,7 @@ import { useAlice } from "../alice-context";
 import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
 import { packUrl, tailoredCvUrl } from "@/lib/tailor-client";
+import { invalidateApplication } from "@/lib/application-state";
 
 type Phase = "confirm" | "running" | "settled";
 
@@ -99,6 +100,8 @@ export function ApplyPanel({
       }
       setOutcome(event);
       setPhase("settled");
+      // Dossier rédigé, envoi fait ou en attente : toute l'interface le sait.
+      invalidateApplication(jobId);
       if (event.type === "done") sayAsAlice(event.message);
 
       // Dès qu'un envoi existe en base, on récupère ce qu'il en reste :
@@ -293,6 +296,7 @@ export function ApplyPanel({
                     onClick={async () => {
                       if (await markApplied(candidateId, jobId)) {
                         setMarkedApplied(true);
+                        invalidateApplication(jobId);
                         toast(`Candidature chez ${companyName} ajoutée à ton suivi.`);
                         sayAsAlice(
                           `C'est noté : tu as postulé chez ${companyName}. Je suis la réponse, ` +

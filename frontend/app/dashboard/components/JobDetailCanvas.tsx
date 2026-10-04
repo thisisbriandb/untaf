@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Download, ExternalLink, FileText, FolderDown, Loader2, PenLine, Send, Sparkles,
+  Check, Download, ExternalLink, FileText, FolderDown, Loader2, PenLine, Send, Sparkles,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/config";
 import type { JobCardData } from "@/lib/alice-client";
@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/api";
 import { DownloadLink } from "./ProtectedFile";
 import { openFile } from "@/lib/api";
 import { cvTemplates } from "@/app/onboarding/types";
+import { invalidateApplication, isSent, useApplicationState } from "@/lib/application-state";
 
 function templateLabel(id: string): string {
   return cvTemplates.find((t) => t.id === id)?.name ?? id;
@@ -62,6 +63,10 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
   const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice, goToConversation } = useAlice();
   const [adapting, setAdapting] = useState(false);
   const [tailored, setTailored] = useState<TailoredDocuments | null>(null);
+  // L'état du dossier vient du serveur, partagé avec toute l'interface : une
+  // candidature déjà préparée (par une mission, depuis la liste…) ne se
+  // « prépare » plus ici.
+  const { state: appState } = useApplicationState(candidateId, job.id);
 
   /**
    * Adapte le CV et la lettre à CETTE offre. Les deux sont rangés sur la
@@ -78,6 +83,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
       return;
     }
     setTailored(docs);
+    invalidateApplication(job.id);
     const letterRef = {
       mode: "cover_letter" as const,
       companyName: job.company_name,
@@ -150,6 +156,20 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
   ];
 
   const applyUrl = detail?.apply_url || job.source_url;
+  const packReady = !!tailored || !!appState?.pack_ready;
+  const letter = tailored?.letter ?? appState?.letter ?? null;
+  const mode = appState?.apply_mode ?? job.apply_mode ?? "manual";
+  const sent = isSent(appState);
+  const awaiting = appState?.stage === "awaiting";
+  const day = (iso: string | null | undefined) =>
+    iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+  const primaryLabel = sent
+    ? `Candidature envoyée${appState?.applied_at ? ` le ${day(appState.applied_at)}` : ""}`
+    : awaiting
+      ? "Valider l'envoi"
+      : packReady
+        ? mode === "manual" ? "Finir ma candidature sur le site" : "Envoyer ma candidature"
+        : mode === "manual" ? "Préparer ma candidature" : "Préparer et envoyer ma candidature";
   const tags = [
     CONTRACT_LABELS[job.contract_type],
     REMOTE_LABELS[job.remote_policy],
@@ -282,20 +302,30 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
         <div className="px-5 py-3 border-t border-[#1A1918]/6 space-y-2">
           <button
             type="button"
-            onClick={() => setApplying(true)}
-            disabled={!candidateId}
+            onClick={() => {
+              if (awaiting) {
+                window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: "candidatures" }));
+                return;
+              }
+              setApplying(true);
+            }}
+            disabled={!candidateId || sent}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5 stroke-[1.6]" />
-            {job.apply_mode === "manual"
-              ? "Préparer mon dossier de candidature"
-              : job.apply_mode === "assisted"
-                ? "Préparer et postuler"
-                : "Postuler"}
+            {sent ? <Check className="w-3.5 h-3.5 stroke-[2]" /> : null}
+            {primaryLabel}
           </button>
-          {job.apply_mode === "manual" && (
+          {!sent && (packReady || mode === "manual") && (
             <p className="text-[10px] font-light text-[#1A1918]/40 text-center tracking-tight">
-              Cette offre se postule sur le site de l&apos;employeur : je prépare tout, tu envoies.
+              {packReady
+                ? `Dossier prêt${appState?.pack_ready_at ? ` depuis le ${day(appState.pack_ready_at)}` : ""} : CV adapté et lettre. `
+                : ""}
+              {mode === "manual"
+                ? packReady
+                  ? "Cette offre se postule sur le site de l'employeur : tout est rédigé, tu envoies."
+                  : "Cette offre se postule sur le site de l'employeur : je prépare tout, tu envoies."
+                : ""}
             </p>
           )}
 
@@ -336,7 +366,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               </div>
             </div>
           )}
-          {tailored && candidateId ? (
+          {packReady && candidateId ? (
             <div className="grid grid-cols-2 gap-2">
               <DownloadLink
                 url={tailoredCvUrl(candidateId, job.id)}
@@ -352,8 +382,9 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                   mode: "cover_letter",
                   companyName: job.company_name,
                   jobTitle: job.title,
-                  letter: tailored.letter,
+                  letter: letter ?? undefined,
                 })}
+                disabled={!letter}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-light text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors cursor-pointer"
               >
                 <PenLine className="w-3 h-3 stroke-[1.6]" />
@@ -383,7 +414,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] tracking-tight transition-colors"
               >
                 <FolderDown className="w-3 h-3 stroke-[1.5]" />
-                {tailored ? "Télécharger le dossier adapté" : "Télécharger le dossier"}
+                {packReady ? "Télécharger le dossier adapté" : "Préparer et télécharger le dossier"}
               </DownloadLink>
             )}
             {!applyUrl.startsWith("import://") && (
