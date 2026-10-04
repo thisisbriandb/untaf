@@ -86,7 +86,7 @@ def _decode(token: str) -> dict:
 
 async def get_user(request: Request) -> AuthUser | None:
     """L'utilisateur du jeton, ou None s'il n'y en a pas. Lève 401 s'il est invalide."""
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         return DEV_USER
 
     header = request.headers.get("authorization", "")
@@ -124,7 +124,7 @@ async def require_user(user: AuthUser | None = Depends(get_user)) -> AuthUser:
 
 async def require_admin(user: AuthUser = Depends(require_user)) -> AuthUser:
     """Déclencheurs coûteux (scraping, seeding) : réservés aux administrateurs."""
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         return user
     if not user.email or user.email not in settings.admin_email_list:
         raise HTTPException(403, "Réservé aux administrateurs.")
@@ -136,7 +136,7 @@ async def assert_owner(db: AsyncSession, user: AuthUser, candidate_id: UUID) -> 
     Le candidat appartient-il à cet utilisateur ? 404 sinon — pas 403 : on ne
     confirme pas l'existence d'un profil à qui n'y a pas droit.
     """
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         return
     from app.models.candidate import Candidate
 

@@ -21,6 +21,7 @@ from app.agents.application.followup import (
     followup_state,
     recipient_for,
 )
+from app.agents.application.feasibility import apply_mode
 from app.agents.application.outcome import _mailto
 from app.agents.application.pack import is_pack_ready
 from app.database import get_db
@@ -68,6 +69,8 @@ class PipelineItem(BaseModel):
     location: str | None
     contract_type: str
     remote_policy: str
+    #: Qui envoie : auto (Alice) · assisted (un clic) · manual (sur le site)
+    apply_mode: str = "manual"
     match_score: int
     status: ApplicationStatus
     #: Étape lisible, calculée : à préparer · prêt · à valider · envoyée ·
@@ -155,6 +158,7 @@ async def get_pipeline(
             location=job.location,
             contract_type=job.contract_type.value,
             remote_policy=job.remote_policy.value,
+            apply_mode=apply_mode(job),
             match_score=application.match_score,
             status=application.status,
             stage=stage,

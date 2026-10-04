@@ -24,6 +24,10 @@ class ChatTurn(BaseModel):
 
 class ChatRequest(BaseModel):
     candidate_id: str = Field(..., description="UUID of the candidate")
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation à poursuivre. Absente : une nouvelle est ouverte.",
+    )
     message: str = Field(..., min_length=1, max_length=1000, description="User message to Alice")
     history: list[ChatTurn] = Field(
         default_factory=list,
@@ -42,6 +46,7 @@ class UiBlock(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     ui_blocks: list[dict] = Field(default_factory=list)
+    conversation_id: str | None = None
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -66,15 +71,23 @@ async def chat_endpoint(req: ChatRequest, user: AuthUser = Depends(require_user)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    # Call Alice agent
+    from app.agents.conversations import append_turn, history_for, open_conversation
+
+    conversation = await open_conversation(candidate_id, req.conversation_id, req.message)
+    # Le fil vient de la base : il survit au changement d'appareil, et le
+    # client ne peut pas réécrire ce qu'Alice « se rappelle ».
+    history = await history_for(conversation.id) or [t.model_dump() for t in req.history]
+
     result = await chat_with_alice(
         candidate_id=candidate_id,
         user_message=req.message,
         user_name=candidate.full_name or "l'utilisateur",
-        history=[t.model_dump() for t in req.history],
+        history=history,
     )
+    await append_turn(conversation.id, req.message, result["reply"], result.get("ui_blocks", []))
 
     return ChatResponse(
         reply=result["reply"],
         ui_blocks=result.get("ui_blocks", []),
+        conversation_id=str(conversation.id),
     )

@@ -59,6 +59,18 @@ class Settings(BaseSettings):
     admin_emails: str = ""
 
     @property
+    def auth_bypassed(self) -> bool:
+        """
+        Gardes levées : explicitement, ou en développement (DEBUG) quand
+        aucune authentification n'est configurée — un `.env` local d'avant
+        l'authentification ne doit pas bloquer toute l'application en 503.
+        En production (DEBUG=false), l'absence de configuration reste un refus.
+        """
+        if self.auth_disabled:
+            return True
+        return self.debug and not (self.supabase_url or self.supabase_jwt_secret)
+
+    @property
     def admin_email_list(self) -> set[str]:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
 

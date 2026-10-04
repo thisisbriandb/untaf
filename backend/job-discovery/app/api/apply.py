@@ -141,9 +141,25 @@ async def import_job(candidate_id: UUID, data: ImportIn):
 # ── CV et lettre adaptés à une offre ───────────────────────────────────────
 
 
+class CvReport(BaseModel):
+    """Ce que le CV adapté contient vraiment, et sous quelle forme."""
+    #: Modèle de mise en page utilisé pour ce CV.
+    template_id: str
+    #: Vrai si le candidat n'avait choisi aucun modèle : on a pris le classique.
+    #: L'interface lui propose alors d'en choisir un.
+    template_is_default: bool
+    #: Le candidat présentait jusqu'ici son PDF d'origine, qu'on ne peut pas
+    #: réécrire : l'adaptation passe forcément par un modèle.
+    was_original_pdf: bool
+    #: Sections du parcours encore vides (expériences, langues…).
+    missing_sections: list[str] = []
+    missing_labels: list[str] = []
+
+
 class TailorOut(BaseModel):
     cv: CvContentResult
     letter: CoverLetterResult
+    report: CvReport | None = None
 
 
 @router.post("/{job_id}/tailor", response_model=TailorOut)
@@ -168,7 +184,25 @@ async def tailor_documents(candidate_id: UUID, job_id: UUID):
     pack = await build_pack(candidate_id, app_id)
     if not pack:
         raise HTTPException(404, "Offre ou candidat introuvable")
-    return TailorOut(cv=pack.cv, letter=pack.letter)
+    return TailorOut(cv=pack.cv, letter=pack.letter, report=await _cv_report(candidate_id, pack))
+
+
+async def _cv_report(candidate_id: UUID, pack) -> CvReport:
+    from app.agents.application.cv_completeness import SECTION_LABELS
+
+    async with async_session() as session:
+        candidate = await session.get(Candidate, candidate_id)
+        design = (candidate.cv_design or {}) if candidate else {}
+    chosen = design.get("mode") == "template" and design.get("template_id")
+    return CvReport(
+        template_id=design.get("template_id") or "classic",
+        template_is_default=not chosen,
+        was_original_pdf=design.get("mode") == "original" or (
+            not design and bool(candidate and candidate.resume_file)
+        ),
+        missing_sections=pack.missing_sections,
+        missing_labels=[SECTION_LABELS.get(s, s) for s in pack.missing_sections],
+    )
 
 
 @router.get("/{job_id}/cv")
@@ -276,6 +310,34 @@ async def download_pack(
     )
 
 
+@router.post("/{job_id}/mark-applied", response_model=dict)
+async def mark_applied(candidate_id: UUID, job_id: UUID, db: AsyncSession = Depends(get_db)):
+    """
+    Le candidat a fini la candidature lui-même (portail, formulaire).
+
+    Elle entre alors dans le suivi comme les autres : frise datée, relance
+    proposée après quelques jours, journal de mission.
+    """
+    from app.agents.application.followup import record_status
+    from app.agents.mission_log import log_event
+    from app.models.application import ApplicationStatus
+    from app.models.mission import MissionEventKind
+
+    job, company_name, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate or not application:
+        raise HTTPException(404, "Cette offre n'est pas dans ta liste.")
+    if application.status != ApplicationStatus.APPLIED:
+        record_status(application, ApplicationStatus.APPLIED, "envoyée par toi sur le site de l'employeur")
+        await log_event(
+            db, candidate_id, MissionEventKind.APPLIED,
+            f"Tu as postulé chez {company_name} pour « {job.title} » avec le dossier préparé. "
+            f"Je suis la réponse et je te proposerai une relance si besoin.",
+            {"job_id": str(job_id), "manual": True},
+        )
+        await db.commit()
+    return {"status": application.status.value}
+
+
 @router.get("/{job_id}/plan", response_model=PlanOut)
 async def get_plan(
     candidate_id: UUID,
@@ -335,11 +397,55 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
                 app_id = application.id if application else None
                 profile = _profile(candidate)
 
+            # ── Pack : CV adapté + lettre, quel que soit le canal ──
+            # Postuler promet au minimum un dossier prêt. Même quand l'envoi
+            # ne peut pas être automatisé (portail, formulaire), le candidat
+            # repart avec le CV adapté et la lettre, au lieu d'un simple
+            # « non pris en charge » les mains vides.
+            from app.agents.application.pack import build_pack, is_pack_ready
+            # La lettre et l'annonce valent d'être préparées même s'il manque
+            # une pièce : le dossier se complète ensuite, il ne repart pas de zéro.
+            if app_id and not is_pack_ready(application):
+                yield _sse("step", {
+                    "key": "pack",
+                    "label": "J'adapte ton CV et je rédige ta lettre pour cette offre",
+                    "status": "running",
+                })
+                pack = await build_pack(candidate_id, app_id)
+                if pack:
+                    letter = pack.letter.model_dump()
+                    async with async_session() as session:
+                        job, company_name, candidate, application = await _load(
+                            session, candidate_id, job_id
+                        )
+                        plan = detect_requirements(job, candidate, letter, _tailoring(application))
+                    cv_ok = any(
+                        r.key == "resume" and r.status == "satisfied" for r in plan.requirements
+                    )
+                    # Annoncer ce qui a réellement été produit, pas ce qui était prévu.
+                    yield _sse("step", {
+                        "key": "pack",
+                        "label": (
+                            "Dossier prêt : CV adapté et lettre" if cv_ok
+                            else "Lettre rédigée — le CV n'a pas pu être produit"
+                        ),
+                        "status": "done",
+                        "detail": pack.cv.headline if cv_ok else "",
+                        "missing": pack.missing_sections,
+                    })
+
+            pack_ready = bool(app_id)
+            # Le CV fait-il vraiment partie du dossier ? L'interface ne doit pas
+            # annoncer « CV adapté » quand il n'a pas pu être produit.
+            has_resume = any(r.key == "resume" and r.status == "satisfied" for r in plan.requirements)
+
             # Aucune étape n'est émise pour un travail instantané : cocher
             # des cases qui se remplissent seules donne l'illusion d'un
             # traitement qui n'a pas lieu. On rend le verdict directement.
             if not plan.can_apply and plan.complexity != "simple":
                 yield _sse("unsupported", {
+                    "pack_ready": pack_ready,
+                    "has_resume": has_resume,
                     "complexity": plan.complexity,
                     "message": plan.summary,
                     "reason": plan.blocked_reason,
@@ -353,6 +459,8 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
 
             if plan.missing:
                 yield _sse("blocked", {
+                    "pack_ready": pack_ready,
+                    "has_resume": has_resume,
                     "message": "Il me manque des éléments obligatoires.",
                     "missing": [{"label": r.label, "detail": r.detail} for r in plan.missing],
                 })

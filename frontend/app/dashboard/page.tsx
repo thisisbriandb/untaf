@@ -142,6 +142,16 @@ export default function DashboardPage() {
     fetchData();
   }, [candidateId]);
 
+  // Alice peut ouvrir un onglet (« tes candidatures à valider sont ici »).
+  useEffect(() => {
+    const onSelect = (e: Event) => {
+      const tab = (e as CustomEvent<TabType>).detail;
+      if (TABS.includes(tab)) selectTab(tab);
+    };
+    window.addEventListener("untaf:select-tab", onSelect);
+    return () => window.removeEventListener("untaf:select-tab", onSelect);
+  }, [selectTab]);
+
   const handlePipelineChange = useCallback(
     (pipeline: Pipeline) => setAwaitingCount(pipeline.counts.awaiting ?? 0),
     [],

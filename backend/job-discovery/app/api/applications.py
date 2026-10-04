@@ -35,7 +35,7 @@ async def list_applications(
     """List matched applications with filters, sorted by match score desc."""
     # Sans authentification, la liste couvrait tous les candidats. On exige
     # désormais un candidat, et qu'il appartienne à l'appelant.
-    if not settings.auth_disabled:
+    if not settings.auth_bypassed:
         if not candidate_id:
             raise HTTPException(400, "candidate_id requis")
         await assert_owner(db, user, candidate_id)

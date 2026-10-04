@@ -7,6 +7,7 @@ executes it server-side, and returns a structured response.
 """
 
 import json
+import re
 import logging
 from uuid import UUID
 
@@ -28,6 +29,7 @@ from app.agents.discovery.cv_editor import merge_entries, structure_cv_entries
 from app.agents.mission_log import get_or_create_mission
 from app.agents.persona import IDENTITY
 from app.agents.alice_state import OPEN_STATUSES, load_state
+from app.agents.application.feasibility import apply_mode
 from app.schemas.candidate import ParsedCandidateProfile
 from app.schemas.matching import MatchingCriteria
 
@@ -165,7 +167,84 @@ _edit_cv_fn = FunctionDeclaration(
     },
 )
 
+
+_JOB_QUERY = {
+    "type": "string",
+    "description": "Entreprise et/ou intitulé de l'offre, tels que l'utilisateur les "
+                   "nomme (ex. « Doctolib », « data engineer chez Alan »).",
+}
+
+_prepare_application_fn = FunctionDeclaration(
+    name="prepare_application",
+    description=(
+        "Prépare le dossier de candidature d'UNE offre de la liste du candidat : "
+        "CV adapté à l'offre (accroche, présentation, compétences demandées en "
+        "tête — tout le parcours est conservé) et lettre de motivation. Utilise-la "
+        "quand l'utilisateur demande d'adapter son CV à une offre, de préparer une "
+        "candidature ou un dossier, ou de « tout préparer » pour une offre."
+    ),
+    parameters_json_schema={
+        "type": "object",
+        "properties": {"job_query": _JOB_QUERY},
+        "required": ["job_query"],
+    },
+)
+
+_apply_to_job_fn = FunctionDeclaration(
+    name="apply_to_job",
+    description=(
+        "Lance la candidature à UNE offre de la liste : ouvre l'offre et démarre "
+        "l'envoi (Alice envoie elle-même si le canal le permet, sinon elle prépare "
+        "le dossier et indique où finir). Utilise-la quand l'utilisateur dit "
+        "« postule », « envoie ma candidature », « vas-y pour cette offre »."
+    ),
+    parameters_json_schema={
+        "type": "object",
+        "properties": {"job_query": _JOB_QUERY},
+        "required": ["job_query"],
+    },
+)
+
+_choose_cv_template_fn = FunctionDeclaration(
+    name="choose_cv_template",
+    description=(
+        "Ouvre le choix du modèle de mise en page du CV. Utilise-la quand "
+        "l'utilisateur veut changer l'apparence, le design ou le modèle de son "
+        "CV, ou quand son CV est un PDF d'origine qu'il faut mettre en page pour "
+        "pouvoir l'adapter."
+    ),
+    parameters_json_schema={"type": "object", "properties": {}},
+)
+
+_start_mission_fn = FunctionDeclaration(
+    name="start_mission",
+    description=(
+        "Ouvre l'assistant qui confie une mission bornée à Alice (chercher, "
+        "préparer les dossiers, ou aller jusqu'à l'envoi, pendant 30 min à une "
+        "demi-journée). Utilise-la quand l'utilisateur veut que tu travailles "
+        "pour lui pendant un moment, que tu postules à plusieurs offres, ou qu'il "
+        "parle de déléguer."
+    ),
+    parameters_json_schema={"type": "object", "properties": {}},
+)
+
+_open_candidatures_fn = FunctionDeclaration(
+    name="open_candidatures",
+    description=(
+        "Ouvre l'onglet Candidatures : file de validation des envois, dossiers "
+        "prêts, relances à faire, suivi des réponses. Utilise-la quand "
+        "l'utilisateur veut valider des envois, voir ses relances ou noter une "
+        "réponse (entretien, refus)."
+    ),
+    parameters_json_schema={"type": "object", "properties": {}},
+)
+
 _alice_tools = Tool(function_declarations=[
+    _prepare_application_fn,
+    _apply_to_job_fn,
+    _choose_cv_template_fn,
+    _start_mission_fn,
+    _open_candidatures_fn,
     _search_jobs_fn,
     _edit_cv_fn,
     _get_applications_fn,
@@ -175,6 +254,89 @@ _alice_tools = Tool(function_declarations=[
     _open_cover_letter_fn,
     _trigger_agent_scan_fn,
 ])
+
+
+async def _find_application(candidate_id: UUID, query: str):
+    """
+    L'offre que l'utilisateur désigne, parmi les siennes. La meilleure
+    correspondance l'emporte : entreprise et intitulé, puis score.
+    """
+    words = [w for w in re.split(r"\W+", (query or "").lower()) if len(w) > 2]
+    async with async_session() as session:
+        rows = (await session.execute(
+            select(Application, JobPosting, Company.name)
+            .join(JobPosting, Application.job_posting_id == JobPosting.id)
+            .join(Company, JobPosting.company_id == Company.id)
+            .where(Application.candidate_id == candidate_id)
+            .order_by(Application.updated_at.desc())
+            .limit(300)
+        )).all()
+
+    def score(row) -> tuple[int, int]:
+        app, job, company = row
+        hay = f"{job.title} {company or ''}".lower()
+        return (sum(1 for w in words if w in hay), app.match_score)
+
+    ranked = sorted(rows, key=score, reverse=True)
+    if not ranked or (words and score(ranked[0])[0] == 0):
+        return None
+    return ranked[0]
+
+
+def _job_card(app, job, company) -> dict:
+    return {
+        "id": str(job.id),
+        "title": job.title,
+        "company_name": company or "Entreprise",
+        "location": job.location or "Non précisé",
+        "match_score": app.match_score,
+        "contract_type": job.contract_type.value if job.contract_type else "unknown",
+        "remote_policy": job.remote_policy.value if job.remote_policy else "unknown",
+        "source_url": job.source_url,
+        "status": app.status.value,
+        "apply_mode": apply_mode(job),
+    }
+
+
+async def _execute_prepare_application(candidate_id: UUID, args: dict) -> tuple[dict, dict | None]:
+    from app.agents.application.cv_completeness import SECTION_LABELS
+    from app.agents.application.feasibility import APPLY_MODE_LABELS
+    from app.agents.application.pack import build_pack
+
+    found = await _find_application(candidate_id, args.get("job_query", ""))
+    if not found:
+        return {"found": False, "hint": "aucune offre de sa liste ne correspond ; "
+                                        "propose de chercher ou de coller l'annonce"}, None
+    app, job, company = found
+    pack = await build_pack(candidate_id, app.id)
+    if not pack:
+        return {"found": False}, None
+    card = _job_card(app, job, company)
+    return {
+        "found": True,
+        "offre": f"{job.title} chez {company}",
+        "nouvelle_accroche": pack.cv.headline,
+        "adaptation": "accroche et présentation réécrites pour l'offre, compétences "
+                      "demandées en tête, parcours complet conservé",
+        "cv_sections_encore_vides": [SECTION_LABELS.get(x, x) for x in pack.missing_sections],
+        "qui_envoie": APPLY_MODE_LABELS[card["apply_mode"]],
+        "dossier_telechargeable": True,
+    }, card
+
+
+async def _execute_apply_to_job(candidate_id: UUID, args: dict) -> tuple[dict, dict | None]:
+    from app.agents.application.feasibility import APPLY_MODE_LABELS
+
+    found = await _find_application(candidate_id, args.get("job_query", ""))
+    if not found:
+        return {"found": False}, None
+    card = _job_card(*found)
+    return {
+        "found": True,
+        "offre": f"{card['title']} chez {card['company_name']}",
+        "qui_envoie": APPLY_MODE_LABELS[card["apply_mode"]],
+        "statut": "candidature lancée dans le panneau de droite ; le résultat s'y affiche",
+    }, card
 
 
 def _parts(response: types.GenerateContentResponse) -> list[types.Part]:
@@ -255,10 +417,13 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
             "remote_policy": job.remote_policy.value if job.remote_policy else "unknown",
             "source_url": job.source_url,
             "status": app.status.value,
+            # Dire d'emblée qui envoie : Alice, un clic, ou le candidat sur le site.
+            "apply_mode": apply_mode(job),
         })
 
     return {
         "jobs": jobs,
+        "postulables_par_alice": sum(1 for j in jobs if j["apply_mode"] == "auto"),
         "affichees": len(jobs),
         "total_proposables": total,
         "offres_rafraichies": refreshed,
@@ -525,14 +690,47 @@ Une demande qui correspond à un outil déclenche cet outil, puis tu rends compt
 du résultat avec ses chiffres. Ne réponds jamais par un simple accusé de
 réception.
 - voir des offres → search_jobs
-- statut des candidatures → get_applications_status
-- audit du CV → get_cv_audit
+- adapter le CV / préparer le dossier pour UNE offre → prepare_application
+- postuler, envoyer la candidature pour UNE offre → apply_to_job
+- statut des candidatures → get_applications_status ; valider des envois,
+  relancer, noter une réponse → open_candidatures
 - bilan, point sur la recherche, ce que tu as fait, peu d'offres → get_mission_report
-- modifier le CV → open_cv_editor
+- travailler pour lui pendant un moment, postuler à plusieurs offres → start_mission
+- audit du CV → get_cv_audit
+- modifier le contenu du CV → open_cv_editor ; changer sa mise en page → choose_cv_template
 - l'utilisateur te DONNE du contenu pour son CV (stage, expérience, formation,
   compétences) → add_to_cv avec son texte tel quel, sans le lui faire ressaisir
-- lettre de motivation → open_cover_letter
+- lettre de motivation seule → open_cover_letter
 - explorer une entreprise précise → trigger_agent_scan
+
+CE QUE LE LOGICIEL FAIT — et ce qu'il ne fait pas. Ne promets rien en dehors.
+- Adapter un CV à une offre = réécrire l'accroche et la présentation pour ce
+  poste, mettre les compétences demandées en tête. Tout le parcours est
+  conservé : expériences, formation, langues. Le CV général ne change pas.
+- Un CV déposé en PDF ne peut pas être réécrit : l'adapter passe par un modèle
+  de mise en page (classique par défaut). Si `cv_presentation` est « original »,
+  dis-le et propose choose_cv_template.
+- Si `cv_sections_vides` n'est pas vide, le CV adapté sera incomplet : dis
+  quelles sections manquent et propose de les compléter (open_cv_editor ou
+  add_to_cv).
+- Postuler : trois cas, à annoncer clairement pour chaque offre.
+  · « Alice postule » — tu envoies toi-même (adresse e-mail publiée, ou ATS
+    avec envoi navigateur actif) ;
+  · « Prêt en un clic » — tout est rempli, le candidat confirme l'envoi ;
+  · « À finir sur le site » — portail France Travail ou formulaire propre :
+    aucun envoi automatique possible (compte candidat requis, tu ne manipules
+    jamais ses identifiants). Tu prépares le dossier complet et il l'envoie.
+  Dans tous les cas, le dossier (CV adapté + lettre + annonce) est
+  téléchargeable. Privilégie les offres où tu peux postuler toi-même.
+- Si `envoi_email_actif` est faux, aucun e-mail ne part réellement (répétition) :
+  ne dis jamais qu'une candidature est partie dans ce cas.
+- Les candidatures en attente de feu vert sont dans l'onglet Candidatures
+  (`candidatures_a_valider`), comme les relances (`relances_a_faire`).
+- Le candidat peut coller une offre trouvée ailleurs (bouton presse-papiers
+  à côté du champ de saisie) : elle rejoint sa liste et se prépare pareil.
+- Tu lui écris par e-mail (fin de mission, envois, relances) selon ses réglages
+  dans Paramètres.
+- La conversation est sauvegardée : il la retrouve sur tous ses appareils.
 
 RÈGLES
 - Français, tutoiement, 1 à 3 phrases. Jusqu'à 5 pour un bilan chiffré.
@@ -651,6 +849,35 @@ async def chat_with_alice(
                 elif fn_name == "get_mission_report":
                     tool_result = await _execute_get_mission(candidate_id)
                     ui_blocks.append({"type": "mission", "data": tool_result})
+
+                elif fn_name == "prepare_application":
+                    tool_result, card = await _execute_prepare_application(candidate_id, fn_args)
+                    if card:
+                        ui_blocks.append({"type": "action", "action": "open_job", "data": {"job": card}})
+
+                elif fn_name == "apply_to_job":
+                    tool_result, card = await _execute_apply_to_job(candidate_id, fn_args)
+                    if card:
+                        ui_blocks.append({
+                            "type": "action", "action": "open_job",
+                            "data": {"job": card, "autoApply": True},
+                        })
+
+                elif fn_name == "choose_cv_template":
+                    tool_result = {"status": "opened"}
+                    ui_blocks.append({
+                        "type": "action", "action": "open_cv_editor", "data": {"pane": "design"},
+                    })
+
+                elif fn_name == "start_mission":
+                    tool_result = {"status": "assistant de mission ouvert"}
+                    ui_blocks.append({"type": "action", "action": "open_mission_launcher"})
+
+                elif fn_name == "open_candidatures":
+                    tool_result = {"status": "onglet Candidatures ouvert"}
+                    ui_blocks.append({
+                        "type": "action", "action": "select_tab", "data": {"tab": "candidatures"},
+                    })
 
                 elif fn_name == "open_cv_editor":
                     tool_result = {"status": "opened"}

@@ -17,7 +17,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { sendMessageToAlice, type JobCardData, type UiBlock } from "@/lib/alice-client";
+import {
+  fetchConversationMessages,
+  fetchConversations,
+  sendMessageToAlice,
+  type ConversationSummary,
+  type JobCardData,
+  type StoredMessage,
+  type UiBlock,
+} from "@/lib/alice-client";
 import { fetchMission } from "@/lib/mission-client";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 import type { CoverLetter } from "@/lib/letter-client";
@@ -27,14 +35,14 @@ export type CanvasMode = "cv_editor" | "cover_letter" | "job_detail";
 
 /** What the Canvas is currently showing — mode plus everything it needs. */
 export type CanvasPayload =
-  | { mode: "cv_editor" }
+  | { mode: "cv_editor"; pane?: "original" | "content" | "design" }
   | { mode: "cover_letter"; companyName?: string; jobTitle?: string; letter?: CoverLetter }
-  | { mode: "job_detail"; job: JobCardData };
+  | { mode: "job_detail"; job: JobCardData; autoApply?: boolean };
 
 export function canvasLabel(payload: CanvasPayload): string {
   switch (payload.mode) {
     case "cv_editor":
-      return "Éditeur de CV";
+      return payload.pane === "design" ? "Modèles de CV" : "Éditeur de CV";
     case "cover_letter":
       if (payload.jobTitle) return `Lettre — ${payload.jobTitle}`;
       return payload.companyName
@@ -70,6 +78,13 @@ interface AliceContextValue {
   submitQuery: (text: string) => Promise<void>;
   /** Post a line as Alice without a round-trip (used by the Canvas). */
   sayAsAlice: (text: string, canvasRef?: CanvasPayload) => void;
+
+  // Conversations sauvegardées
+  conversationId: string | null;
+  conversations: ConversationSummary[];
+  newConversation: () => void;
+  openConversation: (id: string) => Promise<void>;
+  refreshConversations: () => Promise<void>;
 
   // Canvas
   canvas: CanvasPayload | null;
@@ -162,6 +177,46 @@ function briefingFrom(
     : `${report}${congrats} Je continue de chercher.`;
 }
 
+/**
+ * Le chip Canvas d'un message, reconstruit depuis ses blocs d'action. Sans
+ * effet de bord : sert aussi à relire une conversation sauvegardée.
+ */
+function canvasRefFrom(blocks: UiBlock[]): CanvasPayload | undefined {
+  let ref: CanvasPayload | undefined;
+  for (const block of blocks) {
+    if (block.type !== "action") continue;
+    if (block.action === "open_cv_editor") {
+      ref = { mode: "cv_editor", pane: block.data?.pane };
+    } else if (block.action === "open_job" && block.data?.job) {
+      ref = { mode: "job_detail", job: block.data.job };
+    } else if (block.action === "open_cover_letter") {
+      ref = {
+        mode: "cover_letter",
+        companyName: block.data?.companyName ?? block.data?.company_name,
+        jobTitle: block.data?.jobTitle ?? block.data?.job_title,
+        letter: block.data?.letter,
+      };
+    }
+  }
+  return ref;
+}
+
+function fromStored(m: StoredMessage): ChatMessage {
+  const blocks = m.ui_blocks ?? [];
+  const renderable = blocks.filter((b) => b.type !== "action");
+  return {
+    id: m.id,
+    sender: m.sender,
+    text: m.text,
+    timestamp: formatTime(new Date(m.created_at)),
+    uiBlocks: renderable.length ? renderable : undefined,
+    canvasRef: canvasRefFrom(blocks),
+  };
+}
+
+/** Au-delà, la dernière conversation n'est plus rouverte d'office. */
+const RESUME_WITHIN_MS = 3 * 24 * 3600 * 1000;
+
 export function AliceProvider({
   candidateId,
   onGoToConversation,
@@ -175,8 +230,16 @@ export function AliceProvider({
   const [isThinking, setIsThinking] = useState(false);
   const [emotion, setEmotion] = useState<AliceEmotion>("idle");
   const [canvas, setCanvas] = useState<CanvasPayload | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [briefing, setBriefing] = useState<ChatMessage | null>(null);
 
   const hasConversation = messages.some((m) => m.sender === "user");
+
+  const refreshConversations = useCallback(async () => {
+    if (!candidateId) return;
+    setConversations(await fetchConversations(candidateId));
+  }, [candidateId]);
 
   // Compte rendu d'ouverture, tiré du journal de mission. Ne remplace la ligne
   // d'attente que si l'utilisateur n'a pas déjà commencé à parler.
@@ -184,25 +247,52 @@ export function AliceProvider({
     if (!candidateId) return;
     let alive = true;
 
-    Promise.all([fetchMission(candidateId), fetchPipeline(candidateId)]).then(([mission, pipeline]) => {
+    Promise.all([
+      fetchMission(candidateId),
+      fetchPipeline(candidateId),
+      fetchConversations(candidateId),
+    ]).then(async ([mission, pipeline, convs]) => {
       if (!alive) return;
-      setMessages((prev) => {
-        if (prev.some((m) => m.sender === "user")) return prev;
-        return [
-          {
-            id: "briefing",
-            sender: "alice",
-            timestamp: formatTime(new Date()),
-            text: briefingFrom(mission, pipeline),
-          },
-        ];
-      });
+      setConversations(convs);
+      const greet: ChatMessage = {
+        id: "briefing",
+        sender: "alice",
+        timestamp: formatTime(new Date()),
+        text: briefingFrom(mission, pipeline),
+      };
+      setBriefing(greet);
+
+      // La conversation récente reprend où elle s'était arrêtée — sur cet
+      // appareil comme sur un autre. Le compte rendu du jour vient après.
+      const latest = convs[0];
+      let past: ChatMessage[] = [];
+      if (latest && Date.now() - new Date(latest.updated_at).getTime() < RESUME_WITHIN_MS) {
+        past = (await fetchConversationMessages(candidateId, latest.id)).map(fromStored);
+        if (!alive) return;
+        if (past.length) setConversationId(latest.id);
+      }
+      setMessages((prev) => (prev.some((m) => m.sender === "user") ? prev : [...past, greet]));
     });
 
     return () => {
       alive = false;
     };
   }, [candidateId]);
+
+  const newConversation = useCallback(() => {
+    setConversationId(null);
+    setMessages(briefing ? [briefing] : INITIAL_MESSAGES);
+  }, [briefing]);
+
+  const openConversation = useCallback(
+    async (id: string) => {
+      if (!candidateId) return;
+      const stored = await fetchConversationMessages(candidateId, id);
+      setConversationId(id);
+      setMessages(stored.length ? stored.map(fromStored) : briefing ? [briefing] : INITIAL_MESSAGES);
+    },
+    [candidateId, briefing],
+  );
 
   const openCanvas = useCallback((payload: CanvasPayload) => setCanvas(payload), []);
 
@@ -247,25 +337,34 @@ export function AliceProvider({
           candidateId,
           trimmed,
           messages
-            .filter((m) => m.text.trim())
+            .filter((m) => m.text.trim() && m.id !== "briefing")
             .map((m) => ({ sender: m.sender, text: m.text })),
+          conversationId,
         );
+        if (response.conversation_id && response.conversation_id !== conversationId) {
+          setConversationId(response.conversation_id);
+          void refreshConversations();
+        }
 
         // An action block means Alice produced an artifact: open it, and leave
         // a chip on her message so the thread keeps a handle on it.
-        let canvasRef: CanvasPayload | undefined;
+        // Les effets d'interface (ouvrir un onglet, l'assistant de mission)
+        // ne se jouent qu'en direct ; le chip Canvas, lui, reste dans le fil.
         for (const block of response.ui_blocks) {
           if (block.type !== "action") continue;
-          if (block.action === "open_cv_editor") {
-            canvasRef = { mode: "cv_editor" };
-          } else if (block.action === "open_cover_letter") {
-            canvasRef = {
-              mode: "cover_letter",
-              companyName: block.data?.companyName ?? block.data?.company_name,
-              jobTitle: block.data?.jobTitle ?? block.data?.job_title,
-              letter: block.data?.letter,
-            };
+          if (block.action === "open_mission_launcher") {
+            window.dispatchEvent(new CustomEvent("untaf:open-mission-launcher"));
+          } else if (block.action === "select_tab" && block.data?.tab) {
+            window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: block.data.tab }));
           }
+        }
+        let canvasRef = canvasRefFrom(response.ui_blocks);
+        // « Postule » : l'offre s'ouvre directement sur la candidature.
+        const applyBlock = response.ui_blocks.find(
+          (b) => b.type === "action" && b.action === "open_job" && b.data?.autoApply,
+        );
+        if (applyBlock && canvasRef?.mode === "job_detail") {
+          canvasRef = { ...canvasRef, autoApply: true };
         }
         if (canvasRef) openCanvas(canvasRef);
 
@@ -290,7 +389,7 @@ export function AliceProvider({
         setIsThinking(false);
       }
     },
-    [candidateId, isThinking, messages, openCanvas, sayAsAlice],
+    [candidateId, isThinking, messages, openCanvas, sayAsAlice, conversationId, refreshConversations],
   );
 
   const value = useMemo<AliceContextValue>(
@@ -303,6 +402,11 @@ export function AliceProvider({
       hasConversation,
       submitQuery,
       sayAsAlice,
+      conversationId,
+      conversations,
+      newConversation,
+      openConversation,
+      refreshConversations,
       canvas,
       isCanvasOpen: canvas !== null,
       openCanvas,
@@ -317,6 +421,11 @@ export function AliceProvider({
       hasConversation,
       submitQuery,
       sayAsAlice,
+      conversationId,
+      conversations,
+      newConversation,
+      openConversation,
+      refreshConversations,
       canvas,
       openCanvas,
       closeCanvas,

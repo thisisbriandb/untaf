@@ -153,7 +153,7 @@ async def get_job(
     # Une offre collée par un candidat reste la sienne : son texte peut
     # contenir des éléments qu'il n'a pas choisi de rendre publics.
     # `external_id` vaut « import:<candidate_id>:<uuid> ».
-    if posting.external_id.startswith(IMPORT_PREFIX) and not settings.auth_disabled:
+    if posting.external_id.startswith(IMPORT_PREFIX) and not settings.auth_bypassed:
         owner = posting.external_id[len(IMPORT_PREFIX):].split(":", 1)[0]
         try:
             owner_id = UUID(owner)

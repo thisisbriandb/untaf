@@ -74,7 +74,7 @@ async def list_candidates(
     développement sans authentification, tous (filtrables par email).
     """
     query = select(Candidate)
-    if not settings.auth_disabled:
+    if not settings.auth_bypassed:
         query = query.where(Candidate.auth_user_id == user.id)
     if email:
         # Case-insensitive: emails are stored as typed, not normalised.
@@ -115,9 +115,9 @@ async def create_candidate(
     """
     from app.agents.account import claim_candidate
 
-    email = data.email if settings.auth_disabled else (user.email or data.email)
+    email = data.email if settings.auth_bypassed else (user.email or data.email)
 
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         existing = await db.scalar(select(Candidate).where(Candidate.email == email))
         if existing:
             raise HTTPException(409, f"Candidate with email '{email}' already exists")
@@ -138,7 +138,7 @@ async def create_candidate(
 
     candidate = Candidate(
         email=email,
-        auth_user_id=None if settings.auth_disabled else user.id,
+        auth_user_id=None if settings.auth_bypassed else user.id,
     )
     _apply_create(candidate, data)
     db.add(candidate)
@@ -235,6 +235,7 @@ async def set_matching_criteria(
 @router.post("/{candidate_id}/resume", response_model=dict)
 async def upload_resume(
     candidate_id: UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -263,6 +264,11 @@ async def upload_resume(
         candidate.cv_design = {"mode": "original"}
 
     await db.commit()
+
+    # Le parcours qui manque côté serveur est relu depuis ce CV : c'est lui
+    # qui remplira le CV adapté et les lettres. Rien de saisi n'est écrasé.
+    from app.agents.application.cv_completeness import ensure_cv_content
+    background_tasks.add_task(ensure_cv_content, candidate_id)
 
     return {
         "filename": candidate.resume_filename,

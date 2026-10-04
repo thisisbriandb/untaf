@@ -252,13 +252,20 @@ function CvDesignPane({
 /** Onglet ouvert. « original » n'existe que si un CV a été déposé. */
 type Pane = "original" | "content" | "design";
 
-export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) {
+export function CanvasCvEditor({
+  candidateId,
+  initialPane,
+}: {
+  candidateId: string | null;
+  /** Ouvre directement sur les modèles, par exemple après une adaptation. */
+  initialPane?: Pane;
+}) {
   const { submitQuery, sayAsAlice, isThinking } = useAlice();
 
   const [profile, setProfile] = useState<CvProfile | null>(null);
   const [design, setDesign] = useState<CvDesign | null>(null);
   const [subStep, setSubStep] = useState<CvEditorSubStep>("personal");
-  const [pane, setPane] = useState<Pane>("content");
+  const [pane, setPane] = useState<Pane>(initialPane ?? "content");
   // Le PDF d'origine est protégé : récupéré avec le jeton, affiché en local.
   const originalPdf = useProtectedBlobUrl(
     pane === "original" && candidateId ? resumeUrl(candidateId) : null,
@@ -281,14 +288,15 @@ export function CanvasCvEditor({ candidateId }: { candidateId: string | null }) 
         setProfile(p);
         setDesign(d);
         // Le CV déposé s'ouvre en premier tant qu'aucun modèle n'a été demandé.
-        if (d?.has_original && d.mode === "original") setPane("original");
+        // Sauf si l'on a été ouvert exprès sur un autre volet (les modèles).
+        if (!initialPane && d?.has_original && d.mode === "original") setPane("original");
       },
     );
 
     return () => {
       alive = false;
     };
-  }, [candidateId]);
+  }, [candidateId, initialPane]);
 
   /** Un changement de présentation est toujours un geste explicite. */
   const updateDesign = useCallback(

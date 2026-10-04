@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Check, Download, ExternalLink, Loader2, Mail, Send, X,
+  ArrowLeft, Check, Download, ExternalLink, FileText, FolderDown, Loader2, Mail, Send, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
@@ -13,6 +13,7 @@ import {
   dispatchResumeUrl,
   fetchApplyOutcome,
   fetchApplyPlan,
+  markApplied,
   rememberSkipConfirm,
   shouldConfirmApply,
   streamApply,
@@ -23,6 +24,8 @@ import {
 } from "@/lib/apply-client";
 import { useAlice } from "../alice-context";
 import { DownloadLink } from "./ProtectedFile";
+import { useToast } from "./Toaster";
+import { packUrl, tailoredCvUrl } from "@/lib/tailor-client";
 
 type Phase = "confirm" | "running" | "settled";
 
@@ -59,7 +62,7 @@ export function ApplyPanel({
   jobTitle: string;
   onBack: () => void;
 }) {
-  const { sayAsAlice } = useAlice();
+  const { sayAsAlice, openCanvas } = useAlice();
 
   const [plan, setPlan] = useState<ApplyPlan | null>(null);
   const [phase, setPhase] = useState<Phase>("confirm");
@@ -67,6 +70,8 @@ export function ApplyPanel({
   const [outcome, setOutcome] = useState<ApplyEvent | null>(null);
   const [result, setResult] = useState<ApplyOutcome | null>(null);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [markedApplied, setMarkedApplied] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     fetchApplyPlan(candidateId, jobId).then((p) => {
@@ -111,6 +116,10 @@ export function ApplyPanel({
       : (plan?.requirements ?? []);
 
   const succeeded = outcome?.type === "done" && outcome.real;
+  const resumeInPack =
+    outcome && (outcome.type === "unsupported" || outcome.type === "blocked")
+      ? outcome.has_resume !== false
+      : true;
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -206,31 +215,104 @@ export function ApplyPanel({
               </div>
             )}
 
-            {/* Pourquoi ça ne passe pas, et par où finir */}
+            {/* Pourquoi l'envoi automatique ne passe pas — dit en une ligne */}
             {outcome?.type === "unsupported" && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] tracking-tight bg-[#1A1918]/6 text-[#1A1918]/55">
-                    {COMPLEXITY_LABEL[outcome.complexity]}
-                  </span>
-                </div>
+              <div className="space-y-2">
+                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] tracking-tight bg-[#1A1918]/6 text-[#1A1918]/55">
+                  {COMPLEXITY_LABEL[outcome.complexity]}
+                </span>
                 {outcome.reason && (
                   <p className="text-xs font-light text-[#1A1918]/60 tracking-tight leading-relaxed">
                     {outcome.reason}
                   </p>
                 )}
-                {outcome.fallback_url && (
-                  <a
-                    href={outcome.fallback_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors"
-                  >
-                    Postuler sur le site de l&apos;employeur
-                    <ExternalLink className="w-3.5 h-3.5 stroke-[1.6]" />
-                  </a>
-                )}
               </div>
+            )}
+
+            {/* Le dossier — la promesse minimale de « Postuler », toujours tenue */}
+            {phase === "settled" && !succeeded && outcome?.type !== "error" && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 p-4 rounded-2xl border border-[#006045]/20 bg-[#006045]/[0.03]"
+              >
+                <div className="flex items-center gap-2">
+                  <FolderDown className="w-4 h-4 text-[#006045] stroke-[1.6]" />
+                  <p className="text-sm font-normal text-[#1A1918] tracking-tight">Ton dossier est prêt</p>
+                </div>
+                <p className="text-xs font-light text-[#1A1918]/55 tracking-tight leading-relaxed">
+                  {resumeInPack
+                    ? "CV adapté à l'offre, lettre de motivation et annonce, dans un seul fichier."
+                    : "Lettre de motivation et annonce prêtes. Ton CV n'a pas pu être produit : complète-le ou dépose-le dans l'éditeur, puis télécharge à nouveau."}
+                </p>
+                <DownloadLink
+                  url={packUrl(candidateId, jobId)}
+                  filename={`Candidature_${companyName}.zip`}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 stroke-[1.6]" />
+                  Télécharger le dossier
+                </DownloadLink>
+                <div className="grid grid-cols-2 gap-2">
+                  {resumeInPack ? (
+                  <DownloadLink
+                    url={tailoredCvUrl(candidateId, jobId)}
+                    filename="CV.pdf"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+                  >
+                    <FileText className="w-3 h-3 stroke-[1.6]" />
+                    CV seul (PDF)
+                  </DownloadLink>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openCanvas({ mode: "cv_editor", pane: "content" })}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-amber-500/30 text-[11px] font-light text-amber-700 tracking-tight hover:bg-amber-50 transition-colors cursor-pointer"
+                    >
+                      <FileText className="w-3 h-3 stroke-[1.6]" />
+                      Compléter mon CV
+                    </button>
+                  )}
+                  {outcome?.type === "unsupported" && outcome.fallback_url ? (
+                    <a
+                      href={outcome.fallback_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+                    >
+                      Ouvrir l&apos;offre
+                      <ExternalLink className="w-3 h-3 stroke-[1.5]" />
+                    </a>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+                {!markedApplied ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (await markApplied(candidateId, jobId)) {
+                        setMarkedApplied(true);
+                        toast(`Candidature chez ${companyName} ajoutée à ton suivi.`);
+                        sayAsAlice(
+                          `C'est noté : tu as postulé chez ${companyName}. Je suis la réponse, ` +
+                            "et je te proposerai une relance si rien ne bouge.",
+                        );
+                      } else {
+                        toast("Je n'ai pas pu l'enregistrer. Réessaie.", "warning");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-1.5 w-full text-[11px] font-light text-[#006045] hover:underline tracking-tight cursor-pointer"
+                  >
+                    <Check className="w-3 h-3" />
+                    J&apos;ai postulé avec ce dossier
+                  </button>
+                ) : (
+                  <p className="flex items-center justify-center gap-1.5 text-[11px] font-light text-[#006045]">
+                    <Check className="w-3 h-3" /> Ajoutée à ton suivi
+                  </p>
+                )}
+              </motion.div>
             )}
 
             {outcome?.type === "blocked" && (
@@ -371,7 +453,7 @@ export function ApplyPanel({
                   <p className="text-xs font-light text-[#1A1918]/55 tracking-tight leading-relaxed">
                     {plan.complexity === "simple"
                       ? "J'envoie la candidature en ton nom. Tu ne pourras pas la rappeler."
-                      : "Je prépare ce que je peux et je te dis ce qu'il reste à faire."}
+                      : "Cette offre ne se postule pas automatiquement. Je prépare ton dossier complet — CV adapté et lettre — et tu l'envoies en deux clics sur le site de l'employeur."}
                   </p>
                 </div>
                 <button

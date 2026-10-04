@@ -22,9 +22,20 @@ export interface TailoredCv {
   source: string;
 }
 
+export interface CvReport {
+  template_id: string;
+  /** Aucun modèle choisi par le candidat : on a pris le classique. */
+  template_is_default: boolean;
+  /** Le candidat présentait son PDF d'origine, qu'on ne peut pas réécrire. */
+  was_original_pdf: boolean;
+  missing_sections: string[];
+  missing_labels: string[];
+}
+
 export interface TailoredDocuments {
   cv: TailoredCv;
   letter: CoverLetter;
+  report?: CvReport | null;
 }
 
 const base = (candidateId: string) => `${API_BASE_URL}/api/candidates/${candidateId}/apply`;

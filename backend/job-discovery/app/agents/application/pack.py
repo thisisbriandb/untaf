@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -37,6 +37,8 @@ class Pack:
     letter: CoverLetterResult
     job_title: str
     company_name: str
+    #: Sections du parcours encore vides — à montrer, pas à taire.
+    missing_sections: list[str] = field(default_factory=list)
 
 
 def candidate_profile(candidate: Candidate) -> dict:
@@ -67,8 +69,12 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
     Rédige l'accroche, la synthèse et la lettre, puis les range sur la
     candidature. None si la candidature ou le candidat est introuvable.
     """
+    from app.agents.application.cv_completeness import ensure_cv_content, order_skills_for_job
     from app.agents.discovery.cover_letter import write_cover_letter
     from app.agents.discovery.cv_writer import write_cv_content
+
+    # Le parcours complet d'abord : sans lui, le CV adapté sortait à moitié vide.
+    missing = await ensure_cv_content(candidate_id)
 
     async with async_session() as session:
         row = (await session.execute(
@@ -120,10 +126,21 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
         stored = await session.get(Application, application_id)
         stored.metadata_json = {
             **(stored.metadata_json or {}),
-            "tailored_cv": {"headline": cv.headline, "summary": cv.summary},
+            "tailored_cv": {
+                "headline": cv.headline,
+                "summary": cv.summary,
+                # Mise en avant, jamais suppression : toutes les compétences
+                # restent, celles que l'offre demande passent devant.
+                "skills_order": order_skills_for_job(
+                    profile["skills"], tech_stack, job.description_raw or "",
+                ),
+            },
             "cover_letter": letter.model_dump(),
             "pack_ready_at": datetime.now(timezone.utc).isoformat(),
         }
         await session.commit()
 
-    return Pack(cv=cv, letter=letter, job_title=job.title, company_name=company_name)
+    return Pack(
+        cv=cv, letter=letter, job_title=job.title, company_name=company_name,
+        missing_sections=missing,
+    )

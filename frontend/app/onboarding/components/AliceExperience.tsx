@@ -13,7 +13,7 @@ import {
   ZONE_COUNTRIES,
   type CriteriaDraft,
 } from "./CriteriaStep";
-import { apiFetch } from "@/lib/api";
+import { ApiUnreachableError, apiFetch, describeApiError } from "@/lib/api";
 import { AUTH_ENABLED, accessToken } from "@/lib/supabase";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
@@ -155,6 +155,7 @@ export function AliceExperience() {
       experienceYears: parsed.experience_years ?? prev.experienceYears,
       experiences: parsed.experiences || prev.experiences,
       education: parsed.education || prev.education,
+      languages: parsed.languages?.length ? parsed.languages : prev.languages,
     }));
 
     // Les localisations extraites pré-remplissent le mandat sans l'imposer.
@@ -197,6 +198,14 @@ export function AliceExperience() {
       if (res.ok) parsedData = await res.json();
     } catch (err) {
       console.error("CV parse error:", err);
+      if (err instanceof ApiUnreachableError) {
+        // Ne pas faire comme si la lecture avait marché : le dire, et
+        // laisser recommencer quand le serveur répondra.
+        await say("Je n'arrive pas à joindre mon serveur pour lire ton CV.", "thinking", 600);
+        await say("Réessaie dans un moment — rien n'est perdu.", "listening", 400);
+        setPhase(2); // retour au dépôt du CV
+        return;
+      }
     }
 
     await read("Je rassemble ce qui compte...", 650);
@@ -379,6 +388,24 @@ export function AliceExperience() {
         throw new Error(`Création impossible (${res.status})`);
       }
 
+      // Le parcours détaillé part au serveur dès l'activation : c'est avec lui
+      // qu'Alice compose le CV adapté et argumente les lettres. Sans ça, le
+      // CV adapté sortait avec un nom et des compétences, rien d'autre.
+      try {
+        await apiFetch(`${API_BASE_URL}/api/candidates/${candidate.id}/cv-content`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: profile.summary || "",
+            experiences: profile.experiences,
+            education: profile.education,
+            languages: profile.languages,
+          }),
+        });
+      } catch (err) {
+        console.error("CV content save failed:", err);
+      }
+
       localStorage.setItem("candidate_id", candidate.id);
       localStorage.setItem("candidate_email", candidate.email);
       localStorage.setItem("candidate_name", candidate.full_name);
@@ -406,7 +433,7 @@ export function AliceExperience() {
     } catch (err) {
       console.error("Activation error:", err);
       setActivationError(
-        "Je n'ai pas réussi à ouvrir ton espace. Vérifie ta connexion et réessaie."
+        describeApiError(err, "Je n'ai pas réussi à ouvrir ton espace. Réessaie dans un moment.")
       );
       setIsActivating(false);
     }

@@ -71,9 +71,17 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
 
             {/* Corps */}
             <div className="flex-1 min-h-0">
-              {canvas.mode === "cv_editor" && <CanvasCvEditor candidateId={candidateId} />}
+              {canvas.mode === "cv_editor" && (
+                <CanvasCvEditor
+                  key={canvas.pane ?? "content"}
+                  candidateId={candidateId}
+                  initialPane={canvas.pane}
+                />
+              )}
 
-              {canvas.mode === "job_detail" && <JobDetailCanvas job={canvas.job} />}
+              {canvas.mode === "job_detail" && (
+                <JobDetailCanvas job={canvas.job} autoApply={canvas.autoApply} />
+              )}
 
               {canvas.mode === "cover_letter" && (
                 <CoverLetterEditor

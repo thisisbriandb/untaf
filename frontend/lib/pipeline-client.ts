@@ -51,6 +51,7 @@ export interface PipelineItem {
   location: string | null;
   contract_type: string;
   remote_policy: string;
+  apply_mode: "auto" | "assisted" | "manual";
   match_score: number;
   status: ApplicationStatus;
   stage: Stage;

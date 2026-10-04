@@ -10,11 +10,38 @@
 import { API_BASE_URL } from "./config";
 import { accessToken } from "./supabase";
 
+/**
+ * Le serveur d'Alice ne répond pas du tout (éteint, mauvaise adresse, CORS).
+ * Distinct d'une réponse en erreur : l'interface doit dire « injoignable »,
+ * pas « vérifie ta connexion », qui envoie l'utilisateur sur une fausse piste.
+ */
+export class ApiUnreachableError extends Error {
+  constructor() {
+    super(`Le serveur d'Alice ne répond pas (${API_BASE_URL}).`);
+    this.name = "ApiUnreachableError";
+  }
+}
+
+let warned = false;
+
 export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
   const token = await accessToken();
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(input, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(input, { ...init, headers });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    if (!warned) {
+      warned = true;
+      console.error(
+        `API injoignable sur ${API_BASE_URL}. En local : lancer \`uvicorn app.main:app --port 8000\` ` +
+          "dans backend/job-discovery. Déployé : renseigner NEXT_PUBLIC_API_URL au build du frontend.",
+      );
+    }
+    throw new ApiUnreachableError();
+  }
   if (res.status === 401 && typeof window !== "undefined" && token) {
     // Session révoquée ou expirée sans rafraîchissement possible.
     window.dispatchEvent(new CustomEvent("untaf:unauthorized"));
@@ -75,4 +102,12 @@ export async function fetchMe(): Promise<Me | null> {
   } catch {
     return null;
   }
+}
+
+/** Message à montrer à l'utilisateur pour une erreur d'appel. */
+export function describeApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiUnreachableError) {
+    return "Je n'arrive pas à joindre mon serveur pour l'instant. Réessaie dans un moment.";
+  }
+  return fallback;
 }

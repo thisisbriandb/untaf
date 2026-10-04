@@ -226,7 +226,7 @@ Chaque offre écartée l'est avec un motif lisible, consultable dans le journal.
 
 | Canal | Complexité | État |
 | --- | --- | --- |
-| Email | `simple` | Implémenté, mais **sans stock** (voir *Limites connues*) |
+| Email | `simple` | Implémenté ; adresses extraites des annonces |
 | Greenhouse / Lever / Ashby | `medium` | Formulaire rempli dans un navigateur |
 | Formulaire employeur | `complex` | Socle commun rempli, le reste signalé |
 | Portail France Travail | `impossible` | Compte candidat requis |
@@ -258,6 +258,37 @@ contrat stable, contrairement à des sélecteurs CSS.
 Rien ne part sans autorisation du mandat, rien ne part deux fois, et un envoi
 simulé n'est **jamais** rapporté comme réel — `SIMULATED` et `SENT` sont deux
 états distincts.
+
+### Adapter un CV — ce que ça veut dire
+
+Adapter un CV à une offre, c'est réécrire l'accroche et la présentation pour ce
+poste, et placer en tête les compétences que l'annonce demande. **Rien n'est
+retiré** : expériences, formation et langues restent toutes. Le CV général du
+candidat ne bouge pas ; la version adaptée est rangée sur la candidature.
+
+Le parcours vit côté serveur (`candidates.cv_content`) : l'onboarding l'envoie
+à l'activation, l'éditeur le relit sur n'importe quel appareil, et s'il manque
+encore une section alors qu'un CV a été déposé, il est relu depuis ce PDF
+([`cv_completeness.py`](backend/job-discovery/app/agents/application/cv_completeness.py))
+sans écraser ce qui a été saisi. Les sections encore vides sont signalées.
+
+Un PDF déposé ne se réécrit pas : l'adapter passe par un modèle de mise en
+page (classique par défaut), et l'interface propose d'en choisir un.
+
+### Qui envoie la candidature
+
+Chaque offre porte un mode, affiché partout (`feasibility.apply_mode`) :
+
+| Mode | Quand | Ce qui se passe |
+| --- | --- | --- |
+| « Alice postule » | adresse e-mail publiée + SMTP, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
+| « Prêt en un clic » | ATS ou formulaire sans envoi automatique, e-mail sans SMTP | tout est rempli, le candidat confirme |
+| « À finir sur le site » | portail France Travail, canal inconnu | le dossier est prêt, le candidat l'envoie |
+
+Une mission « postuler » prépare d'abord les offres qu'Alice peut réellement
+envoyer. Quel que soit le mode, « Postuler » se termine toujours sur le
+dossier téléchargeable (CV adapté, lettre, annonce) et un bouton « J'ai
+postulé » qui fait entrer la candidature dans le suivi (relance comprise).
 
 ### Pack et envoi pendant une mission
 
@@ -328,10 +359,13 @@ consignées à la main depuis Candidatures), connexion France Travail.
   `bytea`, signature en base64). Chaque `pg_dump` les embarque, ce qui alourdit
   les sauvegardes et gonfle une base facturée à la taille. Leur place est
   Supabase Storage, avec seulement le chemin en base.
-- **Le parcours détaillé est dupliqué** entre `localStorage` et
-  `Candidate.cv_content`. Le serveur fait foi pour ce qu'Alice rédige.
-- **L'historique de conversation transite par le navigateur** à chaque tour. Il
-  ne survit pas à un changement d'appareil.
+- **Le portail France Travail reste hors de portée de l'envoi automatique.**
+  Il exige le compte candidat de l'utilisateur, et il n'existe pas d'API
+  « postuler ». La seule voie serait une session navigateur autorisée par
+  l'utilisateur lui-même (voir `frontend/spec/moteur_candidature.md`, P1).
+- **Le rendu des CV au modèle télécharge des paquets Typst** (icônes) au
+  premier usage : le serveur doit pouvoir joindre `packages.typst.org`, ou
+  ces paquets doivent être pré-installés dans l'image.
 
 ---
 

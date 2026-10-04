@@ -152,7 +152,9 @@ async def _step_match(run_id: UUID, candidate_id: UUID) -> int:
     return kept
 
 
-async def _step_prepare(run_id: UUID, candidate_id: UUID) -> int:
+async def _step_prepare(
+    run_id: UUID, candidate_id: UUID, prioritize_sendable: bool = False,
+) -> int:
     """
     Pack complet — CV adapté et lettre — pour les offres du haut du panier.
 
@@ -162,19 +164,27 @@ async def _step_prepare(run_id: UUID, candidate_id: UUID) -> int:
     from app.agents.application.pack import build_pack, is_pack_ready
     from app.models.company import Company
 
+    from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode
+
     async with async_session() as session:
         rows = (await session.execute(
-            select(Application, JobPosting.title, Company.name)
+            select(Application, JobPosting, Company.name)
             .join(JobPosting, Application.job_posting_id == JobPosting.id)
             .join(Company, JobPosting.company_id == Company.id)
             .where(Application.candidate_id == candidate_id)
             .where(Application.status == ApplicationStatus.MATCHED)
             .order_by(Application.match_score.desc())
-            .limit(LETTERS_PER_CYCLE * 4)
+            .limit(LETTERS_PER_CYCLE * 6)
         )).all()
 
     # Un pack déjà prêt n'est pas refait : on descend dans le classement.
-    todo = [(a, t, c) for a, t, c in rows if not is_pack_ready(a)][:LETTERS_PER_CYCLE]
+    pending = [(a, j, c) for a, j, c in rows if not is_pack_ready(a)]
+    if prioritize_sendable:
+        # Mission « postuler » : les offres qu'Alice peut réellement envoyer
+        # passent d'abord. Préparer en priorité des offres qu'il faudra finir
+        # à la main, c'est trahir la promesse de candidater.
+        pending.sort(key=lambda r: (APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
+    todo = [(a, j.title, c) for a, j, c in pending][:LETTERS_PER_CYCLE]
 
     prepared = 0
     for app, title, company in todo:
@@ -396,7 +406,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                     r = await s.get(MissionRun, run_id)
                     r.current_step = RunStep.PREPARE
                     await s.commit()
-                await _step_prepare(run_id, candidate_id)
+                await _step_prepare(run_id, candidate_id, prioritize_sendable=objective == "apply")
 
             if objective == "apply":
                 async with async_session() as s:

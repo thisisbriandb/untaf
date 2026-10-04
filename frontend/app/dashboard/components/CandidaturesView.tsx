@@ -33,6 +33,7 @@ import {
   type PipelineItem,
   type Stage,
 } from "@/lib/pipeline-client";
+import { APPLY_MODE_LABELS } from "@/lib/alice-client";
 import { useAlice } from "../alice-context";
 import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
@@ -274,10 +275,13 @@ function Row({
         remote_policy: item.remote_policy,
         source_url: item.source_url ?? "",
         status: item.status,
+        apply_mode: item.apply_mode,
       },
     });
 
-  const subtitle = [item.company_name, item.location].filter(Boolean).join(" · ");
+  // Avant l'envoi, dire qui appuiera sur « envoyer » — c'est la promesse.
+  const modeLabel = ["to_prepare", "ready"].includes(item.stage) ? APPLY_MODE_LABELS[item.apply_mode] : null;
+  const subtitle = [item.company_name, item.location, modeLabel].filter(Boolean).join(" · ");
   const detail =
     item.stage === "applied" && item.applied_at
       ? `Envoyée le ${when(item.applied_at)}${item.dispatch?.destination && item.dispatch.channel === "email" ? ` à ${item.dispatch.destination}` : ""}`

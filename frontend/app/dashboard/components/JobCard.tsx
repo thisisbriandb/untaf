@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { JobCardData } from "@/lib/alice-client";
+import { APPLY_MODE_LABELS, type JobCardData } from "@/lib/alice-client";
 import { useAlice } from "../alice-context";
 
 const CONTRACT_LABELS: Record<string, string> = {
@@ -48,9 +48,15 @@ export function JobCard({ job }: { job: JobCardData }) {
           <p className="text-xs font-light text-[#1A1918]/55 tracking-tight truncate">
             {job.company_name} · {job.location}
           </p>
-          {tags && (
+          {(tags || job.apply_mode) && (
             <p className="text-[11px] font-light text-[#1A1918]/45 tracking-tight">
               {tags}
+              {job.apply_mode && (
+                <span className={job.apply_mode === "auto" ? "text-[#006045]" : ""}>
+                  {tags ? " · " : ""}
+                  {APPLY_MODE_LABELS[job.apply_mode]}
+                </span>
+              )}
             </p>
           )}
         </div>

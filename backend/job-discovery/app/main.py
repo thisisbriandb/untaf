@@ -22,6 +22,7 @@ from app.api.apply import router as apply_router
 from app.api.chat import router as chat_router
 from app.api.pipeline import router as pipeline_router
 from app.api.me import router as me_router
+from app.api.conversations import router as conversations_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -64,7 +65,7 @@ async def lifespan(app: FastAPI):
     # Import all models so they're registered with Base.metadata
     import app.models  # noqa: F401
 
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         logger.warning(
             "AUTH_DISABLED=true : toutes les gardes sont levées. "
             "Réservé au développement local, jamais en production."
@@ -127,6 +128,7 @@ app.include_router(apply_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(pipeline_router, prefix="/api")
 app.include_router(me_router, prefix="/api")
+app.include_router(conversations_router, prefix="/api")
 
 
 @app.get("/health")

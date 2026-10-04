@@ -30,7 +30,7 @@ class MeOut(BaseModel):
 
 @router.get("/me", response_model=MeOut)
 async def me(user: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db)):
-    if settings.auth_disabled:
+    if settings.auth_bypassed:
         return MeOut(user_id=user.id, email=None, candidate_id=None, auth_disabled=True)
     candidate = await claim_candidate(db, user)
     return MeOut(
