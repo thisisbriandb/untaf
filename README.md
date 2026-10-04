@@ -148,15 +148,23 @@ d'API ; c'est géré par le code mais mal documenté côté France Travail.
 
 ### La bonne alternance
 
-`LBA_API_KEY` : clé gratuite d'un compte développeur sur
-[api.apprentissage.beta.gouv.fr](https://api.apprentissage.beta.gouv.fr). La
-recherche d'offres marche avec la clé de base. **L'envoi des candidatures
-demande en plus la permission « candidature »** (`applications:write`), à
-demander à l'équipe La bonne alternance
-(labonnealternance@apprentissage.beta.gouv.fr) en décrivant le service : sans
-elle, l'API répond 403, l'envoi échoue proprement (dossier prêt, alerte
-`OPS_ALERT_EMAIL`) et rien n'est rapporté comme parti. Lire leurs CGU avant la
-mise en production (consentement du candidat à l'envoi en son nom).
+`LBA_API_KEY` : clé d'un compte développeur sur
+[api.apprentissage.beta.gouv.fr](https://api.apprentissage.beta.gouv.fr).
+
+- **Clé production** : la recherche d'offres marche tout de suite, sans
+  habilitation.
+- **Envoi des candidatures** : exige une habilitation accordée à
+  l'organisation, sur demande à
+  contact-api@labonnealternance.apprentissage.beta.gouv.fr. Sans elle, l'API
+  répond 403 : l'envoi échoue proprement (dossier prêt, alerte
+  `OPS_ALERT_EMAIL`) et rien n'est rapporté comme parti.
+- **Clé sandbox** : pour tester l'envoi avant l'habilitation. Tous les
+  échanges, recherche comprise, passent alors par un environnement de test :
+  les offres ne sont pas réelles. À réserver au développement, jamais en
+  production.
+
+Lire leurs CGU avant la mise en production (consentement du candidat à
+l'envoi en son nom).
 
 ---
 

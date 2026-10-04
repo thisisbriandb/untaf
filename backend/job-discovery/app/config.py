@@ -123,10 +123,11 @@ class Settings(BaseSettings):
 
     # ── La bonne alternance (API Apprentissage) ──────────
     # Clé gratuite d'un compte développeur sur api.apprentissage.beta.gouv.fr.
-    # La recherche d'offres marche avec la clé de base ; l'envoi des
-    # candidatures exige en plus la permission « candidature »
-    # (applications:write), accordée par l'équipe La bonne alternance. Sans
-    # cette permission, l'API répond 403 et Alice le signale.
+    # Clé production : la recherche d'offres marche sans habilitation. L'envoi
+    # des candidatures exige une habilitation (contact-api@labonnealternance.
+    # apprentissage.beta.gouv.fr) ; sans elle, l'API répond 403 et Alice le
+    # signale. Une clé sandbox route tout, recherche comprise, vers un
+    # environnement de test : offres fictives, développement seulement.
     lba_api_key: str = ""
     lba_api_url: str = "https://api.apprentissage.beta.gouv.fr/api"
 
