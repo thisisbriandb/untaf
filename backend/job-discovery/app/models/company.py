@@ -22,6 +22,7 @@ class ATSType(str, enum.Enum):
     WORKABLE = "workable"
     ASHBY = "ashby"
     SMARTRECRUITERS = "smartrecruiters"
+    RECRUITEE = "recruitee"
     CUSTOM = "custom"
     UNKNOWN = "unknown"
 

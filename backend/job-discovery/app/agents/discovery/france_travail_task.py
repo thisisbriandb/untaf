@@ -267,6 +267,11 @@ async def ingest_for_candidate(candidate_id) -> dict:
         fetched += report.get("fetched", 0)
         companies += report.get("new_companies", 0)
 
+    # Les ATS (dont Recruitee, où Alice envoie elle-même) : collectés en
+    # arrière-plan si aucun beat ne l'a fait récemment.
+    from app.agents.discovery.freshness import ensure_fresh
+    await ensure_fresh()
+
     # La bonne alternance : les offres auxquelles Alice peut transmettre la
     # candidature elle-même. Une panne d'une source n'empêche pas l'autre.
     from app.agents.discovery.labonnealternance_task import ingest_lba_for_candidate

@@ -22,6 +22,8 @@ from app.models.application import Application, ApplicationStatus
 from app.agents.discovery.scrapers.greenhouse import GreenhouseScraper
 from app.agents.discovery.scrapers.lever import LeverScraper
 from app.agents.discovery.scrapers.ashby import AshbyScraper
+from app.agents.discovery.scrapers.recruitee import RecruiteeScraper
+from app.agents.discovery.scrapers.workable import WorkableScraper
 from app.agents.discovery.scrapers.base import ScrapedJob
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.qualification import qualify_job_description
@@ -39,7 +41,25 @@ ATS_TO_CHANNEL = {
     ATSType.LEVER: ApplyChannel.LEVER_API,
     ATSType.WORKABLE: ApplyChannel.WORKABLE_API,
     ATSType.ASHBY: ApplyChannel.ASHBY_API,
+    ATSType.RECRUITEE: ApplyChannel.RECRUITEE_API,
 }
+
+
+def _channel_for(job: ScrapedJob, default: ApplyChannel) -> tuple[ApplyChannel, dict | None]:
+    """
+    Le canal réel d'une offre, et ce qu'il faut pour y postuler.
+
+    Recruitee accepte la candidature par API, sauf quand l'employeur pose des
+    questions obligatoires (on ne répond pas à la place du candidat) ou
+    n'accepte pas de CV : ces offres passent par le formulaire.
+    """
+    target = job.extra.get("recruitee")
+    if not target:
+        return default, None
+    questions = job.extra.get("required_questions") or []
+    if questions or job.extra.get("cv_option") == "off":
+        return ApplyChannel.WEB_FORM, {"apply_url": job.apply_url, "questions": questions or None}
+    return ApplyChannel.RECRUITEE_API, {"recruitee": target, "apply_url": job.apply_url}
 
 
 def _release(loop: asyncio.AbstractEventLoop) -> None:
@@ -90,6 +110,7 @@ async def _persist_jobs(
     async with async_session() as session:
         for job in scraped:
             fp = compute_fingerprint(company_domain, job.title, job.location)
+            channel, contact = _channel_for(job, apply_channel)
 
             # Upsert: insert if new fingerprint, update last_seen if existing
             stmt = pg_insert(JobPosting).values(
@@ -102,8 +123,9 @@ async def _persist_jobs(
                 department=job.department,
                 source_url=job.source_url,
                 apply_url=job.apply_url,
-                apply_channel=apply_channel,
+                apply_channel=channel,
                 apply_complexity=ApplyComplexity.SIMPLE,
+                contact_json=contact,
                 status=PostingStatus.ACTIVE,
             ).on_conflict_do_update(
                 index_elements=["fingerprint"],
@@ -112,6 +134,8 @@ async def _persist_jobs(
                     "status": PostingStatus.ACTIVE,
                     "apply_url": job.apply_url,
                     "description_raw": job.description_raw,
+                    "apply_channel": channel,
+                    **({"contact_json": contact} if contact else {}),
                 },
             )
 
@@ -139,6 +163,8 @@ async def _scrape_platform(ats_type: ATSType):
         ATSType.GREENHOUSE: GreenhouseScraper(),
         ATSType.LEVER: LeverScraper(),
         ATSType.ASHBY: AshbyScraper(),
+        ATSType.WORKABLE: WorkableScraper(),
+        ATSType.RECRUITEE: RecruiteeScraper(),
     }
 
     scraper = scraper_map.get(ats_type)
@@ -232,6 +258,26 @@ def scrape_all_ashby():
         count = loop.run_until_complete(_scrape_platform(ATSType.ASHBY))
         logger.info("Ashby daily scrape complete: %d jobs", count)
         return count
+    finally:
+        _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.scrape_all_workable")
+def scrape_all_workable():
+    """Daily task: scrape all Workable companies."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_scrape_platform(ATSType.WORKABLE))
+    finally:
+        _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.scrape_all_recruitee")
+def scrape_all_recruitee():
+    """Quotidien : offres Recruitee, où Alice envoie elle-même la candidature."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_scrape_platform(ATSType.RECRUITEE))
     finally:
         _release(loop)
 
