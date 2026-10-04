@@ -60,23 +60,6 @@ export const STEP_LABELS: Record<RunStep, string> = {
   apply: "J'envoie ce que tu m'as autorisé",
 };
 
-/**
- * Le repérage des offres tourne chaque matin : le confier en mission ne
- * produisait rien de plus. Une mission sert à agir sur ce qui est retenu.
- */
-export const OBJECTIVES: { id: Exclude<RunObjective, "search">; label: string; detail: string }[] = [
-  {
-    id: "prepare",
-    label: "Préparer mes candidatures",
-    detail: "Pour chaque offre retenue : CV adapté et lettre. Tu envoies quand tu veux.",
-  },
-  {
-    id: "apply",
-    label: "Postuler pour moi",
-    detail: "Je prépare tout et j'envoie ce qui peut l'être ; je te dis ce qui reste à faire.",
-  },
-];
-
 export const COUNTS = [3, 5, 10];
 
 const base = (candidateId: string) =>

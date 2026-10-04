@@ -144,10 +144,14 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         run.heartbeat_at = run.started_at
         run.ends_at = None
         run.stats = {}
-        objective = run.objective if run.objective in ("prepare", "apply") else "prepare"
+        # Une seule mission : préparer et envoyer sont les deux temps du même
+        # geste. On ne postule pas sans dossier, et un dossier qu'Alice peut
+        # envoyer ne doit pas attendre une seconde mission. Seule question :
+        # envoyer directement, ou présenter d'abord (`send`).
+        objective = "apply"
         allowed = run.allowed_actions or {}
         count = max(1, min(MAX_TARGETS, int(allowed.get("count") or DEFAULT_TARGETS)))
-        send = objective == "apply" and bool(allowed.get("send"))
+        send = bool(allowed.get("send"))
         await session.commit()
 
     try:

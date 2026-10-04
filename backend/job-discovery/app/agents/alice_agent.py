@@ -220,8 +220,10 @@ _start_mission_fn = FunctionDeclaration(
     name="start_mission",
     description=(
         "Ouvre l'assistant de mission : Alice prépare les dossiers complets (CV "
-        "adapté + lettre) des 3, 5 ou 10 meilleures offres retenues, et peut aller "
-        "jusqu'à l'envoi. Une seule passe, sans durée ; l'utilisateur peut fermer "
+        "adapté + lettre) des 3, 5 ou 10 meilleures offres retenues PUIS envoie ce "
+        "qui peut l'être (directement, ou après validation selon le choix de "
+        "l'utilisateur) ; le reste est prêt à envoyer sur le site de l'employeur. "
+        "Une seule mission, une seule passe, sans durée ; l'utilisateur peut fermer "
         "l'onglet, il reçoit un e-mail à la fin. Utilise-la quand il veut que tu "
         "postules ou prépares plusieurs candidatures d'un coup, ou qu'il parle de "
         "déléguer. Le repérage des offres, lui, tourne déjà chaque matin."
