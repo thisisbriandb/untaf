@@ -121,3 +121,11 @@ def test_session_maison_refusee_si_secret_change(monkeypatch):
     monkeypatch.setattr(settings, "auth_secret", "secret-deux-assez-long-pour-hs256-0123456789abcd")
     with pytest.raises(HTTPException):
         _user(token)
+
+
+def test_cors_autorise_le_site_de_frontend_url(monkeypatch):
+    monkeypatch.setattr(settings, "cors_origins", "https://untaf.vercel.app/")
+    monkeypatch.setattr(settings, "frontend_url", "https://alice-agent.fr/")
+    assert settings.cors_origin_list == [
+        "https://untaf.vercel.app", "https://alice-agent.fr", "https://www.alice-agent.fr",
+    ]

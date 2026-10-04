@@ -103,15 +103,20 @@ app = FastAPI(
 )
 
 # CORS — allow frontend
+ALLOWED_ORIGINS = list(dict.fromkeys([
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3010",
+    "http://localhost:3011",
+    *settings.cors_origin_list,
+]))
+# Un appel refusé par CORS ne laisse qu'un « OPTIONS … 400 » dans les logs :
+# la liste effective, écrite au démarrage, permet de comprendre pourquoi.
+logger.info("Origines CORS autorisées : %s", ", ".join(ALLOWED_ORIGINS))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3010",
-        "http://localhost:3011",
-        *settings.cors_origin_list,
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
