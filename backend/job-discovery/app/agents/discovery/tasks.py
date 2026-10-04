@@ -570,7 +570,10 @@ async def _match_candidate_to_existing_jobs(candidate_id):
                     metadata_json=metadata,
                 ))
             elif current.status not in _LOCKED_STATUSES:
-                current.status = status
+                # Un dossier préparé ne redescend pas « en attente » : il
+                # disparaîtrait de Candidatures.
+                if not (_protected(current) and status == ApplicationStatus.PENDING):
+                    current.status = status
                 current.match_score = match.score
                 # Fusion, jamais remplacement : la métadonnée porte aussi le
                 # dossier préparé (CV adapté, lettre), la frise et la relance.

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Pause, Play, Radar, Sparkles } from "lucide-react";
+import { ArrowRight, FolderOpen, Loader2, Pause, Play, Radar, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchJournal,
@@ -12,6 +12,7 @@ import {
   type Mission,
   type MissionEvent,
 } from "@/lib/mission-client";
+import { fetchPipeline } from "@/lib/pipeline-client";
 import { useAlice } from "../alice-context";
 
 // ── Libellés ───────────────────────────────────────────────────────────────
@@ -59,10 +60,16 @@ const CONTRACT_LABELS: Record<string, string> = {
 const EVENT_DOT: Record<string, string> = {
   scan: "bg-[#1A1918]/25",
   shortlist: "bg-[#006045]",
+  letter_written: "bg-[#006045]/70",
   applied: "bg-[#006045]",
   awaiting_approval: "bg-amber-500",
   error: "bg-red-500",
 };
+
+/** Les dossiers vivent dans Candidatures : on y emmène plutôt que de les décrire. */
+function openCandidatures() {
+  window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: "candidatures" }));
+}
 
 function relativeTime(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -114,6 +121,7 @@ export function MissionView() {
   };
   const [mission, setMission] = useState<Mission | null>(null);
   const [journal, setJournal] = useState<MissionEvent[]>([]);
+  const [readyPacks, setReadyPacks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -122,12 +130,17 @@ export function MissionView() {
       setLoading(false);
       return;
     }
-    const [m, j] = await Promise.all([
+    const [m, j, p] = await Promise.all([
       fetchMission(candidateId),
       fetchJournal(candidateId, 40),
+      fetchPipeline(candidateId),
     ]);
     setMission(m);
     setJournal(j);
+    // Prêts mais pas encore partis : ce que l'utilisateur vient chercher ici.
+    setReadyPacks(
+      p?.items.filter((i) => i.pack_ready && ["ready", "manual", "simulated", "awaiting"].includes(i.stage)).length ?? 0,
+    );
     setLoading(false);
   }, [candidateId]);
 
@@ -217,6 +230,31 @@ export function MissionView() {
           <Stat value={stats.applied} label="envoyées" />
           <Stat value={stats.interviews} label="entretiens" />
         </div>
+
+        {/* ═══ Dossiers prêts ═══ */}
+        {readyPacks > 0 && (
+          <motion.button
+            type="button"
+            onClick={openCandidatures}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileTap={{ scale: 0.99 }}
+            className="w-full flex items-center gap-3 p-4 rounded-2xl bg-[#006045]/[0.06] border border-[#006045]/15 text-left cursor-pointer hover:bg-[#006045]/10 transition-colors"
+          >
+            <FolderOpen className="h-4 w-4 text-[#006045] shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm text-[#1A1918] tracking-tight">
+                {readyPacks} dossier{readyPacks > 1 ? "s prêts" : " prêt"}
+              </span>
+              <span className="block text-xs font-light text-[#1A1918]/50 tracking-tight">
+                CV adapté et lettre pour chaque offre, à télécharger ou envoyer depuis Candidatures.
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs text-[#006045] shrink-0">
+              Voir <ArrowRight className="h-3 w-3" />
+            </span>
+          </motion.button>
+        )}
 
         {/* ═══ Autonomie ═══ */}
         <section className="space-y-3">
@@ -380,7 +418,17 @@ export function MissionView() {
               {journal.map((e) => (
                 <div
                   key={e.id}
-                  className="flex items-start gap-3 py-3 border-b border-[#1A1918]/6"
+                  {...(e.kind === "letter_written" && {
+                    role: "button",
+                    tabIndex: 0,
+                    onClick: openCandidatures,
+                    onKeyDown: (ev: React.KeyboardEvent) => ev.key === "Enter" && openCandidatures(),
+                    title: "Voir le dossier dans Candidatures",
+                  })}
+                  className={cn(
+                    "flex items-start gap-3 py-3 border-b border-[#1A1918]/6",
+                    e.kind === "letter_written" && "cursor-pointer group hover:bg-[#006045]/[0.03]",
+                  )}
                 >
                   <span
                     className={cn(
@@ -391,6 +439,11 @@ export function MissionView() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-light text-[#1A1918]/75 leading-relaxed tracking-tight">
                       {e.summary}
+                      {e.kind === "letter_written" && (
+                        <span className="ml-1.5 text-xs text-[#006045] opacity-60 group-hover:opacity-100 transition-opacity">
+                          Voir →
+                        </span>
+                      )}
                     </p>
                   </div>
                   <span className="text-[11px] font-light text-[#1A1918]/30 tracking-tight shrink-0 pt-0.5">

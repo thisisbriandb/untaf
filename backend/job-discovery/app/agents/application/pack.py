@@ -21,7 +21,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.database import async_session
-from app.models.application import Application
+from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
 from app.models.company import Company
 from app.models.job_posting import JobPosting
@@ -138,6 +138,10 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
             "cover_letter": letter.model_dump(),
             "pack_ready_at": datetime.now(timezone.utc).isoformat(),
         }
+        # Un dossier rédigé est une offre retenue : restée « en attente », elle
+        # n'apparaissait nulle part dans Candidatures.
+        if stored.status == ApplicationStatus.PENDING:
+            stored.status = ApplicationStatus.MATCHED
         await session.commit()
 
     return Pack(

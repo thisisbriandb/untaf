@@ -13,7 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.followup import (
@@ -124,7 +124,11 @@ async def get_pipeline(
         .join(JobPosting, Application.job_posting_id == JobPosting.id)
         .join(Company, JobPosting.company_id == Company.id)
         .where(Application.candidate_id == candidate_id)
-        .where(Application.status != ApplicationStatus.PENDING)
+        # « En attente » reste hors du suivi, sauf si un dossier y est prêt.
+        .where(or_(
+            Application.status != ApplicationStatus.PENDING,
+            Application.metadata_json.has_key("cover_letter"),
+        ))
         .order_by(desc(Application.updated_at))
         .limit(limit)
     )).all()
