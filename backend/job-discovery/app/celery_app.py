@@ -52,6 +52,7 @@ celery_app.conf.update(
         "app.agents.seeding.tasks",
         "app.agents.resolver.tasks",
         "app.agents.discovery.tasks",
+        "app.agents.notifications.tasks",
     ],
 )
 
@@ -72,6 +73,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.ingest_france_travail_daily",
         "schedule": crontab(hour=5, minute=30),
     },
+    # Juste après l'ingestion : les adresses cachées dans les consignes ou
+    # les descriptions rendent l'offre candidatable par e-mail.
+    "daily-reclassify-contacts": {
+        "task": "app.agents.discovery.tasks.reclassify_apply_contacts",
+        "schedule": crontab(hour=5, minute=50),
+    },
     "daily-scrape-ashby": {
         "task": "app.agents.discovery.tasks.scrape_all_ashby",
         "schedule": crontab(hour=6, minute=30),
@@ -87,6 +94,22 @@ celery_app.conf.beat_schedule = {
     "sweep-stale-missions": {
         "task": "app.agents.discovery.tasks.sweep_stale_missions",
         "schedule": crontab(minute="*/5"),
+    },
+    # Relances dues et rapports : envoyés en matinée, quand le candidat
+    # ouvre sa messagerie, et une seule fois par jour au plus.
+    "daily-check-followups": {
+        "task": "app.agents.notifications.tasks.check_followups",
+        "schedule": crontab(hour=8, minute=40),
+    },
+    "daily-digest": {
+        "task": "app.agents.notifications.tasks.send_digests",
+        "schedule": crontab(hour=18, minute=30),
+        "args": ("daily",),
+    },
+    "weekly-digest": {
+        "task": "app.agents.notifications.tasks.send_digests",
+        "schedule": crontab(hour=8, minute=50, day_of_week=1),
+        "args": ("weekly",),
     },
     "daily-resolve-unresolved": {
         "task": "app.agents.resolver.tasks.resolve_unresolved_companies",

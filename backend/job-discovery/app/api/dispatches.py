@@ -139,20 +139,33 @@ async def approve(
 
     sent = await send_dispatch(dispatch_id)
 
-    async with db.begin_nested():
-        await log_event(
-            db, candidate_id,
-            MissionEventKind.APPLIED if sent and sent.status == DispatchStatus.SENT
-            else MissionEventKind.ERROR,
-            (
-                f"Candidature envoyée à {sent.company_name} pour « {sent.job_title} »."
-                if sent and sent.status == DispatchStatus.SENT
-                else f"Envoi vers {dispatch.company_name} non abouti : "
-                     f"{(sent.error if sent else 'erreur inconnue')}"
-            ),
-            {"dispatch_id": str(dispatch_id)},
+    # Trois issues, trois récits : une répétition n'est ni un envoi ni un
+    # échec, et la rapporter comme « non aboutie » affolait pour rien.
+    status = sent.status if sent else DispatchStatus.FAILED
+    if status == DispatchStatus.SENT:
+        kind, summary = (
+            MissionEventKind.APPLIED,
+            f"Candidature envoyée à {sent.company_name} pour « {sent.job_title} ».",
         )
+    elif status == DispatchStatus.SIMULATED:
+        kind, summary = (
+            MissionEventKind.APPLIED,
+            f"Répétition pour {sent.company_name} : tout est prêt, rien n'est parti "
+            f"({sent.error}).",
+        )
+    else:
+        kind, summary = (
+            MissionEventKind.ERROR,
+            f"Envoi vers {dispatch.company_name} non abouti : "
+            f"{(sent.error if sent else 'erreur inconnue')}",
+        )
+    async with db.begin_nested():
+        await log_event(db, candidate_id, kind, summary, {"dispatch_id": str(dispatch_id)})
     await db.commit()
+
+    if status == DispatchStatus.SENT:
+        from app.agents.notifications import notify_application_sent
+        await notify_application_sent(candidate_id, dispatch_id)
 
     return sent or dispatch
 

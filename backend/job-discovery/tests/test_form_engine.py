@@ -13,6 +13,10 @@ parce qu'une offre a expiré. La mesure complète, elle, est ailleurs :
 from __future__ import annotations
 
 import pytest
+
+# Extra « browser » : sans lui, ces tests sont sautés au lieu de faire échouer
+# la collecte de toute la suite.
+pytest.importorskip("playwright")
 from playwright.async_api import async_playwright
 
 from app.agents.application.field_classifier import Semantic, classify_all, needs_model

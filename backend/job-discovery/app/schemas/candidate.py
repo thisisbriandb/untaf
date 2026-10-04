@@ -47,6 +47,9 @@ class CandidateUpdate(BaseModel):
 
 
 class CandidateOut(CandidateBase):
+    #: Parcours détaillé — l'éditeur le recharge depuis le serveur, sur
+    #: n'importe quel appareil, au lieu de dépendre du navigateur.
+    cv_content: dict | None = None
     id: UUID
     resume_raw: str | None
     matching_criteria: MatchingCriteria | None = None

@@ -2,11 +2,12 @@
  * CV profile store — the single source of truth for the CV the user edits
  * inside the Canvas.
  *
- * Persistence is split in two because the `candidates` table only holds the
- * flat identity/matching fields:
+ * Persistence:
  *   - identity + matching fields   → backend (`PUT /api/candidates/{id}`)
- *   - rich CV structure & design   → localStorage, keyed by candidate id
- * A save always writes both, so the two halves never drift apart.
+ *   - parcours (expériences, formation, langues) → backend (`cv_content`),
+ *     qui fait foi sur tous les appareils
+ *   - photo et mise en page        → localStorage, keyed by candidate id
+ * A save always writes both.
  */
 
 import { API_BASE_URL } from "./config";
@@ -15,6 +16,7 @@ import type {
   ExperienceEntry,
   LanguageEntry,
 } from "@/app/onboarding/types";
+import { apiFetch } from "./api";
 
 export interface CvProfile {
   fullName: string;
@@ -79,11 +81,17 @@ export function writeLocalCvProfile(candidateId: string, profile: CvProfile): vo
  * Load the CV the user last worked on: backend record as the base, local draft
  * layered on top (it is always newer, since every save writes both).
  */
+/** Les entrées venues du serveur (relecture du CV) n'ont pas toujours d'id. */
+function withIds<T extends { id?: string }>(entries: unknown): T[] {
+  if (!Array.isArray(entries)) return [];
+  return entries.map((e, i) => ({ ...(e as T), id: (e as T)?.id || `srv-${i}-${Date.now()}` }));
+}
+
 export async function loadCvProfile(candidateId: string): Promise<CvProfile> {
   let remote: Partial<CvProfile> = {};
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}`);
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}`);
     if (res.ok) {
       const c = await res.json();
       remote = {
@@ -95,13 +103,29 @@ export async function loadCvProfile(candidateId: string): Promise<CvProfile> {
         skills: Array.isArray(c.skills) ? c.skills : [],
         experienceYears: c.experience_years ?? 0,
       };
+      // Le parcours détaillé vit côté serveur : c'est lui qui fait foi, sur
+      // tous les appareils. Le brouillon local ne comble que ce qui manque.
+      const cv = c.cv_content ?? {};
+      if (cv.summary) remote.summary = cv.summary;
+      if (cv.experiences?.length) remote.experiences = withIds<ExperienceEntry>(cv.experiences);
+      if (cv.education?.length) remote.education = withIds<EducationEntry>(cv.education);
+      if (cv.languages?.length) remote.languages = withIds<LanguageEntry>(cv.languages);
     }
   } catch {
     // Offline / backend down — fall back to whatever is cached locally.
   }
 
   const local = readLocalCvProfile(candidateId) ?? {};
-  return { ...EMPTY_CV_PROFILE, ...remote, ...local };
+  const merged = { ...EMPTY_CV_PROFILE, ...local, ...remote };
+  // Mise en page et photo ne vivent que localement : on les garde.
+  for (const key of ["photoUrl", "showPhotoOnCv", "templateId", "colorHex"] as const) {
+    if (local[key] !== undefined) (merged as Record<string, unknown>)[key] = local[key];
+  }
+  // Un brouillon local plus riche que le serveur (saisie hors ligne) n'est pas perdu.
+  for (const key of ["experiences", "education", "languages"] as const) {
+    if (!(remote[key]?.length) && local[key]?.length) merged[key] = local[key] as never;
+  }
+  return merged;
 }
 
 /**
@@ -117,7 +141,7 @@ export async function saveCvProfile(
   // Le parcours détaillé part aussi au serveur : Alice rédige côté backend et
   // ne peut argumenter à partir d'expériences restées dans le navigateur.
   try {
-    await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-content`, {
+    await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-content`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -132,7 +156,7 @@ export async function saveCvProfile(
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -172,7 +196,7 @@ export function resumeUrl(candidateId: string): string {
 
 export async function fetchCvDesign(candidateId: string): Promise<CvDesign | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`);
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`);
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -184,7 +208,7 @@ export async function saveCvDesign(
   patch: Partial<Pick<CvDesign, "mode" | "template_id" | "color_hex" | "show_photo">>,
 ): Promise<CvDesign | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/cv-design`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -224,7 +248,7 @@ export async function writeCvContent(
   job?: JobContext,
 ): Promise<CvContent | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/cv-content`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/cv-content`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -270,7 +294,7 @@ export function toCvRenderPayload(profile: CvProfile) {
 }
 
 export async function downloadCvPdf(profile: CvProfile): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/candidates/download-cv`, {
+  const res = await apiFetch(`${API_BASE_URL}/api/candidates/download-cv`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(toCvRenderPayload(profile)),

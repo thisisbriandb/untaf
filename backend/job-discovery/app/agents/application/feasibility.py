@@ -12,9 +12,9 @@ possible, le lien pour finir à la main.
 """
 
 import logging
-import re
 from dataclasses import dataclass, field
 
+from app.agents.discovery.contact_extract import is_valid_email
 from app.config import settings
 from app.models.job_posting import ApplyChannel, JobPosting
 
@@ -43,9 +43,6 @@ class Feasibility:
 IMPLEMENTED = {"email", "web_form", "greenhouse_api", "lever_api",
                "ashby_api", "workable_api"}
 
-#: Une adresse, pas une consigne rédigée.
-_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
-
 #: Canaux dont le formulaire est public et dont l'ATS publie le schéma des
 #: champs : ce sont ceux que le remplissage guidé couvre le mieux.
 AUTOMATABLE_SOON = {"greenhouse_api", "lever_api", "ashby_api", "workable_api"}
@@ -56,7 +53,7 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
     channel = job.apply_channel.value if job.apply_channel else "unknown"
     contact = job.contact_json or {}
     raw_email = (contact.get("email") or "").strip()
-    email = raw_email if _EMAIL_RE.fullmatch(raw_email) else None
+    email = raw_email if is_valid_email(raw_email) else None
     form_url = contact.get("apply_url") or job.apply_url
     link = form_url or job.source_url
 
@@ -133,3 +130,31 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
         "Je n'ai pas trouvé par où postuler sur cette offre.",
         blockers, link, channel,
     )
+
+
+# ── Qui appuie sur « envoyer » ─────────────────────────────────────────────
+
+#: Trois réponses honnêtes à « est-ce qu'Alice postule pour moi ? ».
+#:   auto     — elle envoie elle-même (e-mail avec SMTP, ATS avec envoi navigateur)
+#:   assisted — tout est prêt, un clic du candidat suffit (brouillon d'e-mail,
+#:              formulaire pré-rempli non soumis)
+#:   manual   — portail authentifié ou canal inconnu : il finit sur le site,
+#:              avec le dossier préparé
+APPLY_MODE_LABELS = {
+    "auto": "Alice postule",
+    "assisted": "Prêt en un clic",
+    "manual": "À finir sur le site",
+}
+APPLY_MODE_RANK = {"auto": 0, "assisted": 1, "manual": 2}
+
+
+def apply_mode(job: JobPosting) -> str:
+    channel = job.apply_channel.value if job.apply_channel else "unknown"
+    contact = job.contact_json or {}
+    if is_valid_email(contact.get("email")):
+        return "auto" if settings.can_send_email else "assisted"
+    if channel in AUTOMATABLE_SOON:
+        return "auto" if settings.browser_submit_enabled else "assisted"
+    if channel == "web_form":
+        return "assisted"
+    return "manual"

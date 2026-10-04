@@ -12,6 +12,14 @@ import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
 } from "@/lib/tailor-client";
 import { useAlice } from "../alice-context";
+import { apiFetch } from "@/lib/api";
+import { DownloadLink } from "./ProtectedFile";
+import { openFile } from "@/lib/api";
+import { cvTemplates } from "@/app/onboarding/types";
+
+function templateLabel(id: string): string {
+  return cvTemplates.find((t) => t.id === id)?.name ?? id;
+}
 
 interface JobDetail {
   description_raw?: string | null;
@@ -50,8 +58,8 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function JobDetailCanvas({ job }: { job: JobCardData }) {
-  const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice } = useAlice();
+export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; autoApply?: boolean }) {
+  const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice, goToConversation } = useAlice();
   const [adapting, setAdapting] = useState(false);
   const [tailored, setTailored] = useState<TailoredDocuments | null>(null);
 
@@ -76,10 +84,34 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
       jobTitle: job.title,
       letter: docs.letter,
     };
+    // Ce qu'adapter veut dire, dit sans détour : accroche et présentation
+    // réécrites pour l'offre, compétences demandées mises en avant, tout le
+    // parcours conservé. Et si le PDF d'origine ne pouvait pas être réécrit,
+    // on le dit et on propose de choisir le modèle.
+    const r = docs.report;
+    const parts = [
+      `J'ai adapté ton CV et ta lettre pour « ${job.title} » chez ${job.company_name} : ` +
+        `nouvelle accroche (« ${docs.cv.headline} »), présentation réécrite pour l'offre, ` +
+        "compétences demandées mises en avant. Tout ton parcours est conservé.",
+    ];
+    if (r?.was_original_pdf) {
+      parts.push(
+        "Ton CV d'origine est un PDF que je ne peux pas réécrire : je l'ai donc mis en page " +
+          `avec le modèle ${templateLabel(r.template_id)}. Choisis-en un autre si tu préfères.`,
+      );
+    } else if (r?.template_is_default) {
+      parts.push(`Mise en page : modèle ${templateLabel(r.template_id)}, modifiable.`);
+    }
+    if (r?.missing_labels.length) {
+      parts.push(
+        `Il manque encore à ton CV : ${r.missing_labels.join(", ")}. Complète-les et ` +
+          "je referai l'adaptation.",
+      );
+    }
+    parts.push("Ton CV général n'a pas bougé.");
     sayAsAlice(
-      `J'ai adapté ton CV et ta lettre pour « ${job.title} » chez ${job.company_name}. ` +
-      `Nouvelle accroche : « ${docs.cv.headline} ». Ton CV général n'a pas bougé.`,
-      letterRef,
+      parts.join(" "),
+      r?.template_is_default || r?.was_original_pdf ? { mode: "cv_editor", pane: "design" } : letterRef,
     );
   };
   const [detail, setDetail] = useState<JobDetail | null>(null);
@@ -91,10 +123,11 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
     let alive = true;
     setStatus("loading");
     setDetail(null);
-    setApplying(false);
+    // « Postule » demandé à Alice : on ouvre directement la candidature.
+    setApplying(autoApply);
     setTailored(null);
 
-    fetch(`${API_BASE_URL}/api/jobs/${job.id}`)
+    apiFetch(`${API_BASE_URL}/api/jobs/${job.id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((data: JobDetail) => {
         if (!alive) return;
@@ -108,7 +141,7 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
     return () => {
       alive = false;
     };
-  }, [job.id]);
+  }, [job.id, autoApply]);
 
   const prompts = [
     `Rédige-moi une lettre de motivation pour « ${job.title} » chez ${job.company_name}`,
@@ -232,7 +265,11 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
               <button
                 key={q}
                 type="button"
-                onClick={() => void submitQuery(q)}
+                onClick={() => {
+                  // La question part dans la conversation de cette offre.
+                  void submitQuery(q, { job });
+                  goToConversation();
+                }}
                 disabled={isThinking}
                 className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-light text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40 text-left"
               >
@@ -250,19 +287,65 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5 stroke-[1.6]" />
-            Postuler
+            {job.apply_mode === "manual"
+              ? "Préparer mon dossier de candidature"
+              : job.apply_mode === "assisted"
+                ? "Préparer et postuler"
+                : "Postuler"}
           </button>
+          {job.apply_mode === "manual" && (
+            <p className="text-[10px] font-light text-[#1A1918]/40 text-center tracking-tight">
+              Cette offre se postule sur le site de l&apos;employeur : je prépare tout, tu envoies.
+            </p>
+          )}
 
           {/* Actions séparées : tout ne passe pas par la candidature complète. */}
+          {tailored && candidateId && tailored.report && (
+            <div className="space-y-1.5 rounded-xl bg-white border border-[#1A1918]/8 px-3 py-2.5">
+              <p className="text-[11px] font-light text-[#1A1918]/65 tracking-tight leading-relaxed">
+                Accroche et présentation réécrites pour l&apos;offre, compétences demandées en tête,
+                parcours complet conservé · modèle {templateLabel(tailored.report.template_id)}
+              </p>
+              {tailored.report.missing_labels.length > 0 && (
+                <p className="text-[11px] font-light text-amber-700 tracking-tight">
+                  Manque encore : {tailored.report.missing_labels.join(", ")}.{" "}
+                  <button
+                    type="button"
+                    onClick={() => openCanvas({ mode: "cv_editor", pane: "content" })}
+                    className="underline cursor-pointer"
+                  >
+                    Compléter mon CV
+                  </button>
+                </p>
+              )}
+              <div className="flex items-center gap-3 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => void openFile(tailoredCvUrl(candidateId, job.id))}
+                  className="text-[11px] font-light text-[#006045] hover:underline cursor-pointer"
+                >
+                  Aperçu du CV adapté
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openCanvas({ mode: "cv_editor", pane: "design" })}
+                  className="text-[11px] font-light text-[#006045] hover:underline cursor-pointer"
+                >
+                  Changer de modèle
+                </button>
+              </div>
+            </div>
+          )}
           {tailored && candidateId ? (
             <div className="grid grid-cols-2 gap-2">
-              <a
-                href={tailoredCvUrl(candidateId, job.id)}
+              <DownloadLink
+                url={tailoredCvUrl(candidateId, job.id)}
+                filename="CV.pdf"
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-light text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors"
               >
                 <Download className="w-3 h-3 stroke-[1.6]" />
                 CV adapté (PDF)
-              </a>
+              </DownloadLink>
               <button
                 type="button"
                 onClick={() => openCanvas({
@@ -294,13 +377,14 @@ export function JobDetailCanvas({ job }: { job: JobCardData }) {
           )}
           <div className="flex items-center justify-center gap-4">
             {candidateId && (
-              <a
-                href={packUrl(candidateId, job.id)}
-                className="flex items-center gap-1.5 text-[11px] font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight transition-colors"
+              <DownloadLink
+                url={packUrl(candidateId, job.id)}
+                filename={`Candidature_${job.company_name}.zip`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-[11px] font-light text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] tracking-tight transition-colors"
               >
                 <FolderDown className="w-3 h-3 stroke-[1.5]" />
-                Pack candidature (ZIP)
-              </a>
+                {tailored ? "Télécharger le dossier adapté" : "Télécharger le dossier"}
+              </DownloadLink>
             )}
             {!applyUrl.startsWith("import://") && (
               <a

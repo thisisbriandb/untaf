@@ -6,6 +6,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 export type RequirementStatus = "satisfied" | "generate" | "missing";
 
@@ -43,9 +44,19 @@ export const COMPLEXITY_LABEL: Record<Complexity, string> = {
 
 export type ApplyEvent =
   | { type: "step"; key: string; label: string; status: "running" | "done"; detail?: string }
-  | { type: "blocked"; message: string; missing: { label: string; detail: string }[] }
+  | { type: "blocked"; message: string; missing: { label: string; detail: string }[]; pack_ready?: boolean; has_resume?: boolean }
   | { type: "awaiting"; dispatch_id: string; message: string; destination?: string }
-  | { type: "unsupported"; complexity: Complexity; message: string; reason: string | null; fallback_url: string | null }
+  | {
+      type: "unsupported";
+      complexity: Complexity;
+      message: string;
+      reason: string | null;
+      fallback_url: string | null;
+      /** Le CV adapté et la lettre sont prêts, même sans envoi automatique. */
+      pack_ready?: boolean;
+      /** Le CV a pu être produit et fait partie du dossier. */
+      has_resume?: boolean;
+    }
   | { type: "done"; dispatch_id: string | null; status: string; real: boolean; message: string }
   | { type: "error"; message: string };
 
@@ -79,7 +90,7 @@ export async function fetchApplyOutcome(
   dispatchId: string,
 ): Promise<ApplyOutcome | null> {
   try {
-    const res = await fetch(dispatchBase(candidateId, dispatchId));
+    const res = await apiFetch(dispatchBase(candidateId, dispatchId));
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -99,7 +110,7 @@ export async function fetchApplyPlan(
   jobId: string,
 ): Promise<ApplyPlan | null> {
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/plan`,
     );
     return res.ok ? await res.json() : null;
@@ -119,7 +130,7 @@ export async function streamApply(
   jobId: string,
   onEvent: (event: ApplyEvent) => void,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/stream`,
     { method: "POST" },
   );
@@ -179,5 +190,18 @@ export function rememberSkipConfirm(): void {
     localStorage.setItem(SKIP_KEY, "1");
   } catch {
     // Mode privé : on redemandera, ce n'est pas grave.
+  }
+}
+
+/** Le candidat a fini la candidature lui-même : elle entre dans le suivi. */
+export async function markApplied(candidateId: string, jobId: string): Promise<boolean> {
+  try {
+    const res = await apiFetch(
+      `${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/mark-applied`,
+      { method: "POST" },
+    );
+    return res.ok;
+  } catch {
+    return false;
   }
 }

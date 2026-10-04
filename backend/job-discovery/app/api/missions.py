@@ -162,6 +162,11 @@ def _run_detail(run: MissionRun, events: list[MissionEvent]) -> MissionRunDetail
     )
 
 
+#: Références des missions exécutées sur place : sans elles, le ramasse-miettes
+#: pourrait interrompre une tâche asyncio en cours.
+_INPROCESS_RUNS: set[asyncio.Task] = set()
+
+
 @router.post("/runs", response_model=MissionRunDetail, status_code=201)
 async def start_run(
     candidate_id: UUID,
@@ -187,9 +192,9 @@ async def start_run(
     run = MissionRun(
         mission_id=mission.id,
         title=data.title,
-        objective=data.objective,
-        duration_minutes=data.duration_minutes,
-        allowed_actions=data.allowed_actions,
+        objective="prepare" if data.objective == "search" else data.objective,
+        duration_minutes=0,
+        allowed_actions={**(data.allowed_actions or {}), "count": data.count},
         status=RunStatus.PREPARING,
     )
     db.add(run)
@@ -209,20 +214,14 @@ async def start_run(
             args=[str(run.id), str(candidate_id)], retry=False
         )
     except Exception as exc:  # noqa: BLE001
-        logger.error("Impossible de mettre la mission en file : %s", exc)
-        # Ne jamais laisser un run « en préparation » que personne ne prendra :
-        # Alice afficherait une mission en attente qui ne démarrera jamais.
-        run.status = RunStatus.INTERRUPTED
-        run.finished_at = datetime.now(timezone.utc)
-        await db.commit()
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Le service de tâches de fond n'est pas disponible : la mission "
-                "ne peut pas être lancée. Vérifie que Redis et le worker Celery "
-                "tournent."
-            ),
-        ) from exc
+        # Sans worker joignable, la mission tourne dans ce processus plutôt
+        # que de ne pas tourner du tout : c'est une seule passe de quelques
+        # minutes, pas une boucle de plusieurs heures. Elle survit à la
+        # fermeture de l'onglet, pas à un redéploiement de l'API.
+        logger.warning("File de tâches indisponible (%s) : mission exécutée sur place.", exc)
+        task = asyncio.create_task(execute_run(run.id, candidate_id))
+        _INPROCESS_RUNS.add(task)
+        task.add_done_callback(_INPROCESS_RUNS.discard)
 
     return _run_detail(run, [])
 
@@ -244,19 +243,17 @@ async def get_current_run(candidate_id: UUID, db: AsyncSession = Depends(get_db)
 
     # Un worker mort laisse un run « en cours » orphelin. Le balayage
     # périodique s'en charge, mais on ne peut pas afficher un travail fantôme
-    # en attendant son prochain passage : créneau écoulé ou battement de cœur
-    # périmé, on clôt ici aussi.
-    from app.agents.mission_runner import STALE_AFTER_SECONDS
+    # en attendant son prochain passage : battement de cœur périmé, on clôt
+    # ici aussi — par la clôture normale, pour que le compte rendu et l'e-mail
+    # existent.
+    #
+    # L'heure de fin dépassée ne suffit PAS : le dernier cycle déborde souvent
+    # de quelques minutes, et clore ici rendait sans effet la vraie clôture du
+    # worker — mission « interrompue », sans rapport ni notification.
+    from app.agents.mission_runner import is_orphaned
 
-    now = datetime.now(timezone.utc)
-    last_sign = run.heartbeat_at or run.started_at or run.created_at
-    if run.status == RunStatus.RUNNING and (
-        (run.ends_at and run.ends_at < now)
-        or (last_sign and (now - last_sign).total_seconds() > STALE_AFTER_SECONDS)
-    ):
-        run.status = RunStatus.INTERRUPTED
-        run.finished_at = datetime.now(timezone.utc)
-        await db.commit()
+    if is_orphaned(run, datetime.now(timezone.utc)):
+        await finalize_run(run.id, candidate_id, RunStatus.INTERRUPTED)
         await db.refresh(run)
 
     events = (await db.execute(

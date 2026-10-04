@@ -62,6 +62,19 @@ class AliceState:
 
     # Documents prêts
     letters_ready: int = 0
+    packs_ready: int = 0
+
+    # Ce qui attend le candidat
+    awaiting_approval: int = 0
+    followups_due: int = 0
+
+    # Son CV
+    cv_presentation: str = "aucun"     # original (PDF déposé) | modèle <id> | aucun
+    cv_missing_sections: list[str] = field(default_factory=list)
+
+    # Capacités de ce déploiement — ce qu'Alice peut réellement faire
+    can_send_email: bool = False
+    can_submit_forms: bool = False
 
     warnings: list[str] = field(default_factory=list)
 
@@ -80,6 +93,13 @@ class AliceState:
             "mission": self.mission_status,
             "autonomie": self.autonomy,
             "mission_en_cours": self.run_title if self.run_status == "running" else None,
+            "dossiers_prets": self.packs_ready,
+            "candidatures_a_valider": self.awaiting_approval,
+            "relances_a_faire": self.followups_due,
+            "cv_presentation": self.cv_presentation,
+            "cv_sections_vides": self.cv_missing_sections,
+            "envoi_email_actif": self.can_send_email,
+            "envoi_formulaires_actif": self.can_submit_forms,
         }
 
 
@@ -122,6 +142,30 @@ async def load_state(candidate_id: UUID) -> AliceState:
             .where(Application.candidate_id == candidate_id)
         )).scalars().all()
         state.letters_ready = sum(1 for m in apps if (m or {}).get("cover_letter"))
+        state.packs_ready = sum(
+            1 for m in apps if (m or {}).get("cover_letter") and (m or {}).get("tailored_cv")
+        )
+
+        from app.agents.application.cv_completeness import missing_sections
+        from app.agents.application.followup import due_followups
+        from app.config import settings
+        from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+        state.awaiting_approval = (await session.execute(
+            select(func.count(ApplicationDispatch.id))
+            .where(ApplicationDispatch.candidate_id == candidate_id)
+            .where(ApplicationDispatch.status == DispatchStatus.AWAITING_APPROVAL)
+        )).scalar() or 0
+        state.followups_due = len(await due_followups(session, candidate_id))
+
+        design = candidate.cv_design or {}
+        if design.get("mode") == "template" and design.get("template_id"):
+            state.cv_presentation = f"modèle {design['template_id']}"
+        elif candidate.resume_file:
+            state.cv_presentation = "original (PDF déposé, non modifiable)"
+        state.cv_missing_sections = missing_sections(candidate)
+        state.can_send_email = settings.can_send_email
+        state.can_submit_forms = settings.browser_submit_enabled
 
         mission = (await session.execute(
             select(Mission).where(Mission.candidate_id == candidate_id)

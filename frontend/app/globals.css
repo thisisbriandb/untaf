@@ -285,3 +285,11 @@ body {
 .scroll-discreet:hover::-webkit-scrollbar-thumb:hover {
   background-color: rgba(26, 25, 24, 0.32);
 }
+
+/* Défilement horizontal sans barre — la navigation compacte en mobile. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

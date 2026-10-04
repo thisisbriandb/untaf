@@ -77,6 +77,7 @@ async def _weekly_sent(session, candidate_id: UUID) -> int:
 async def decide(
     session, candidate: Candidate, mission: Mission,
     application: Application, job: JobPosting, company_name: str,
+    run_authorized: bool = False,
 ) -> Decision:
     """
     Peut-on envoyer cette candidature ? Chaque refus porte son motif, pour que
@@ -116,8 +117,10 @@ async def decide(
     if not destination:
         return Decision(False, "aucune adresse de candidature", channel, destination)
 
+    # « Postule pour moi », choisi au lancement d'une mission, vaut
+    # autorisation pour cette mission : pas besoin de canaux pré-cochés.
     allowed_channels = mission.allowed_channels or []
-    if channel.value not in allowed_channels:
+    if not run_authorized and channel.value not in allowed_channels:
         return Decision(
             False, f"canal « {channel.value} » non autorisé par ton mandat",
             channel, destination, needs_approval=True,
@@ -132,6 +135,9 @@ async def decide(
         )
 
     # Niveau d'autonomie : c'est ici que se joue « qui appuie sur le bouton ».
+    # Une mission explicitement autorisée à envoyer a déjà la réponse.
+    if run_authorized:
+        return Decision(True, "autorisée par la mission", channel, destination)
     if mission.autonomy == AutonomyLevel.PROPOSE:
         return Decision(
             False, "tu valides chaque envoi", channel, destination, needs_approval=True,
@@ -150,6 +156,7 @@ async def decide(
 
 async def prepare_dispatch(
     candidate_id: UUID, application_id: UUID, run_id: UUID | None = None,
+    run_authorized: bool = False,
 ) -> ApplicationDispatch | None:
     """
     Crée la trace et arrête le statut selon l'autorisation.
@@ -175,7 +182,10 @@ async def prepare_dispatch(
         if not candidate or not mission:
             return None
 
-        verdict = await decide(session, candidate, mission, application, job, company_name)
+        verdict = await decide(
+            session, candidate, mission, application, job, company_name,
+            run_authorized=run_authorized,
+        )
 
         letter = (application.metadata_json or {}).get("cover_letter")
 
@@ -196,6 +206,12 @@ async def prepare_dispatch(
         cv_bytes, cv_name, cv_mode = resolve_cv(
             candidate, (application.metadata_json or {}).get("tailored_cv"),
         )
+        if cv_mode == "render_failed":
+            from app.agents.incidents import report_incident
+            await report_incident(
+                "cv_render_failed", candidate_id, "composition Typst échouée à l'assemblage",
+                context={"job": job.title, "company": company_name},
+            )
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
 
         dispatch = ApplicationDispatch(
@@ -291,12 +307,21 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             if result["real"] and d.application_id:
                 app = await session.get(Application, d.application_id)
                 if app:
-                    app.status = ApplicationStatus.APPLIED
+                    from app.agents.application.followup import record_status
                     app.applied_at = d.sent_at
+                    record_status(app, ApplicationStatus.APPLIED, f"envoyée via {d.channel.value}")
         else:
             d.status = DispatchStatus.FAILED
             d.error = result.get("error", "échec inconnu")
 
         await session.commit()
         await session.refresh(d)
-        return d
+
+    if d.status == DispatchStatus.FAILED:
+        from app.agents.incidents import report_incident
+        await report_incident(
+            "send_failed", d.candidate_id, d.error or "",
+            context={"job": d.job_title, "company": d.company_name, "channel": d.channel.value,
+                     "dispatch_id": str(d.id)},
+        )
+    return d

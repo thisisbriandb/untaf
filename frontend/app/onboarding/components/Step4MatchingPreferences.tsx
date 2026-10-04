@@ -7,6 +7,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { useState } from "react";
 import { cvTemplates, contractOptions, remoteOptions, ColorSwatch, ExperienceEntry, EducationEntry, LanguageEntry } from "../types";
 import { CandidateCvPreview } from "./CandidateCvPreview";
+import { apiFetch } from "@/lib/api";
 
 interface Step4MatchingPreferencesProps {
   fullName: string;
@@ -71,7 +72,7 @@ export function Step4MatchingPreferences({
       const tpl = cvTemplates.find((t) => t.id === selectedTemplate);
       const photoUrlToSend = userPhotoUrl || tpl?.photo || null;
 
-      const response = await fetch(`${API_BASE_URL}/api/candidates/download-cv`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/candidates/download-cv`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

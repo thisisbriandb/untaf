@@ -11,6 +11,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.auth import AuthUser, assert_owner, get_user, require_user
+from app.config import settings
 from app.database import get_db
 from app.models.company import Company
 from app.models.job_posting import (
@@ -131,7 +133,11 @@ async def get_job_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{job_id}", response_model=JobPostingDetail)
-async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_job(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AuthUser | None = Depends(get_user),
+):
     """Get full details for a single job posting."""
     result = await db.execute(
         select(JobPosting, Company.name, Company.domain)
@@ -143,6 +149,18 @@ async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "Job posting not found")
 
     posting, company_name, company_domain = row
+
+    # Une offre collée par un candidat reste la sienne : son texte peut
+    # contenir des éléments qu'il n'a pas choisi de rendre publics.
+    # `external_id` vaut « import:<candidate_id>:<uuid> ».
+    if posting.external_id.startswith(IMPORT_PREFIX) and not settings.auth_bypassed:
+        owner = posting.external_id[len(IMPORT_PREFIX):].split(":", 1)[0]
+        try:
+            owner_id = UUID(owner)
+        except ValueError:
+            raise HTTPException(404, "Job posting not found") from None
+        await assert_owner(db, await require_user(user), owner_id)
+
     data = JobPostingDetail.model_validate(posting)
     data.company_name = company_name
     data.company_domain = company_domain

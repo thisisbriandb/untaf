@@ -168,9 +168,12 @@ def build_outcome(
         )
     elif dispatch.status == DispatchStatus.SIMULATED:
         headline = "Répétition terminée — rien n'est parti."
+        # Le motif dépend du canal (SMTP absent, clic final désactivé) : c'est
+        # l'exécuteur qui l'a consigné, on le restitue tel quel.
+        reason = dispatch.error or "l'envoi réel n'est pas activé sur ce serveur"
         detail = (
-            "L'envoi réel demande une configuration SMTP. Les documents "
-            "ci-dessous sont ceux qui seraient partis."
+            f"Rien n'est parti : {reason}. Les documents ci-dessous sont "
+            "ceux qui seraient partis."
         )
     elif dispatch.status == DispatchStatus.AWAITING_APPROVAL:
         headline = "Candidature prête, en attente de ton accord."

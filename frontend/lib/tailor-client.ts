@@ -8,6 +8,7 @@
 import { API_BASE_URL } from "./config";
 import type { JobCardData } from "./alice-client";
 import type { CoverLetter } from "./letter-client";
+import { apiFetch } from "./api";
 
 export interface ImportedJob extends JobCardData {
   /** Motifs pour lesquels l'offre sort du mandat, s'il y en a. */
@@ -21,9 +22,20 @@ export interface TailoredCv {
   source: string;
 }
 
+export interface CvReport {
+  template_id: string;
+  /** Aucun modèle choisi par le candidat : on a pris le classique. */
+  template_is_default: boolean;
+  /** Le candidat présentait son PDF d'origine, qu'on ne peut pas réécrire. */
+  was_original_pdf: boolean;
+  missing_sections: string[];
+  missing_labels: string[];
+}
+
 export interface TailoredDocuments {
   cv: TailoredCv;
   letter: CoverLetter;
+  report?: CvReport | null;
 }
 
 const base = (candidateId: string) => `${API_BASE_URL}/api/candidates/${candidateId}/apply`;
@@ -37,7 +49,7 @@ export async function importJob(
   url?: string,
 ): Promise<ImportedJob | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/import`, {
+    const res = await apiFetch(`${base(candidateId)}/import`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, url: url || null }),
@@ -53,7 +65,7 @@ export async function tailorDocuments(
   jobId: string,
 ): Promise<TailoredDocuments | null> {
   try {
-    const res = await fetch(`${base(candidateId)}/${jobId}/tailor`, { method: "POST" });
+    const res = await apiFetch(`${base(candidateId)}/${jobId}/tailor`, { method: "POST" });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

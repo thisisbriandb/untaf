@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,17 @@ export interface JobCardData {
   remote_policy: string;
   source_url: string;
   status: string;
+  /** Qui envoie : auto (Alice) · assisted (un clic) · manual (sur le site). */
+  apply_mode?: ApplyMode;
 }
+
+export type ApplyMode = "auto" | "assisted" | "manual";
+
+export const APPLY_MODE_LABELS: Record<ApplyMode, string> = {
+  auto: "Alice postule",
+  assisted: "Prêt en un clic",
+  manual: "À finir sur le site",
+};
 
 export interface ApplicationData {
   id: string;
@@ -65,6 +76,8 @@ export type UiBlock =
 export interface AliceResponse {
   reply: string;
   ui_blocks: UiBlock[];
+  /** Conversation où l'échange a été enregistré, côté serveur. */
+  conversation_id?: string | null;
 }
 
 // ── Client ─────────────────────────────────────────────────────────────────
@@ -78,12 +91,16 @@ export async function sendMessageToAlice(
   candidateId: string,
   message: string,
   history: ChatTurn[] = [],
+  conversationId: string | null = null,
+  jobId: string | null = null,
 ): Promise<AliceResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/chat`, {
+  const res = await apiFetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       candidate_id: candidateId,
+      conversation_id: conversationId,
+      job_id: jobId,
       message,
       // Le fil de la discussion seulement : les chiffres sont relus côté
       // serveur depuis la base à chaque tour.
@@ -101,4 +118,57 @@ export async function sendMessageToAlice(
   }
 
   return res.json();
+}
+
+// ── Conversations sauvegardées ────────────────────────────────────────────
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  updated_at: string;
+  /** Offre dont parle la conversation, s'il y en a une. */
+  job_id?: string | null;
+  company_name?: string | null;
+  job_title?: string | null;
+}
+
+export interface StoredMessage {
+  id: string;
+  sender: "user" | "alice";
+  text: string;
+  ui_blocks: UiBlock[] | null;
+  created_at: string;
+}
+
+const convBase = (candidateId: string) =>
+  `${API_BASE_URL}/api/candidates/${candidateId}/conversations`;
+
+export async function fetchConversations(candidateId: string): Promise<ConversationSummary[]> {
+  try {
+    const res = await apiFetch(convBase(candidateId));
+    return res.ok ? await res.json() : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchConversationMessages(
+  candidateId: string,
+  conversationId: string,
+): Promise<StoredMessage[]> {
+  try {
+    const res = await apiFetch(`${convBase(candidateId)}/${conversationId}/messages`);
+    return res.ok ? await res.json() : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteConversation(candidateId: string, conversationId: string): Promise<boolean> {
+  try {
+    const res = await apiFetch(`${convBase(candidateId)}/${conversationId}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

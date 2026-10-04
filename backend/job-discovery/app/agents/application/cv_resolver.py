@@ -57,6 +57,11 @@ def resolve_cv(
     tailored = bool(tailoring.get("headline") or tailoring.get("summary"))
     if tailored and HAS_ENGINE:
         mode, template_id = "template", template_id or "classic"
+    # Aucun PDF déposé et aucun modèle choisi : le parcours saisi suffit à
+    # composer un CV au modèle classique. Répondre « aucun CV » alors que tout
+    # le contenu est là bloquait la candidature pour rien.
+    if not candidate.resume_file and HAS_ENGINE and not template_id:
+        mode, template_id = "template", "classic"
 
     # Mode original, ou modèle non choisi : on envoie le document déposé.
     if mode != "template" or not template_id:
@@ -108,8 +113,13 @@ def resolve_cv(
     if education:
         sections["education"] = education
 
-    if candidate.skills:
-        sections["competences"] = [", ".join(candidate.skills)]
+    # Toutes les compétences, dans l'ordre choisi pour l'offre s'il y en a un.
+    skills = list(candidate.skills or [])
+    order = (tailoring.get("skills_order") if tailored else None) or []
+    if order:
+        skills = [s for s in order if s in skills] + [s for s in skills if s not in order]
+    if skills:
+        sections["competences"] = [", ".join(skills)]
 
     languages = [
         f"**{l.get('language')}** — {l.get('level')}" if l.get("level") else f"**{l.get('language')}**"
@@ -161,4 +171,7 @@ def resolve_cv(
         # Un échec de compilation ne doit pas envoyer un document inattendu :
         # on retombe sur l'original en le signalant.
         logger.error("Génération du CV au modèle échouée : %s", e, exc_info=True)
-        return candidate.resume_file, candidate.resume_filename or "CV.pdf", "original"
+        # « render_failed » : l'appelant sait que la promesse (un CV mis en
+        # page) n'est pas tenue, et peut le dire au lieu de servir en silence
+        # l'original — ou rien du tout.
+        return candidate.resume_file, candidate.resume_filename or "CV.pdf", "render_failed"

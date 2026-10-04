@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight, ArrowUp, ArrowUpRight, ClipboardPaste, Mic, PanelRight, Plus, Radar,
+  ArrowUp, ClipboardPaste, PanelRight, Plus,
 } from "lucide-react";
 import { AlicePresence } from "../../onboarding/components/AlicePresence";
 import type {
@@ -11,11 +11,15 @@ import type {
 } from "@/lib/alice-client";
 import { JobCardList } from "./JobCard";
 import { Markdown } from "./Markdown";
-import { ActiveMissionCard } from "./ActiveMissionCard";
+import { MissionStream } from "./MissionStream";
 import { MissionLauncher } from "./MissionLauncher";
 import { ImportJobDialog } from "./ImportJobDialog";
 import { fetchCurrentRun, type MissionRun } from "@/lib/mission-run-client";
 import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../alice-context";
+import { useToast } from "./Toaster";
+import { NextAction } from "./NextAction";
+import { ConversationMenu } from "./ConversationMenu";
+import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -25,10 +29,9 @@ import { canvasLabel, useAlice, type CanvasPayload, type ChatMessage } from "../
  * « Nouvelles offres » est un sujet de consultation ; « Trouve-moi des offres »
  * est une mission confiée. La nuance porte tout le positionnement du produit.
  */
-const METRICS = [
+const SUGGESTIONS = [
   { label: "Trouve-moi des offres", query: "Montre-moi les nouvelles offres" },
-  { label: "Occupe-toi de mon CV", query: "Audite mon CV et dis-moi ce que tu corriges" },
-  { label: "Écris ma lettre", query: "Rédige-moi une lettre de motivation" },
+  { label: "Prépare mes candidatures", query: "Prépare les dossiers de mes meilleures offres et dis-moi lesquelles tu peux envoyer toi-même" },
   { label: "Fais le point", query: "Où en est ma recherche ? Fais-moi le bilan." },
 ];
 
@@ -241,8 +244,14 @@ function workingLabelFor(query: string): string {
   return "Je m'en occupe…";
 }
 
-export function AliceView({ userName }: { userName: string }) {
-  const firstName = userName.split(" ")[0] || "Briand";
+export function AliceView({
+  userName,
+  onSelectTab,
+}: {
+  userName: string;
+  onSelectTab?: (tab: "candidatures" | "mission") => void;
+}) {
+  const firstName = userName.split(" ")[0];
   const [prompt, setPrompt] = useState("");
   const [workingLabel, setWorkingLabel] = useState("Je m'en occupe…");
   const {
@@ -255,12 +264,56 @@ export function AliceView({ userName }: { userName: string }) {
   const [showLauncher, setShowLauncher] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
+  /** Run vu se terminer pendant la visite : sa carte reste, en relais. */
+  const [finishedRunId, setFinishedRunId] = useState<string | null>(null);
+  const toast = useToast();
+
   useEffect(() => {
     if (!candidateId) return;
     fetchCurrentRun(candidateId).then(setRun);
   }, [candidateId]);
 
+  // Ce qui attend le candidat : nourrit la « prochaine action » de l'accueil.
+  const [pipeline, setPipeline] = useState<Pipeline | null>(null);
+  useEffect(() => {
+    if (!candidateId) return;
+    fetchPipeline(candidateId).then(setPipeline);
+  }, [candidateId, run?.status]);
+
+  // Alice peut ouvrir elle-même l'assistant de mission depuis la conversation.
+  useEffect(() => {
+    const open = () => setShowLauncher(true);
+    window.addEventListener("untaf:open-mission-launcher", open);
+    return () => window.removeEventListener("untaf:open-mission-launcher", open);
+  }, []);
+
   const isRunLive = run?.status === "running" || run?.status === "preparing";
+
+  /**
+   * Suivi du run. Quand il se termine sous les yeux de l'utilisateur, Alice
+   * le dit dans le fil — c'est elle qui rend compte, pas un badge qui change
+   * de couleur — et la carte passe le relais à ce qui reste à faire.
+   */
+  const runRef = useRef<MissionRun | null>(null);
+  useEffect(() => {
+    runRef.current = run;
+  }, [run]);
+  const handleRunChange = useCallback(
+    (next: MissionRun | null) => {
+      const prev = runRef.current;
+      const wasLive = prev?.status === "running" || prev?.status === "preparing";
+      const nowDone = next && (next.status === "completed" || next.status === "interrupted");
+      if (wasLive && nowDone && next) {
+        setFinishedRunId(next.id);
+        if (next.report) sayAsAlice(next.report);
+        toast(next.status === "completed" ? "Mission terminée." : "Mission arrêtée.", "info");
+      }
+      setRun(next);
+    },
+    [sayAsAlice, toast],
+  );
+
+  const showRunCard = run && (isRunLive || run.id === finishedRunId);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
@@ -309,51 +362,30 @@ export function AliceView({ userName }: { userName: string }) {
           <div className="flex flex-col items-center text-center gap-3 shrink-0">
             <AlicePresence emotion={emotion} size="lg" />
             <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
-              Bonjour {firstName}.
+              Bonjour{firstName ? ` ${firstName}` : ""}.
             </h1>
           </div>
 
-          {/* Action principale : confier une mission. Le produit tient sur ce
-              geste — il ne peut pas être caché derrière une icône. */}
-          {!isRunLive ? (
-            <div className="w-full flex justify-center shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowLauncher(true)}
-                className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-[#006045]/30 bg-[#006045]/5 text-[#006045] text-sm tracking-tight hover:bg-[#006045]/10 hover:border-[#006045]/50 transition-all cursor-pointer"
-              >
-                <Radar className="w-4 h-4 stroke-[1.6]" />
-                <span>Confier une mission à Alice</span>
-                <ArrowRight className="w-3.5 h-3.5 stroke-[1.8] transition-transform group-hover:translate-x-0.5" />
-              </button>
+          {/* Une seule prochaine action — pas un tableau de bord. Masquée
+              pendant une mission (la carte de mission tient ce rôle) et dès
+              que la conversation est engagée. */}
+          {!isRunLive && !hasConversation && (
+            <div className="w-full shrink-0">
+              <NextAction
+                pipeline={pipeline}
+                onOpenCandidatures={() => onSelectTab?.("candidatures")}
+                onLaunchMission={() => setShowLauncher(true)}
+              />
             </div>
-          ) : null}
-
-          <div className="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2 shrink-0">
-            {METRICS.map((m) => (
-              <button
-                key={m.label}
-                type="button"
-                onClick={() => send(m.query)}
-                disabled={isThinking}
-                className="flex items-center gap-1.5 text-xs md:text-sm font-light text-[#1A1918]/70 hover:text-[#006045] transition-colors cursor-pointer group py-1 tracking-tight disabled:opacity-40"
-              >
-                <ArrowUpRight className="w-3.5 h-3.5 text-[#006045] stroke-[2] shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                <span className="font-light">{m.label}</span>
-              </button>
-            ))}
-          </div>
+          )}
 
           {/* Uniquement pendant qu'une mission tourne. Une mission terminée n'a
               rien à faire en permanence sur l'écran d'accueil : son compte rendu
               est dans le fil, et l'historique est dans l'onglet Mission. */}
-          {isRunLive && candidateId && run && (
-            <div className="w-full shrink-0">
-              <ActiveMissionCard candidateId={candidateId} run={run} onChange={setRun} />
-            </div>
-          )}
 
-          <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-6 shrink-0">
+
+          <div className="w-full space-y-3.5 border-t border-[#1A1918]/8 pt-3 shrink-0">
+            <ConversationMenu />
             <AnimatePresence initial={false}>
               {messages.map((msg) => (
                 <motion.div
@@ -368,6 +400,17 @@ export function AliceView({ userName }: { userName: string }) {
                 </motion.div>
               ))}
             </AnimatePresence>
+            {/* La mission se raconte ici, dans le fil, au fil de l'eau */}
+            {showRunCard && candidateId && run && (
+              <MissionStream
+                key={run.id}
+                candidateId={candidateId}
+                run={run}
+                onChange={handleRunChange}
+                onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
+                onDismiss={() => setFinishedRunId(null)}
+              />
+            )}
             {isThinking && (
               <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
                 <span className="animate-pulse">{workingLabel}</span>
@@ -377,8 +420,23 @@ export function AliceView({ userName }: { userName: string }) {
         </div>
       </div>
 
-      {/* ═══ Bloc fixe en bas : input ═══ */}
+      {/* ═══ Bloc fixe en bas : suggestions discrètes + input ═══ */}
       <div className="w-full shrink-0 pt-3 pb-2 bg-[#FAFAF8]/90 backdrop-blur-sm">
+        {!hasConversation && (
+          <div className="flex flex-wrap justify-center gap-1.5 pb-2.5">
+            {SUGGESTIONS.map((m) => (
+              <button
+                key={m.label}
+                type="button"
+                onClick={() => send(m.query)}
+                disabled={isThinking}
+                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-light text-[#1A1918]/60 hover:border-[#006045]/35 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -417,13 +475,6 @@ export function AliceView({ userName }: { userName: string }) {
 
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
-              type="button"
-              aria-label="Message vocal"
-              className="text-[#1A1918]/35 hover:text-[#1A1918] p-1 rounded-full transition-colors cursor-pointer hidden sm:block"
-            >
-              <Mic className="w-4 h-4 stroke-[1.4]" />
-            </button>
-            <button
               type="submit"
               disabled={!prompt.trim() || isThinking}
               aria-label="Envoyer"
@@ -444,6 +495,7 @@ export function AliceView({ userName }: { userName: string }) {
             onLaunched={(r) => {
               setRun(r);
               setShowLauncher(false);
+              toast("C'est parti — tu peux fermer l'onglet, je t'écris quand c'est fini.");
             }}
           />
         )}

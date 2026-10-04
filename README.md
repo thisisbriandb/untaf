@@ -96,9 +96,11 @@ Ce n'est pas un confort : les missions s'exécutent dans le worker, pas dans le
 process web. Sans lui, `POST /runs` répond **503** et le dit — plutôt que
 d'accepter une mission que personne n'exécutera.
 
-Le beat déclenche l'ingestion France Travail à 5h30, les scrapers ATS à partir
-de 6h, le rafraîchissement du registre des boards le lundi à 4h, et le balayage
-des missions orphelines toutes les 5 minutes.
+Le beat déclenche l'ingestion France Travail à 5h30, le reclassement des
+contacts de candidature à 5h50, les scrapers ATS à partir de 6h, le
+rafraîchissement du registre des boards le lundi à 4h, le balayage des missions
+orphelines toutes les 5 minutes, la détection des relances dues à 8h40 et les
+rapports d'activité (quotidien à 18h30, hebdomadaire le lundi à 8h50).
 
 Pour lancer les services à la main plutôt qu'en conteneur :
 
@@ -117,6 +119,9 @@ Toutes dans `backend/job-discovery/.env`.
 | Variable | Requis | Rôle |
 | --- | --- | --- |
 | `DATABASE_URL` | oui | PostgreSQL, pilote `asyncpg` |
+| `SUPABASE_URL` / `SUPABASE_JWT_SECRET` | oui | Vérification des jetons de session (JWKS ou secret HS256) |
+| `AUTH_DISABLED` | — | `true` lève toutes les gardes — **développement local uniquement** |
+| `ADMIN_EMAILS` | — | Comptes autorisés à déclencher scraping et seeding |
 | `REDIS_URL` | Celery | Courtier des tâches planifiées |
 | `DEBUG` | — | `true` crée les tables au démarrage |
 | `GEMINI_API_KEY` | oui | Conversation, qualification, rédaction |
@@ -124,6 +129,11 @@ Toutes dans `backend/job-discovery/.env`.
 | `IDENTIFIER_FRANCE_TRAVAIL` | offres | `client_id` (format `PAR_…`) |
 | `FRANCE_TRAVAIL_API` | offres | `client_secret` |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | envois | Sans eux, les candidatures sont **simulées** |
+| `RESEND_API_KEY` | e-mails | Candidatures, notifications, connexion, alertes (domaine `MAIL_DOMAIN`) |
+| `AUTH_SECRET` | oui | Signature des sessions de connexion |
+| `OPS_ALERT_EMAIL` | — | Alertes quand une promesse n'est pas tenue |
+| `FRONTEND_URL` | notifications | Racine des liens dans les e-mails (`/dashboard?tab=…`) |
+| `FOLLOWUP_AFTER_DAYS` | — | Jours sans réponse avant de proposer une relance (défaut 7) |
 | `SIRENE_API_TOKEN` | — | Enrichissement entreprises |
 
 ### France Travail
@@ -135,6 +145,43 @@ distincte de la création de l'application. Sans lui, l'authentification renvoie
 
 Le scope OAuth doit contenir `application_{client_id}` en plus des scopes
 d'API ; c'est géré par le code mais mal documenté côté France Travail.
+
+---
+
+## Authentification
+
+Connexion sans mot de passe : un lien et un code à 6 chiffres envoyés depuis
+`alice@alice-agent.fr` (Resend) par
+[`api/auth_routes.py`](backend/job-discovery/app/api/auth_routes.py). L'API
+signe elle-même les sessions (`AUTH_SECRET`, `SESSION_DAYS`) ; rien à
+configurer côté frontend. Jetons à usage unique valables 15 minutes,
+empreintes seules en base, 5 essais de code, 5 demandes par adresse et par
+quart d'heure. Le lien ouvert dans un autre onglet fait reprendre l'onglet
+d'origine (l'onboarding en cours n'est pas perdu). Un rechargement garde la
+session ; sans session, `/` et `/dashboard` mènent à la connexion plutôt qu'à
+l'onboarding. Les jetons Supabase Auth restent acceptés si
+`SUPABASE_JWT_SECRET` est fourni.
+
+Chaque requête porte le jeton de session, vérifié par
+[`app/auth.py`](backend/job-discovery/app/auth.py). Un profil n'est accessible
+qu'au compte auquel il est rattaché (`candidates.auth_user_id`) :
+
+- toute route dont le chemin contient `{candidate_id}` est gardée au niveau de
+  l'application — une route ajoutée plus tard l'est d'office ;
+- les routes sans ce paramètre (`/api/chat`, `/api/applications/…`, liste des
+  candidats) vérifient l'appartenance explicitement ;
+- les déclencheurs coûteux (seeding, résolution ATS, matching global) sont
+  réservés à `ADMIN_EMAILS` ;
+- les offres collées par un candidat ne sont lisibles que par lui ;
+- un profil créé avant l'authentification est rattaché à la première
+  connexion avec la même adresse (la connexion prouve la possession de
+  l'adresse).
+
+L'onboarding reste ouvert jusqu'à l'activation : l'analyse du CV et la mise en
+forme ne demandent pas de compte. L'adresse est confirmée à la dernière étape,
+sans perdre ce qui a été saisi. Sans `AUTH_SECRET`, l'API refuse (503) plutôt
+que d'ouvrir — sauf en développement (`DEBUG=true`) ou avec
+`AUTH_DISABLED=true`.
 
 ---
 
@@ -187,7 +234,7 @@ Chaque offre écartée l'est avec un motif lisible, consultable dans le journal.
 
 | Canal | Complexité | État |
 | --- | --- | --- |
-| Email | `simple` | Implémenté, mais **sans stock** (voir *Limites connues*) |
+| Email | `simple` | Implémenté ; adresses extraites des annonces |
 | Greenhouse / Lever / Ashby | `medium` | Formulaire rempli dans un navigateur |
 | Formulaire employeur | `complex` | Socle commun rempli, le reste signalé |
 | Portail France Travail | `impossible` | Compte candidat requis |
@@ -220,43 +267,141 @@ Rien ne part sans autorisation du mandat, rien ne part deux fois, et un envoi
 simulé n'est **jamais** rapporté comme réel — `SIMULATED` et `SENT` sont deux
 états distincts.
 
+### Adapter un CV — ce que ça veut dire
+
+Adapter un CV à une offre, c'est réécrire l'accroche et la présentation pour ce
+poste, et placer en tête les compétences que l'annonce demande. **Rien n'est
+retiré** : expériences, formation et langues restent toutes. Le CV général du
+candidat ne bouge pas ; la version adaptée est rangée sur la candidature.
+
+Le parcours vit côté serveur (`candidates.cv_content`) : l'onboarding l'envoie
+à l'activation, l'éditeur le relit sur n'importe quel appareil, et s'il manque
+encore une section alors qu'un CV a été déposé, il est relu depuis ce PDF
+([`cv_completeness.py`](backend/job-discovery/app/agents/application/cv_completeness.py))
+sans écraser ce qui a été saisi. Les sections encore vides sont signalées.
+
+Un PDF déposé ne se réécrit pas : l'adapter passe par un modèle de mise en
+page (classique par défaut), et l'interface propose d'en choisir un.
+
+### Qui envoie la candidature
+
+Chaque offre porte un mode, affiché partout (`feasibility.apply_mode`) :
+
+| Mode | Quand | Ce qui se passe |
+| --- | --- | --- |
+| « Alice postule » | adresse e-mail publiée + SMTP, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
+| « Prêt en un clic » | ATS ou formulaire sans envoi automatique, e-mail sans SMTP | tout est rempli, le candidat confirme |
+| « À finir sur le site » | portail France Travail, canal inconnu | le dossier est prêt, le candidat l'envoie |
+
+Une mission « postuler » prépare d'abord les offres qu'Alice peut réellement
+envoyer. Quel que soit le mode, « Postuler » se termine toujours sur le
+dossier téléchargeable (CV adapté, lettre, annonce) et un bouton « J'ai
+postulé » qui fait entrer la candidature dans le suivi (relance comprise).
+
+### Missions
+
+Une mission est **une seule passe, sans durée** : reprendre les offres
+retenues (le repérage tourne chaque matin), préparer le dossier complet des
+3, 5 ou 10 meilleures, et — si l'utilisateur a choisi « Postuler pour moi » —
+envoyer ce qui peut l'être. Choisir l'envoi au lancement vaut autorisation pour
+cette mission (doublons, entreprises bloquées et quota restent appliqués).
+Chaque action est écrite au journal au moment où elle a lieu et diffusée en
+direct dans la conversation ; l'utilisateur peut fermer l'onglet, un e-mail
+rend compte à la fin. Sans worker Celery joignable, la mission tourne dans le
+processus de l'API plutôt que de ne pas tourner.
+
+### Promesses non tenues
+
+Quand Alice ne peut pas tenir une promesse (CV non composé, envoi échoué,
+dossier impossible, mission vide ou en erreur, e-mail non délivré),
+[`incidents.py`](backend/job-discovery/app/agents/incidents.py) l'écrit au
+journal du candidat avec une alternative concrète, et alerte
+`OPS_ALERT_EMAIL` (une fois par type, par candidat et par jour).
+
+### Conversations par offre
+
+Une question posée depuis une offre part dans la conversation de cette offre
+(une seule par offre) : Alice reçoit l'annonce, le statut et le dossier comme
+contexte, et la barre latérale (bouton à gauche de l'en-tête) range ces
+conversations sous le nom de l'entreprise, à côté du fil général. Les chiffres
+restent communs : ils sont relus en base à chaque tour.
+
+### Pack et envoi pendant une mission
+
+Une mission « préparer » ou « postuler » construit pour chaque offre du haut du
+panier un **pack** complet — CV adapté (accroche et synthèse) et lettre — par
+le même module que le bouton « adapter » du Canvas
+([`pack.py`](backend/job-discovery/app/agents/application/pack.py)). Une
+mission « postuler » passe ensuite chaque pack au dispatcher : ce que le mandat
+autorise part, le reste rejoint la **file de validation** (onglet
+Candidatures, « Tout valider » en un geste). Si l'utilisateur a demandé à
+valider chaque envoi pour cette mission, c'est la règle la plus stricte qui
+l'emporte. Une candidature n'est jamais reproposée d'un cycle à l'autre.
+
+### Contacts de candidature
+
+Les adresses sont cherchées partout où elles se cachent — champ `courriel`,
+consignes, coordonnées, description — par
+[`contact_extract.py`](backend/job-discovery/app/agents/discovery/contact_extract.py),
+qui écarte les boîtes de plateforme (`francetravail.fr`…) et les expéditeurs
+automatiques, et préfère l'adresse entourée de mots de candidature. Le stock
+existant est repassé chaque matin (`reclassify_apply_contacts`).
+
+### Après la candidature
+
+Chaque changement de statut est daté dans une frise. Sans réponse au bout de
+`FOLLOWUP_AFTER_DAYS` jours, Alice rédige une relance (courte, propre à
+l'offre) et la propose : le candidat l'envoie depuis sa messagerie en un clic.
+Elle ne l'envoie pas elle-même — un second contact engage davantage que le
+premier. Entretien, offre ou refus rejoignent le journal.
+
+### Notifications
+
+Alice écrit au candidat
+([`notifications/`](backend/job-discovery/app/agents/notifications)) : fin de
+mission (compte rendu et ce qui attend), candidature réellement envoyée,
+relances dues, rapport quotidien ou hebdomadaire. Chaque type se coupe dans
+Paramètres. La table `notifications` garde l'historique et sert de verrou
+anti-doublon (`dedupe_key` unique) ; sans service d'envoi configuré, la
+notification est enregistrée en `simulated`, jamais rapportée comme partie.
+
 ---
 
 ## État actuel
 
 **Fonctionne** : onboarding, collecte multi-sources, matching explicable,
 éditeur de CV avec choix de modèle, rédaction de lettres ancrée sur l'annonce,
-signature manuscrite, missions bornées avec journal, candidature par email.
+signature manuscrite, missions bornées avec journal, packs adaptés par offre,
+envoi pendant les missions et file de validation, candidature par email,
+relances, notifications par e-mail et rapports d'activité.
 
-**Simulé** : l'envoi, tant que SMTP n'est pas configuré. L'interface l'indique
-explicitement.
+**Simulé** : l'envoi, tant que SMTP n'est pas configuré ; les notifications,
+tant que ni Resend ni SMTP ne le sont. L'interface l'indique explicitement.
 
-**Absent** : connecteurs ATS, agent navigateur, suivi des réponses.
+**Absent** : lecture de la boîte de réception (les réponses des recruteurs sont
+consignées à la main depuis Candidatures), connexion France Travail.
 
 ---
 
 ## Limites connues
 
-- **Le canal e-mail ne couvre rien.** Les offres classées `EMAIL` viennent de
-  France Travail, dont le champ `courriel` contient une phrase (« Pour
-  postuler, utiliser le lien suivant : … ») et non une adresse. Sur le stock
-  actuel, **zéro** offre a une adresse exploitable : le seul canal implémenté
-  s'applique à un ensemble vide. À reclasser en `EXTERNAL_LINK` à l'ingestion.
+- **Le canal e-mail dépend de ce que publient les annonces.** Les adresses
+  sont désormais extraites des consignes et des descriptions, mais une offre
+  France Travail sans adresse ni lien employeur reste réservée au portail.
 - **Le pont `ALTER TABLE` de `main.py` fait doublon avec Alembic.** Il reste en
   place le temps de la bascule vers Supabase ; une fois la base migrée, c'est
   Alembic seul qui doit faire foi et le pont doit disparaître.
-- **Rien n'informe l'utilisateur** quand une mission se termine pendant son
-  absence. L'état est exact en base, mais il faut revenir le consulter : aucun
-  e-mail ni notification n'est envoyé. C'est le principal écart avec la
-  promesse « confie-moi une mission et va faire autre chose ».
 - **Les fichiers sont stockés dans Postgres** (`resume_file`, `resume_blob` en
   `bytea`, signature en base64). Chaque `pg_dump` les embarque, ce qui alourdit
   les sauvegardes et gonfle une base facturée à la taille. Leur place est
   Supabase Storage, avec seulement le chemin en base.
-- **Le parcours détaillé est dupliqué** entre `localStorage` et
-  `Candidate.cv_content`. Le serveur fait foi pour ce qu'Alice rédige.
-- **L'historique de conversation transite par le navigateur** à chaque tour. Il
-  ne survit pas à un changement d'appareil.
+- **Le portail France Travail reste hors de portée de l'envoi automatique.**
+  Il exige le compte candidat de l'utilisateur, et il n'existe pas d'API
+  « postuler ». La seule voie serait une session navigateur autorisée par
+  l'utilisateur lui-même (voir `frontend/spec/moteur_candidature.md`, P1).
+- **Le rendu des CV au modèle télécharge des paquets Typst** (icônes) au
+  premier usage : le serveur doit pouvoir joindre `packages.typst.org`, ou
+  ces paquets doivent être pré-installés dans l'image.
 
 ---
 

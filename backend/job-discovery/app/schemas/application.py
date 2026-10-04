@@ -20,6 +20,8 @@ class ApplicationCreate(ApplicationBase):
 
 class ApplicationStatusUpdate(BaseModel):
     status: ApplicationStatus
+    #: Précision libre (« entretien le 12 avec la CTO »), gardée dans la frise.
+    note: str | None = None
 
 
 class ApplicationOut(ApplicationBase):

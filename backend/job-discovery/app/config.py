@@ -46,6 +46,40 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 10
 
+    # ── Authentification ─────────────────────────────────
+    # Connexion par e-mail (lien + code envoyés via Resend). L'API signe
+    # elle-même les sessions avec AUTH_SECRET — une longue chaîne aléatoire,
+    # à ne jamais changer en production (toutes les sessions tomberaient).
+    #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+    auth_secret: str = ""
+    #: Durée de vie d'une session, en jours.
+    session_days: int = 30
+    #: Jetons Supabase Auth, acceptés en plus si un projet les émet : secret
+    #: JWT du projet (HS256) ou JWKS public de SUPABASE_URL.
+    supabase_url: str = ""
+    supabase_jwt_secret: str = ""
+    #: Développement local uniquement : lève toutes les gardes. Jamais en
+    #: production — n'importe qui pourrait lire n'importe quel profil.
+    auth_disabled: bool = False
+    #: E-mails autorisés à déclencher scraping et seeding, séparés par des virgules.
+    admin_emails: str = ""
+
+    @property
+    def auth_bypassed(self) -> bool:
+        """
+        Gardes levées : explicitement, ou en développement (DEBUG) quand
+        aucune authentification n'est configurée — un `.env` local d'avant
+        l'authentification ne doit pas bloquer toute l'application en 503.
+        En production (DEBUG=false), l'absence de configuration reste un refus.
+        """
+        if self.auth_disabled:
+            return True
+        return self.debug and not (self.auth_secret or self.supabase_url or self.supabase_jwt_secret)
+
+    @property
+    def admin_email_list(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
     # ── Redis (Celery broker + result backend) ───────────
     redis_url: str = "redis://localhost:6379/0"
 
@@ -90,8 +124,47 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
 
     @property
-    def can_send_email(self) -> bool:
+    def smtp_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_user and self.smtp_password)
+
+    # ── E-mails (Resend, domaine alice-agent.fr) ─────────
+    # Tout ce qui part — candidatures, notifications, liens de connexion,
+    # alertes — passe par Resend quand la clé est là : un seul expéditeur
+    # vérifié (SPF/DKIM du domaine), une seule délivrabilité à surveiller.
+    # Le SMTP ci-dessus reste un repli.
+    resend_api_key: str = ""
+    mail_domain: str = "alice-agent.fr"
+    #: Expéditeur des notifications et des liens de connexion.
+    notify_from_email: str = ""
+    notify_from_name: str = "Alice"
+    #: Expéditeur des candidatures, affiché « Prénom Nom via Alice ». Les
+    #: réponses du recruteur vont au candidat (Reply-To).
+    application_from_email: str = ""
+    #: Qui est prévenu quand Alice ne tient pas une promesse.
+    ops_alert_email: str = "briand@alice-agent.fr"
+    #: Racine du frontend, pour les liens des e-mails.
+    frontend_url: str = "http://localhost:3000"
+
+    @property
+    def notify_sender(self) -> str:
+        return self.notify_from_email or f"alice@{self.mail_domain}"
+
+    @property
+    def application_sender(self) -> str:
+        return self.application_from_email or f"candidatures@{self.mail_domain}"
+
+    @property
+    def can_send_email(self) -> bool:
+        """Une candidature par e-mail peut-elle réellement partir ?"""
+        return bool(self.resend_api_key) or self.smtp_configured
+
+    @property
+    def can_notify(self) -> bool:
+        return bool(self.resend_api_key) or self.smtp_configured
+
+    # ── Suivi des candidatures ───────────────────────────
+    #: Jours sans réponse après lesquels Alice propose une relance.
+    followup_after_days: int = 7
 
     # ── Candidature par pilotage navigateur ──────────────
     # Interrupteur volontairement distinct de l'autorisation du mandat. Le

@@ -23,8 +23,8 @@ from app.agents.discovery.scrapers.base import ScrapedJob
 from app.database import async_session
 from app.models.company import ATSType, Company, CompanyStatus, SeedSource
 from app.models.job_posting import (
-    ApplyChannel, ApplyComplexity, ContractType, JobPosting, PostingStatus,
-    RemotePolicy,
+    IMPORT_PREFIX, ApplyChannel, ApplyComplexity, ContractType, JobPosting,
+    PostingStatus, RemotePolicy,
 )
 
 logger = logging.getLogger(__name__)
@@ -272,3 +272,74 @@ async def ingest_for_candidate(candidate_id) -> dict:
         "new_companies": companies,
         "plans": len(plans),
     }
+
+
+async def reclassify_contacts(batch: int = 500) -> dict:
+    """
+    Repasse le stock déjà collecté au crible de l'extraction de contacts.
+
+    Les offres ingérées avant l'extraction élargie sont restées en `EMAIL`
+    sans adresse valide (l'interface proposait un envoi impossible) ou en
+    `EXTERNAL_LINK` alors qu'une adresse figurait dans la consigne ou la
+    description. Idempotent : une offre déjà juste n'est pas modifiée.
+    """
+    from app.agents.discovery.contact_extract import (
+        find_apply_email, find_apply_url, is_valid_email,
+    )
+
+    changed = {"to_email": 0, "to_web_form": 0, "to_external_link": 0}
+    async with async_session() as session:
+        jobs = (await session.execute(
+            select(JobPosting)
+            .where(JobPosting.status == PostingStatus.ACTIVE)
+            .where(JobPosting.apply_channel.in_([
+                ApplyChannel.EMAIL, ApplyChannel.EXTERNAL_LINK, ApplyChannel.UNKNOWN,
+            ]))
+            .limit(batch)
+        )).scalars().all()
+
+        for job in jobs:
+            contact = dict(job.contact_json or {})
+            current = contact.get("email")
+            hints = " ".join(str(contact.get(k) or "") for k in ("instructions", "email"))
+            email = (
+                current if is_valid_email(current)
+                else find_apply_email(hints) or find_apply_email(job.description_raw, min_score=2)
+            )
+            url = contact.get("apply_url") or find_apply_url(hints)
+
+            if email:
+                channel, complexity = ApplyChannel.EMAIL, ApplyComplexity.SIMPLE
+            elif url:
+                channel, complexity = ApplyChannel.WEB_FORM, ApplyComplexity.MEDIUM
+            elif job.apply_channel != ApplyChannel.EMAIL:
+                continue  # rien de neuf à en tirer
+            elif job.external_id.startswith(IMPORT_PREFIX):
+                # Offre collée sans aucun moyen de postuler : canal inconnu,
+                # surtout pas « portail France Travail ».
+                channel, complexity = ApplyChannel.UNKNOWN, ApplyComplexity.COMPLEX
+            else:
+                channel, complexity = ApplyChannel.EXTERNAL_LINK, ApplyComplexity.COMPLEX
+
+            if channel == job.apply_channel and email == current:
+                continue
+
+            if email:
+                contact["email"] = email
+            else:
+                contact.pop("email", None)
+            if url:
+                contact["apply_url"] = url
+            job.contact_json = contact or None
+            job.apply_channel = channel
+            job.apply_complexity = complexity
+            key = {
+                ApplyChannel.EMAIL: "to_email",
+                ApplyChannel.WEB_FORM: "to_web_form",
+            }.get(channel, "to_external_link")  # UNKNOWN compté avec
+            changed[key] += 1
+
+        await session.commit()
+
+    logger.info("Reclassement des contacts : %s", changed)
+    return {"scanned": len(jobs), **changed}

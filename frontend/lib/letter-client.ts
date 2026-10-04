@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 /**
  * Les blocs conventionnels sont des champs distincts, pas du Markdown : c'est
@@ -60,7 +61,7 @@ export function emptyLetter(companyName = "", jobTitle = ""): CoverLetter {
  */
 export async function downloadLetterPdf(letter: CoverLetter): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/download-cover-letter`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/download-cover-letter`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(letter),
@@ -86,7 +87,7 @@ export async function downloadLetterPdf(letter: CoverLetter): Promise<boolean> {
 
 export async function fetchSignature(candidateId: string): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`);
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`);
     if (!res.ok) return null;
     const data = await res.json();
     return data.image ?? null;
@@ -100,7 +101,7 @@ export async function saveSignature(
   dataUrl: string,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: dataUrl }),
@@ -113,7 +114,7 @@ export async function saveSignature(
 
 export async function deleteSignature(candidateId: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/signature`, {
       method: "DELETE",
     });
     return res.ok;

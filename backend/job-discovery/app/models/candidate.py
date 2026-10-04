@@ -21,6 +21,14 @@ class Candidate(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
+    # ── Compte ────────────────────────────────────────────
+    # Utilisateur Supabase propriétaire du profil. Seul lui peut le lire ou
+    # agir en son nom. Null pour les profils créés avant l'authentification :
+    # ils sont rattachés à la première connexion avec la même adresse.
+    auth_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, unique=True, index=True,
+    )
+
     # ── Identity & Contact ────────────────────────────────
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
@@ -88,6 +96,15 @@ class Candidate(Base):
         JSONB, nullable=True,
         comment="MatchingCriteria: filtres durs (langue, pays, métier, exclusions) "
                 "et pondérations. Null = dérivé du profil à la volée."
+    )
+
+    # ── Notifications ─────────────────────────────────────
+    # Ce qu'Alice a le droit d'écrire au candidat, et à quel rythme. Null =
+    # réglages par défaut (voir `app.agents.notifications.DEFAULT_PREFS`).
+    notification_prefs: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment='{"enabled": bool, "mission_report": bool, "application_sent": bool, '
+                '"awaiting_approval": bool, "followups": bool, "digest": "off"|"daily"|"weekly"}',
     )
 
     # ── Timestamps ────────────────────────────────────────

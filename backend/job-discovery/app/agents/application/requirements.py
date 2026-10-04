@@ -96,6 +96,7 @@ def detect_requirements(job: JobPosting, candidate: Candidate,
         origin = {
             "original": "ton document d’origine",
             "tailored": "adapté à cette offre",
+            "render_failed": "ton document d’origine — la mise en page a échoué",
         }.get(cv_origin, "généré depuis ton modèle")
         reqs.append(Requirement("resume", "CV", "satisfied", f"{cv_name} — {origin}"))
     else:

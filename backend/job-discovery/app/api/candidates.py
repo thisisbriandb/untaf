@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, U
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import AuthUser, require_user
+from app.config import settings
 from app.database import get_db
 from app.models.candidate import Candidate
 from app.schemas.candidate import (
@@ -65,9 +67,15 @@ async def list_candidates(
     limit: int = Query(default=20, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
+    user: AuthUser = Depends(require_user),
 ):
-    """List all registered candidates."""
+    """
+    Les profils visibles par l'appelant : le sien, et lui seul. En
+    développement sans authentification, tous (filtrables par email).
+    """
     query = select(Candidate)
+    if not settings.auth_bypassed:
+        query = query.where(Candidate.auth_user_id == user.id)
     if email:
         # Case-insensitive: emails are stored as typed, not normalised.
         query = query.where(func.lower(Candidate.email) == email.strip().lower())
@@ -77,39 +85,62 @@ async def list_candidates(
     return candidates
 
 
+def _apply_create(candidate: Candidate, data: CandidateCreate) -> None:
+    for key in (
+        "full_name", "phone", "github_url", "linkedin_url", "website_url",
+        "headline", "skills", "experience_years", "preferred_locations",
+        "preferred_remote_policies", "preferred_contract_types", "resume_raw",
+    ):
+        setattr(candidate, key, getattr(data, key))
+    candidate.matching_criteria = (
+        data.matching_criteria.model_dump(mode="json", exclude_unset=True)
+        if data.matching_criteria else None
+    )
+
+
 @router.post("/", response_model=CandidateOut, status_code=201)
 async def create_candidate(
     data: CandidateCreate,
     background_tasks: BackgroundTasks,
+    response: Response,
     db: AsyncSession = Depends(get_db),
+    user: AuthUser = Depends(require_user),
 ):
-    """Create a new candidate profile."""
-    # Check email uniqueness
-    existing = await db.scalar(
-        select(Candidate).where(Candidate.email == data.email)
-    )
-    if existing:
-        raise HTTPException(409, f"Candidate with email '{data.email}' already exists")
+    """
+    Crée le profil de l'utilisateur connecté — ou le met à jour s'il existe.
+
+    Avec authentification, l'adresse du profil est celle du compte, quelle que
+    soit celle envoyée : sinon on pourrait créer un profil au nom d'un autre.
+    Refaire l'onboarding reprend le profil existant au lieu d'un 409.
+    """
+    from app.agents.account import claim_candidate
+
+    email = data.email if settings.auth_bypassed else (user.email or data.email)
+
+    if settings.auth_bypassed:
+        existing = await db.scalar(select(Candidate).where(Candidate.email == email))
+        if existing:
+            raise HTTPException(409, f"Candidate with email '{email}' already exists")
+    else:
+        existing = await claim_candidate(db, user)
+        if existing is None and await db.scalar(
+            select(Candidate.id).where(func.lower(Candidate.email) == email.lower())
+        ):
+            # Adresse prise par un profil rattaché à un autre compte.
+            raise HTTPException(409, "Cette adresse est déjà liée à un autre compte.")
+        if existing is not None:
+            _apply_create(existing, data)
+            await db.commit()
+            await db.refresh(existing)
+            background_tasks.add_task(_match_candidate_to_existing_jobs, existing.id)
+            response.status_code = 200
+            return existing
 
     candidate = Candidate(
-        full_name=data.full_name,
-        email=data.email,
-        phone=data.phone,
-        github_url=data.github_url,
-        linkedin_url=data.linkedin_url,
-        website_url=data.website_url,
-        headline=data.headline,
-        skills=data.skills,
-        experience_years=data.experience_years,
-        preferred_locations=data.preferred_locations,
-        preferred_remote_policies=data.preferred_remote_policies,
-        preferred_contract_types=data.preferred_contract_types,
-        resume_raw=data.resume_raw,
-        matching_criteria=(
-            data.matching_criteria.model_dump(mode="json", exclude_unset=True)
-            if data.matching_criteria else None
-        ),
+        email=email,
+        auth_user_id=None if settings.auth_bypassed else user.id,
     )
+    _apply_create(candidate, data)
     db.add(candidate)
     await db.commit()
     await db.refresh(candidate)
@@ -204,6 +235,7 @@ async def set_matching_criteria(
 @router.post("/{candidate_id}/resume", response_model=dict)
 async def upload_resume(
     candidate_id: UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -232,6 +264,11 @@ async def upload_resume(
         candidate.cv_design = {"mode": "original"}
 
     await db.commit()
+
+    # Le parcours qui manque côté serveur est relu depuis ce CV : c'est lui
+    # qui remplira le CV adapté et les lettres. Rien de saisi n'est écrasé.
+    from app.agents.application.cv_completeness import ensure_cv_content
+    background_tasks.add_task(ensure_cv_content, candidate_id)
 
     return {
         "filename": candidate.resume_filename,

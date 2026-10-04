@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./api";
 
 export type AutonomyLevel = "propose" | "auto_above" | "full";
 export type MissionStatus = "active" | "paused" | "archived";
@@ -68,7 +69,7 @@ const base = (candidateId: string) =>
 
 export async function fetchMission(candidateId: string): Promise<Mission | null> {
   try {
-    const res = await fetch(base(candidateId));
+    const res = await apiFetch(base(candidateId));
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -80,7 +81,7 @@ export async function updateMission(
   patch: Partial<Pick<Mission, "title" | "status" | "autonomy" | "auto_apply_min_score" | "weekly_quota">>,
 ): Promise<boolean> {
   try {
-    const res = await fetch(base(candidateId), {
+    const res = await apiFetch(base(candidateId), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -96,7 +97,7 @@ export async function fetchJournal(
   limit = 50,
 ): Promise<MissionEvent[]> {
   try {
-    const res = await fetch(`${base(candidateId)}/journal?limit=${limit}`);
+    const res = await apiFetch(`${base(candidateId)}/journal?limit=${limit}`);
     return res.ok ? await res.json() : [];
   } catch {
     return [];

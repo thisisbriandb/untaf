@@ -13,6 +13,11 @@ import {
   ZONE_COUNTRIES,
   type CriteriaDraft,
 } from "./CriteriaStep";
+import { ApiUnreachableError, apiFetch, describeApiError } from "@/lib/api";
+import { accessToken, authEnabled } from "@/lib/auth";
+import { destinationAfterSignIn } from "@/lib/session";
+import { EmailSignIn } from "../../auth/EmailSignIn";
+import Link from "next/link";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +79,9 @@ export function AliceExperience() {
   const [emailInput, setEmailInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [activationError, setActivationError] = useState<string | null>(null);
+  /** Adresse en attente de confirmation : l'activation reprend à la connexion. */
+  const [pendingAuthEmail, setPendingAuthEmail] = useState<string | null>(null);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -147,6 +155,7 @@ export function AliceExperience() {
       experienceYears: parsed.experience_years ?? prev.experienceYears,
       experiences: parsed.experiences || prev.experiences,
       education: parsed.education || prev.education,
+      languages: parsed.languages?.length ? parsed.languages : prev.languages,
     }));
 
     // Les localisations extraites pré-remplissent le mandat sans l'imposer.
@@ -182,13 +191,21 @@ export function AliceExperience() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${API_BASE_URL}/api/candidates/parse-resume`, {
+      const res = await apiFetch(`${API_BASE_URL}/api/candidates/parse-resume`, {
         method: "POST",
         body: formData,
       });
       if (res.ok) parsedData = await res.json();
     } catch (err) {
       console.error("CV parse error:", err);
+      if (err instanceof ApiUnreachableError) {
+        // Ne pas faire comme si la lecture avait marché : le dire, et
+        // laisser recommencer quand le serveur répondra.
+        await say("Je n'arrive pas à joindre mon serveur pour lire ton CV.", "thinking", 600);
+        await say("Réessaie dans un moment — rien n'est perdu.", "listening", 400);
+        setPhase(2); // retour au dépôt du CV
+        return;
+      }
     }
 
     await read("Je rassemble ce qui compte...", 650);
@@ -222,7 +239,7 @@ export function AliceExperience() {
 
     let parsedData: any = null;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE_URL}/api/candidates/parse-linkedin?linkedin_url=${encodeURIComponent(linkedinUrl.trim())}`,
         { method: "POST" }
       );
@@ -295,6 +312,15 @@ export function AliceExperience() {
     }
 
     setActivationError(null);
+
+    // Le profil appartient à un compte : sans session, on fait confirmer
+    // l'adresse d'abord. Tout ce qui a été saisi reste en mémoire, et
+    // l'activation reprend d'elle-même une fois la connexion faite.
+    if ((await authEnabled()) && !(await accessToken())) {
+      setPendingAuthEmail(email);
+      return;
+    }
+
     setIsActivating(true);
 
     const matchingCriteria = {
@@ -322,7 +348,7 @@ export function AliceExperience() {
     };
 
     try {
-      let res = await fetch(`${API_BASE_URL}/api/candidates/`, {
+      let res = await apiFetch(`${API_BASE_URL}/api/candidates/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -337,14 +363,14 @@ export function AliceExperience() {
         // mandat. Ne mettre à jour que le mandat laisserait un CV périmé
         // derrière, et c'est le profil qui sert à déduire ce que le mandat ne
         // dit pas. Le PUT relance le matching côté serveur.
-        const lookup = await fetch(
+        const lookup = await apiFetch(
           `${API_BASE_URL}/api/candidates/?email=${encodeURIComponent(email)}`
         );
         const found = lookup.ok ? await lookup.json() : [];
         const existing = found[0] ?? null;
 
         if (existing) {
-          const updated = await fetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
+          const updated = await apiFetch(`${API_BASE_URL}/api/candidates/${existing.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -354,7 +380,30 @@ export function AliceExperience() {
       }
 
       if (!candidate) {
+        if (res.status === 409 && (await authEnabled())) {
+          setActivationError("Cette adresse est déjà liée à un autre compte. Connecte-toi avec elle.");
+          setIsActivating(false);
+          return;
+        }
         throw new Error(`Création impossible (${res.status})`);
+      }
+
+      // Le parcours détaillé part au serveur dès l'activation : c'est avec lui
+      // qu'Alice compose le CV adapté et argumente les lettres. Sans ça, le
+      // CV adapté sortait avec un nom et des compétences, rien d'autre.
+      try {
+        await apiFetch(`${API_BASE_URL}/api/candidates/${candidate.id}/cv-content`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: profile.summary || "",
+            experiences: profile.experiences,
+            education: profile.education,
+            languages: profile.languages,
+          }),
+        });
+      } catch (err) {
+        console.error("CV content save failed:", err);
       }
 
       localStorage.setItem("candidate_id", candidate.id);
@@ -368,7 +417,7 @@ export function AliceExperience() {
         try {
           const form = new FormData();
           form.append("file", cvFile);
-          await fetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
+          await apiFetch(`${API_BASE_URL}/api/candidates/${candidate.id}/resume`, {
             method: "POST",
             body: form,
           });
@@ -384,16 +433,64 @@ export function AliceExperience() {
     } catch (err) {
       console.error("Activation error:", err);
       setActivationError(
-        "Je n'ai pas réussi à ouvrir ton espace. Vérifie ta connexion et réessaie."
+        describeApiError(err, "Je n'ai pas réussi à ouvrir ton espace. Réessaie dans un moment.")
       );
       setIsActivating(false);
     }
   }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say]);
 
+  const activateRef = useRef(handleActivateAlice);
+  useEffect(() => {
+    activateRef.current = handleActivateAlice;
+  }, [handleActivateAlice]);
+
+  const handleAuthConfirmed = useCallback(() => {
+    setPendingAuthEmail(null);
+    void activateRef.current();
+  }, []);
+
+  // Déjà connecté avec un profil : rien à refaire ici, direction l'espace.
+  // Un rechargement ne doit jamais renvoyer quelqu'un qui a déjà un espace
+  // au début de l'onboarding : avec une session, direction son espace ; sans
+  // session mais avec un profil connu sur ce navigateur, la connexion.
+  const [authOn, setAuthOn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const on = await authEnabled();
+      if (!alive) return;
+      setAuthOn(on);
+      if (!on) {
+        if (localStorage.getItem("candidate_id")) router.replace("/dashboard");
+        return;
+      }
+      const token = await accessToken();
+      if (!alive) return;
+      if (!token) {
+        if (localStorage.getItem("candidate_id")) router.replace("/login");
+        return;
+      }
+      setIsSignedIn(true);
+      const destination = await destinationAfterSignIn();
+      if (alive && destination !== "/") router.replace(destination);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
   // ─── Render Canvas ────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-[#FAFAF8] text-[#1A1918] flex flex-col items-center justify-center relative overflow-hidden">
+      {authOn && !isSignedIn && (
+        <Link
+          href="/login"
+          className="absolute top-5 right-6 z-10 text-xs font-light text-[#1A1918]/45 hover:text-[#006045] tracking-tight"
+        >
+          Déjà un compte ? Se connecter
+        </Link>
+      )}
       <div
         ref={scrollRef}
         className="w-full max-w-[520px] mx-auto px-6 py-10 md:py-14 flex flex-col items-center gap-6 overflow-y-auto"
@@ -643,8 +740,18 @@ export function AliceExperience() {
                 </div>
               )}
 
+              {/* ── Confirmation de l'adresse, avant d'ouvrir l'espace ── */}
+              {phase === 5 && pendingAuthEmail && (
+                <EmailSignIn
+                  initialEmail={pendingAuthEmail}
+                  autoSend
+                  title="Confirme ton adresse : c'est elle qui protège ton espace."
+                  onSignedIn={handleAuthConfirmed}
+                />
+              )}
+
               {/* ── Phase 5: Mandat de recherche — dernière étape ── */}
-              {phase === 5 && (
+              {phase === 5 && !pendingAuthEmail && (
                 <CriteriaStep
                   value={criteria}
                   onChange={setCriteria}
