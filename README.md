@@ -209,8 +209,12 @@ que d'ouvrir — sauf en développement (`DEBUG=true`) ou avec
 
 ### Collecte
 
-France Travail (API officielle, source principale) et les ATS publics
-(Greenhouse, Lever, Ashby, Workable). Les requêtes France Travail utilisent les
+France Travail (API officielle, source principale), La bonne alternance
+(alternance, candidature transmise par l'API de l'État) et les ATS publics
+(Greenhouse, Lever, Ashby, Workable, Recruitee — ce dernier acceptant la
+candidature par API sans clé employeur). Les boards sont recensés depuis
+l'index Common Crawl : par chemin (`jobs.lever.co/<board>`) ou par
+sous-domaine (`<board>.recruitee.com`). Les requêtes France Travail utilisent les
 **codes ROME** déduits du mandat plutôt que des mots-clés : `motsCles` combine
 les termes en ET et vide les résultats.
 
@@ -256,6 +260,7 @@ Chaque offre écartée l'est avec un motif lisible, consultable dans le journal.
 | --- | --- | --- |
 | Email | `simple` | Implémenté ; adresses extraites des annonces |
 | La bonne alternance | `simple` | Transmis par l'API de l'État (`POST /job/v1/apply`) |
+| Recruitee | `simple` | Déposé par l'API publique du site carrière (sans clé) |
 | Greenhouse / Lever / Ashby | `medium` | Formulaire rempli dans un navigateur |
 | Formulaire employeur | `complex` | Socle commun rempli, le reste signalé |
 | Portail France Travail | `impossible` | Compte candidat requis |
@@ -322,7 +327,7 @@ Chaque offre porte un mode, affiché partout (`feasibility.apply_mode`) :
 
 | Mode | Quand | Ce qui se passe |
 | --- | --- | --- |
-| « Alice postule » | adresse e-mail publiée + Resend/SMTP, offre La bonne alternance + clé, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
+| « Alice postule » | adresse e-mail publiée + Resend/SMTP, offre Recruitee sans question obligatoire, offre La bonne alternance + habilitation, ou ATS + envoi navigateur | Alice envoie elle-même, selon le mandat |
 | « Prêt en un clic » | ATS ou formulaire sans envoi automatique, e-mail sans SMTP | tout est rempli, le candidat confirme |
 | « À finir sur le site » | portail France Travail, canal inconnu | le dossier est prêt, le candidat l'envoie |
 
@@ -434,15 +439,16 @@ consignées à la main depuis Candidatures), connexion France Travail.
   Il exige le compte candidat de l'utilisateur, et il n'existe pas d'API
   « postuler ». La seule voie serait une session navigateur autorisée par
   l'utilisateur lui-même (voir `frontend/spec/moteur_candidature.md`, P1).
-- **Recruitee n'est pas encore branché.** Son API de site carrière accepte
-  les candidatures sans clé employeur, mais le format exact de la pièce jointe
-  n'a pas pu être vérifié et les boards (sous-domaines) ne s'énumèrent pas
-  comme ceux des autres ATS. Prochaine source à intégrer après La bonne
-  alternance.
-- **Les ATS (Greenhouse, Lever, Ashby) ne sont collectés que par le beat
-  Celery.** Sans services `worker` et `beat` déployés, seules les sources
-  interrogées à la demande (France Travail, La bonne alternance) alimentent
-  les offres.
+- **Recruitee : format d'envoi vérifié par les tests, pas encore en réel.**
+  Le dépôt suit le contrat public (`POST /api/offers/{slug}/candidates`,
+  multipart, `candidate[cv]`) ; un refus du site carrière est dit au candidat,
+  le dossier reste prêt et `OPS_ALERT_EMAIL` est alerté. Les offres à
+  questions obligatoires passent par le formulaire.
+- **Sans `worker` ni `beat`, les ATS sont collectés par l'API elle-même**
+  ([`freshness.py`](backend/job-discovery/app/agents/discovery/freshness.py)) :
+  à la première recherche d'offres, au plus une fois toutes les 20 heures et
+  en arrière-plan (recensement des boards, collecte, qualification). Le beat
+  reste préférable : il étale le travail et ne dépend pas du trafic.
 
 ---
 

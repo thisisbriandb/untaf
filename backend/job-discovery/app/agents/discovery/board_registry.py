@@ -37,6 +37,9 @@ COLLINFO_URL = "https://index.commoncrawl.org/collinfo.json"
 _RESERVED = {
     "api", "assets", "static", "embed", "images", "img", "css", "js",
     "favicon.ico", "robots.txt", "sitemap.xml", "_next", "public", "share",
+    # Sous-domaines de l'éditeur lui-même, pas des employeurs.
+    "www", "app", "careers", "help", "docs", "support", "blog", "status",
+    "apidocs", "partners", "academy", "marketplace", "go", "info",
 }
 
 # A board counts as French-hiring when a posting names France or a large
@@ -65,9 +68,18 @@ class AtsSource:
     #: Slug characters accepted by this platform.
     slug_chars: str = r"A-Za-z0-9_-"
     params: dict[str, str] = field(default_factory=dict)
+    #: Le board est un sous-domaine (`acme.recruitee.com`), pas un chemin.
+    subdomain: bool = False
 
     def slug_pattern(self, host: str) -> re.Pattern[str]:
+        if self.subdomain:
+            return re.compile(rf"https?://([{self.slug_chars}]+)\.{re.escape(host)}")
         return re.compile(rf"{re.escape(host)}/([{self.slug_chars}]+)")
+
+    def index_query(self, host: str) -> dict[str, str]:
+        if self.subdomain:
+            return {"url": host, "matchType": "domain", "output": "json"}
+        return {"url": f"{host}/*", "output": "json"}
 
     def locations(self, payload: Any) -> list[str]:
         """Extract every posting's location string from an API response."""
@@ -108,6 +120,17 @@ ATS_SOURCES: dict[str, AtsSource] = {
         jobs_key=None,  # Lever returns a bare array.
         location_path=("categories", "location"),
         params={"mode": "json"},
+    ),
+    # Recruitee : seul de la liste à accepter la candidature par l'API
+    # publique du site carrière — Alice y envoie elle-même.
+    "recruitee": AtsSource(
+        ats_type=ATSType.RECRUITEE,
+        index_hosts=("recruitee.com",),
+        jobs_url="https://{slug}.recruitee.com/api/offers/",
+        jobs_key="offers",
+        location_path=("location",),
+        slug_chars=r"a-z0-9-",
+        subdomain=True,
     ),
     "workable": AtsSource(
         ats_type=ATSType.WORKABLE,
@@ -195,7 +218,7 @@ async def harvest_slugs(
 
         for host in source.index_hosts:
             pattern = source.slug_pattern(host)
-            query = {"url": f"{host}/*", "output": "json"}
+            query = source.index_query(host)
 
             # Ask how many pages exist rather than relying on `limit`, which
             # truncates alphabetically and would only ever return boards

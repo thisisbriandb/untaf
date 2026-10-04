@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 #: Canal de l'offre → canal d'envoi.
 #: Destination d'un envoi La bonne alternance : `lba:<recipient_id>`.
 LBA_PREFIX = "lba:"
+#: Destination d'un envoi Recruitee : `recruitee:<entreprise>/<offre>`.
+RECRUITEE_PREFIX = "recruitee:"
 
 CHANNEL_MAP = {
     ApplyChannel.EMAIL: DispatchChannel.EMAIL,
@@ -41,6 +43,8 @@ CHANNEL_MAP = {
     ApplyChannel.WORKABLE_API: DispatchChannel.ATS_API,
     # La bonne alternance : transmission par l'API publique, sans navigateur.
     ApplyChannel.LBA_API: DispatchChannel.ATS_API,
+    # Recruitee : dépôt par l'API publique du site carrière, sans navigateur.
+    ApplyChannel.RECRUITEE_API: DispatchChannel.ATS_API,
     ApplyChannel.WEB_FORM: DispatchChannel.WEB_FORM,
     # Absent de la table, EXTERNAL_LINK retombait sur MANUAL et produisait le
     # message « canal manual pas encore automatisable » — incompréhensible.
@@ -101,6 +105,13 @@ async def decide(
         if not settings.lba_configured:
             return Decision(False, "l'envoi via La bonne alternance n'est pas configuré "
                                    "sur ce serveur", channel, destination)
+
+    if job.apply_channel == ApplyChannel.RECRUITEE_API:
+        target = contact.get("recruitee") or {}
+        destination = (
+            f"{RECRUITEE_PREFIX}{target['company']}/{target['offer']}"
+            if target.get("company") and target.get("offer") else None
+        )
 
     if mission.status != MissionStatus.ACTIVE:
         return Decision(False, "mission en pause", channel, destination)
@@ -295,6 +306,8 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         )
     elif (dispatch.destination or "").startswith(LBA_PREFIX):
         result = await _send_via_lba(dispatch, candidate)
+    elif (dispatch.destination or "").startswith(RECRUITEE_PREFIX):
+        result = await _send_via_recruitee(dispatch, candidate)
     elif dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
         # Formulaire public : on le remplit dans un navigateur, guidé par le
         # schéma que l'ATS publie quand il en publie un.
@@ -331,7 +344,9 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
                 if app:
                     from app.agents.application.followup import record_status
                     app.applied_at = d.sent_at
-                    via = ("La bonne alternance" if (d.destination or "").startswith(LBA_PREFIX)
+                    dest = d.destination or ""
+                    via = ("La bonne alternance" if dest.startswith(LBA_PREFIX)
+                           else "Recruitee" if dest.startswith(RECRUITEE_PREFIX)
                            else d.channel.value)
                     record_status(app, ApplicationStatus.APPLIED, f"envoyée via {via}")
         else:
@@ -392,3 +407,38 @@ async def _send_via_lba(dispatch: ApplicationDispatch, candidate: Candidate) -> 
         logger.error("Envoi La bonne alternance impossible : %s", e, exc_info=True)
         return {"ok": False, "real": False, "error": "La bonne alternance injoignable"}
     return {"ok": True, "real": True, "proof": {**proof, "lba_application_id": lba_id}}
+
+
+async def _send_via_recruitee(dispatch: ApplicationDispatch, candidate: Candidate) -> dict:
+    """
+    Dépose la candidature sur le site carrière Recruitee de l'employeur : CV
+    adapté figé à la préparation, lettre en lettre de motivation.
+    """
+    from app.agents.discovery.scrapers.recruitee import RecruiteeError, send_application
+
+    company, _, offer = (dispatch.destination or "")[len(RECRUITEE_PREFIX):].partition("/")
+    proof = {"via": "Recruitee", "company": company, "offer": offer,
+             "attachments": [dispatch.resume_name] if dispatch.resume_blob else []}
+    if not dispatch.resume_blob:
+        return {"ok": False, "real": False, "error": "CV adapté absent : rien n'est parti"}
+    if not candidate.phone:
+        # Exigé par défaut sur les sites carrière Recruitee.
+        return {"ok": False, "real": False,
+                "error": "l'employeur demande un numéro de téléphone : ajoute-le à ton profil"}
+    try:
+        answer = await send_application(
+            company=company, offer=offer,
+            name=candidate.full_name or "", email=candidate.email or "",
+            phone=candidate.phone, resume=dispatch.resume_blob,
+            resume_name=dispatch.resume_name or "CV.pdf",
+            cover_letter=dispatch.letter_body,
+        )
+    except RecruiteeError as e:
+        return {"ok": False, "real": False,
+                "error": f"le site carrière a refusé la candidature ({e.status})",
+                "proof": {**proof, "detail": e.detail}}
+    except Exception as e:  # noqa: BLE001
+        logger.error("Envoi Recruitee impossible : %s", e, exc_info=True)
+        return {"ok": False, "real": False, "error": "site carrière injoignable"}
+    candidate_id = ((answer or {}).get("candidate") or {}).get("id")
+    return {"ok": True, "real": True, "proof": {**proof, "recruitee_candidate_id": candidate_id}}

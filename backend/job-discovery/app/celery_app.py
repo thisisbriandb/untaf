@@ -83,6 +83,19 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.scrape_all_ashby",
         "schedule": crontab(hour=6, minute=30),
     },
+    "daily-scrape-workable": {
+        "task": "app.agents.discovery.tasks.scrape_all_workable",
+        "schedule": crontab(hour=6, minute=40),
+    },
+    "daily-scrape-recruitee": {
+        "task": "app.agents.discovery.tasks.scrape_all_recruitee",
+        "schedule": crontab(hour=6, minute=50),
+    },
+    # Après les collectes ATS : une offre non qualifiée n'est jamais proposée.
+    "daily-qualify-and-match": {
+        "task": "app.agents.discovery.tasks.qualify_and_match_jobs",
+        "schedule": crontab(hour=7, minute=15),
+    },
     # Le registre des boards ATS bouge lentement : un passage par semaine
     # suffit, et il tourne avant les scrapes du jour.
     "weekly-discover-ats-boards": {
