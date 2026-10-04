@@ -42,6 +42,8 @@ class ApplyChannel(str, enum.Enum):
     LEVER_API = "lever_api"
     WORKABLE_API = "workable_api"
     ASHBY_API = "ashby_api"
+    #: La bonne alternance : candidature transmise par l'API publique de l'État.
+    LBA_API = "lba_api"
     WEB_FORM = "web_form"
     EMAIL = "email"
     EXTERNAL_LINK = "external_link"

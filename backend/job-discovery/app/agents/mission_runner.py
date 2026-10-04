@@ -155,9 +155,26 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         await session.commit()
 
     try:
-        # 1. Les offres du jour, confrontées au mandat actuel.
+        # 0. De nouvelles offres, dont celles où Alice envoie elle-même
+        #    (La bonne alternance). Une source en panne ne bloque pas la suite.
         if not await _heartbeat(run_id, RunStep.MATCH):
             return
+        try:
+            from app.agents.discovery.france_travail_task import ingest_for_candidate
+            fresh = await ingest_for_candidate(candidate_id)
+        except Exception as e:  # noqa: BLE001 — on travaille sur le stock
+            logger.warning("Recherche d'offres impossible pendant la mission : %s", e)
+            fresh = {}
+        if fresh.get("ok") and fresh.get("processed"):
+            direct = fresh.get("direct_apply", 0)
+            await _say(
+                run_id, candidate_id, MissionEventKind.SCAN,
+                f"J'ai relevé {fresh['processed']} offres"
+                + (f", dont {direct} où je peux postuler moi-même." if direct else "."),
+                {"processed": fresh["processed"], "scanned": fresh["processed"], "direct_apply": direct},
+            )
+
+        # 1. Les offres du jour, confrontées au mandat actuel.
         try:
             kept = await _match_candidate_to_existing_jobs(candidate_id)
         except Exception as e:  # noqa: BLE001 — on travaille sur le stock déjà noté
