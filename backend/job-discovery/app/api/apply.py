@@ -82,6 +82,39 @@ def _profile(candidate: Candidate) -> dict:
     return candidate_profile(candidate)
 
 
+def _guard_download(label: str):
+    """
+    Un téléchargement ne doit jamais échouer en silence : toute erreur
+    inattendue devient un message clair pour le candidat et une alerte qui
+    porte la trace complète (sinon une 500 sans en-têtes CORS arrivait au
+    navigateur comme « serveur injoignable »).
+    """
+    import functools
+    import traceback
+
+    def wrap(fn):
+        @functools.wraps(fn)
+        async def inner(*args, **kwargs):
+            try:
+                return await fn(*args, **kwargs)
+            except HTTPException:
+                raise
+            except Exception as e:  # noqa: BLE001
+                logger.error("%s : échec inattendu : %s", label, e, exc_info=True)
+                from app.agents.incidents import report_incident
+                await report_incident(
+                    "pack_failed", kwargs.get("candidate_id"), label,
+                    context={"job_id": str(kwargs.get("job_id")),
+                             "erreur": traceback.format_exc()[-1800:]},
+                )
+                raise HTTPException(
+                    500, "Je n'ai pas pu préparer ce téléchargement. L'équipe est prévenue ; "
+                         "réessaie dans quelques minutes.",
+                ) from None
+        return inner
+    return wrap
+
+
 def _render_error() -> str:
     from app.agents.application import cv_resolver
     return cv_resolver.last_render_error or "inconnue"
@@ -212,6 +245,7 @@ async def _cv_report(candidate_id: UUID, pack) -> CvReport:
 
 
 @router.get("/{job_id}/cv")
+@_guard_download("téléchargement du CV adapté")
 async def download_tailored_cv(
     candidate_id: UUID,
     job_id: UUID,
@@ -244,6 +278,7 @@ async def download_tailored_cv(
     )
 
 @router.get("/{job_id}/pack")
+@_guard_download("téléchargement du dossier")
 async def download_pack(
     candidate_id: UUID,
     job_id: UUID,
