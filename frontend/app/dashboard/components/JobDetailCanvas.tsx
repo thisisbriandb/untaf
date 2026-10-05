@@ -9,6 +9,7 @@ import type { JobCardData } from "@/lib/alice-client";
 import { Markdown } from "./Markdown";
 import { ApplyPanel } from "./ApplyPanel";
 import { FinishOnSite } from "./FinishOnSite";
+import { useNarration } from "@/lib/use-narration";
 import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
 } from "@/lib/tailor-client";
@@ -64,6 +65,13 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
   const { submitQuery, isThinking, candidateId, openCanvas, sayAsAlice, goToConversation } = useAlice();
   const [adapting, setAdapting] = useState(false);
   const [tailored, setTailored] = useState<TailoredDocuments | null>(null);
+  const adaptingLabel = useNarration(adapting, [
+    "Je relis l'offre…",
+    "Je repère ce qu'elle attend dans ton parcours…",
+    "Je réécris ton accroche et tes réalisations…",
+    "Je rédige ta lettre…",
+    "Je mets ton CV en page…",
+  ]);
   // L'état du dossier vient du serveur, partagé avec toute l'interface : une
   // candidature déjà préparée (par une mission, depuis la liste…) ne se
   // « prépare » plus ici.
@@ -414,7 +422,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               ) : (
                 <FileText className="w-3 h-3 stroke-[1.6]" />
               )}
-              {adapting ? "J'adapte ton CV et ta lettre…" : "Adapter mon CV et ma lettre"}
+              {adapting ? adaptingLabel : "Adapter mon CV et ma lettre"}
             </button>
           )}
           <div className="flex items-center justify-center gap-4">

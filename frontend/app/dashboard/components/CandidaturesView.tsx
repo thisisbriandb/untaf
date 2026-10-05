@@ -104,7 +104,7 @@ function ActionButton({
       onClick={onClick}
       disabled={busy || disabled}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default",
         tone === "primary" && "bg-[#161615] text-white hover:bg-[#000000]",
         tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615]",
         tone === "danger" && "text-[#1A1918]/60 hover:text-red-600 hover:bg-red-50",
@@ -589,7 +589,7 @@ export function CandidaturesView({
 
         {/* ── Filtres ── */}
         <LayoutGroup>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none">
             {FILTERS.map((f) => {
               const active = f.id === filter;
               const n = countFor(f);
@@ -599,7 +599,7 @@ export function CandidaturesView({
                   type="button"
                   onClick={() => setFilter(f.id)}
                   className={cn(
-                    "relative rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer",
+                    "relative shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer",
                     active ? "text-white" : "text-[#1A1918]/55 hover:text-[#1A1918]",
                   )}
                 >

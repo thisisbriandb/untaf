@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, FolderOpen, PanelLeft, Search, Settings, SquarePen, Trash2 } from "lucide-react";
+import { ArrowRight, FolderOpen, Mail, PanelLeft, Search, Settings, SlidersHorizontal, SquarePen, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteConversation, type ConversationSummary } from "@/lib/alice-client";
 import { fetchPipeline, STAGE_LABELS, type PipelineItem, type Stage } from "@/lib/pipeline-client";
@@ -312,6 +312,20 @@ export function ConversationSidebar({
                   {counts.ready}
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => goTab("mission")}
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
+            >
+              <SlidersHorizontal className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> Mon mandat
+            </button>
+            <button
+              type="button"
+              onClick={() => goTab("messages")}
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
+            >
+              <Mail className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> E-mails d&apos;Alice
             </button>
             <AnimatePresence initial={false}>
               {searching && (

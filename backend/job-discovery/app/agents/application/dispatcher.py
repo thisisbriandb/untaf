@@ -400,7 +400,9 @@ async def _send_via_lba(dispatch: ApplicationDispatch, candidate: Candidate) -> 
     except LbaError as e:
         reason = (
             "la permission d'envoi n'est pas encore accordée à Alice par La bonne alternance"
-            if e.status in (401, 403) else f"La bonne alternance a refusé l'envoi ({e.status})"
+            if e.status in (401, 403)
+            else "La bonne alternance n'a pas accepté l'envoi — ton dossier est prêt, "
+                 "tu peux postuler depuis leur site"
         )
         return {"ok": False, "real": False, "error": reason, "proof": {**proof, "detail": e.detail}}
     except Exception as e:  # noqa: BLE001
@@ -435,8 +437,14 @@ async def _send_via_recruitee(dispatch: ApplicationDispatch, candidate: Candidat
         )
     except RecruiteeError as e:
         return {"ok": False, "real": False,
-                "error": f"le site carrière a refusé la candidature ({e.status})",
-                "proof": {**proof, "detail": e.detail}}
+                "error": (
+                    "le site carrière a refusé un champ (souvent le téléphone ou le CV) — "
+                    "termine sur le site, ton dossier est prêt"
+                    if e.status in (400, 422) else
+                    "le site carrière n'a pas accepté l'envoi — termine sur le site, "
+                    "ton dossier est prêt"
+                ),
+                "proof": {**proof, "detail": e.detail, "status": e.status}}
     except Exception as e:  # noqa: BLE001
         logger.error("Envoi Recruitee impossible : %s", e, exc_info=True)
         return {"ok": False, "real": False, "error": "site carrière injoignable"}

@@ -14,6 +14,7 @@ import {
   type CriteriaDraft,
 } from "./CriteriaStep";
 import { ApiUnreachableError, apiFetch, describeApiError } from "@/lib/api";
+import { startRun } from "@/lib/mission-run-client";
 import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
@@ -426,9 +427,25 @@ export function AliceExperience() {
         }
       }
 
+      // Première valeur, tout de suite : une mission sur 3 offres démarre
+      // dès l'arrivée — l'utilisateur ouvre son espace sur des dossiers qui
+      // se rédigent, pas sur un tableau vide. Rien ne part sans son accord.
+      const firstRun = await startRun(candidate.id, {
+        title: "Tes premiers dossiers",
+        objective: "apply",
+        count: 3,
+        allowed_actions: { send: false },
+      }).catch(() => null);
+
       setShowComponent(false);
       await say("C'est parti.", "happy", 1000);
-      await say("Je travaille pour toi.", "happy", 1200);
+      await say(
+        firstRun
+          ? "Je cherche tes offres et je prépare tes trois premiers dossiers."
+          : "Je travaille pour toi.",
+        "happy",
+        1400,
+      );
       router.push("/dashboard");
     } catch (err) {
       console.error("Activation error:", err);

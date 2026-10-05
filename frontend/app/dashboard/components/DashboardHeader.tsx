@@ -8,11 +8,11 @@ import { fetchJournal, type MissionEvent } from "@/lib/mission-client";
 import { markJournalRead } from "@/lib/pipeline-client";
 import type { TabType } from "./DashboardSidebar";
 
+// Deux lieux seulement : parler à Alice, suivre ses candidatures. Le mandat
+// et les e-mails d'Alice se consultent depuis le rail des conversations.
 const NAV: { id: TabType; label: string }[] = [
   { id: "alice", label: "Alice" },
-  { id: "mission", label: "Mission" },
   { id: "candidatures", label: "Candidatures" },
-  { id: "messages", label: "Messages" },
 ];
 
 const IMPORTANT = new Set(["applied", "reply", "awaiting_approval", "error", "status_changed"]);
