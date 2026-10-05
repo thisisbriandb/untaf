@@ -31,3 +31,26 @@ def test_renotation_ne_supprime_pas_un_dossier_prepare():
                                   metadata_json={"cover_letter": {"body": "x"}}))
     assert _protected(Application(status=ApplicationStatus.APPLIED, metadata_json=None))
     assert not _protected(Application(status=ApplicationStatus.PENDING, metadata_json={"match": {}}))
+
+
+def test_un_telechargement_qui_plante_renvoie_un_message_clair(monkeypatch):
+    import asyncio
+    from fastapi import HTTPException
+    from app.api import apply
+
+    sent = {}
+
+    async def fake_incident(kind, candidate_id, detail, context=None, notify_user=True):
+        sent.update(kind=kind, context=context)
+
+    monkeypatch.setattr("app.agents.incidents.report_incident", fake_incident)
+
+    @apply._guard_download("test")
+    async def boom(candidate_id=None, job_id=None):
+        raise RuntimeError("typst a explosé")
+
+    try:
+        asyncio.run(boom(candidate_id="c", job_id="j"))
+    except HTTPException as e:
+        assert e.status_code == 500 and "L'équipe est prévenue" in e.detail
+    assert sent["kind"] == "pack_failed" and "typst a explosé" in sent["context"]["erreur"]

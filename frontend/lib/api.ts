@@ -75,7 +75,9 @@ export async function downloadFileOrReason(url: string, fallbackName = "document
     } catch {
       /* corps non JSON */
     }
-    return res.status === 404 ? "Ce document n'existe pas (encore)." : "Téléchargement impossible pour l'instant.";
+    if (res.status === 404) return "Ce document n'existe pas (encore).";
+    // Le code aide à diagnostiquer (502/504 : le serveur a coupé ou redémarré).
+    return `Téléchargement impossible (erreur ${res.status}). Réessaie dans un instant.`;
   }
   saveBlob(await res.blob(), filenameFrom(res, fallbackName));
   return null;
