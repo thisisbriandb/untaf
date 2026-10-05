@@ -194,7 +194,7 @@ export function Step3DesignStudio({
                       )}>
                         {template.name}
                       </p>
-                      <p className="text-[10px] text-muted-foreground truncate">
+                      <p className="text-[11px] text-muted-foreground truncate">
                         {template.badge} — {template.tagline}
                       </p>
                     </div>
@@ -219,7 +219,7 @@ export function Step3DesignStudio({
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Aperçu temps réel — vos données
             </span>
-            <span className="text-[10px] text-muted-foreground font-mono">
+            <span className="text-[11px] text-muted-foreground font-mono">
               A4 — {currentTpl.name}
             </span>
           </div>

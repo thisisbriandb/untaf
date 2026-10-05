@@ -123,7 +123,7 @@ export function Step2ContentEditor({
                     onClick={() => {
                       if (!skills.includes(sk)) setSkills([...skills, sk]);
                     }}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-500/20"
+                    className="inline-flex items-center gap-1 rounded-md border border-[#161615]/30 bg-[#161615]/10 px-2 py-0.5 text-[11px] font-semibold text-[#161615] hover:bg-[#161615]/20"
                   >
                     <Plus className="h-3 w-3" />
                     {sk}

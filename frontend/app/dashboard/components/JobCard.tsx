@@ -36,8 +36,8 @@ export function JobCard({ job }: { job: JobCardData }) {
       aria-label={`Ouvrir le détail de l'offre ${job.title}`}
       className={`block w-full text-left p-4 rounded-xl border bg-white transition-colors cursor-pointer ${
         isOpen
-          ? "border-[#006045]/45 bg-[#006045]/4"
-          : "border-[#1A1918]/8 hover:border-[#006045]/30"
+          ? "border-[#161615]/45 bg-[#161615]/4"
+          : "border-[#1A1918]/8 hover:border-[#161615]/30"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -45,14 +45,14 @@ export function JobCard({ job }: { job: JobCardData }) {
           <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
             {job.title}
           </p>
-          <p className="text-xs font-light text-[#1A1918]/55 tracking-tight truncate">
+          <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight truncate">
             {job.company_name} · {job.location}
           </p>
           {(tags || job.apply_mode) && (
-            <p className="text-[11px] font-light text-[#1A1918]/45 tracking-tight">
+            <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight">
               {tags}
               {job.apply_mode && (
-                <span className={job.apply_mode === "auto" ? "text-[#006045]" : ""}>
+                <span className={job.apply_mode === "auto" ? "text-[#161615]" : ""}>
                   {tags ? " · " : ""}
                   {APPLY_MODE_LABELS[job.apply_mode]}
                 </span>
@@ -60,7 +60,7 @@ export function JobCard({ job }: { job: JobCardData }) {
             </p>
           )}
         </div>
-        <span className="shrink-0 text-xs font-medium text-[#006045] tabular-nums">
+        <span className="shrink-0 text-xs font-medium text-[#161615] tabular-nums">
           {job.match_score}%
         </span>
       </div>

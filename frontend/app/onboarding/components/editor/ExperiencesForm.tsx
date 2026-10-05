@@ -115,7 +115,7 @@ export function ExperiencesForm({ experiences, setExperiences }: ExperiencesForm
               <label className="text-[11px] font-semibold">Réalisations clés</label>
               {exp.highlights.map((h, hIdx) => (
                 <div key={hIdx} className="flex gap-2 items-start">
-                  <span className="mt-2 text-[10px] text-muted-foreground font-mono shrink-0">•</span>
+                  <span className="mt-2 text-[11px] text-muted-foreground font-mono shrink-0">•</span>
                   <input type="text" value={h} onChange={(e) => updateHL(exp.id, hIdx, e.target.value)} placeholder="Décrivez une réalisation..." className="flex-1 rounded-lg border border-input bg-background py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" />
                   {exp.highlights.length > 1 && (
                     <button type="button" onClick={() => rmHL(exp.id, hIdx)} className="mt-1.5 p-1 text-muted-foreground hover:text-destructive transition"><Trash2 className="h-3 w-3" /></button>

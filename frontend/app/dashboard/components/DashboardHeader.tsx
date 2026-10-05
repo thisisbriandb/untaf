@@ -21,10 +21,10 @@ const IMPORTANT = new Set(["applied", "reply", "awaiting_approval", "error", "st
 const POLL_MS = 30_000;
 
 const DOT: Record<string, string> = {
-  applied: "bg-[#006045]",
-  reply: "bg-violet-500",
-  awaiting_approval: "bg-amber-500",
-  letter_written: "bg-[#006045]/60",
+  applied: "bg-[#161615]",
+  reply: "bg-[#161615]",
+  awaiting_approval: "bg-[#161615]",
+  letter_written: "bg-[#161615]/60",
   error: "bg-red-500",
 };
 
@@ -107,7 +107,7 @@ export function DashboardHeader({
           title="Conversations"
           className={cn(
             "p-2 rounded-full transition-colors cursor-pointer",
-            sidebarOpen ? "text-[#006045] bg-[#006045]/10" : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
+            sidebarOpen ? "text-[#161615] bg-[#161615]/10" : "text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
           )}
         >
           <PanelLeft className="w-4 h-4 stroke-[1.4]" />
@@ -134,7 +134,7 @@ export function DashboardHeader({
                 onClick={() => onSelectTab(item.id)}
                 className={cn(
                   "relative shrink-0 rounded-full px-2.5 sm:px-3 py-1.5 text-xs tracking-tight transition-colors cursor-pointer",
-                  active ? "text-[#1A1918]" : "text-[#1A1918]/45 hover:text-[#1A1918]/80",
+                  active ? "text-[#1A1918]" : "text-[#1A1918]/60 hover:text-[#1A1918]/80",
                 )}
               >
                 {active && (
@@ -150,7 +150,7 @@ export function DashboardHeader({
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-white text-[9px] font-semibold flex items-center justify-center"
+                      className="min-w-[16px] h-4 px-1 rounded-full bg-[#161615] text-white text-[10px] font-semibold flex items-center justify-center"
                     >
                       {awaitingCount}
                     </motion.span>
@@ -173,7 +173,7 @@ export function DashboardHeader({
               if (opening && unread > 0) setTimeout(() => void markAllRead(), 1200);
             }}
             aria-label="Notifications"
-            className="relative p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+            className="relative p-2 rounded-full text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
           >
             <motion.span
               key={badge}
@@ -190,8 +190,8 @@ export function DashboardHeader({
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   className={cn(
-                    "absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full text-white text-[9px] font-bold flex items-center justify-center shadow-sm",
-                    awaitingCount > 0 ? "bg-amber-500" : "bg-[#006045]",
+                    "absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-sm",
+                    awaitingCount > 0 ? "bg-[#161615]" : "bg-[#161615]",
                   )}
                 >
                   {badge > 9 ? "9+" : badge}
@@ -208,7 +208,7 @@ export function DashboardHeader({
                 exit={{ opacity: 0, y: 4, scale: 0.96 }}
                 transition={{ type: "spring", stiffness: 420, damping: 32 }}
                 style={{ transformOrigin: "top right" }}
-                className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] z-50 bg-white border border-[#EDECEA] rounded-2xl shadow-lg p-3.5 space-y-2.5 text-xs font-light text-[#1A1918] tracking-tight"
+                className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] z-50 bg-white border border-[#EDECEA] rounded-2xl shadow-lg p-3.5 space-y-2.5 text-xs font-normal text-[#1A1918] tracking-tight"
               >
                 <div className="flex items-center justify-between pb-2 border-b border-[#1A1918]/8">
                   <span className="font-medium text-[#1A1918]">Ce que j&apos;ai fait</span>
@@ -216,7 +216,7 @@ export function DashboardHeader({
                     <button
                       type="button"
                       onClick={markAllRead}
-                      className="text-[10px] text-[#006045] hover:underline cursor-pointer"
+                      className="text-[11px] text-[#161615] hover:underline cursor-pointer"
                     >
                       Tout marquer comme lu
                     </button>
@@ -230,19 +230,19 @@ export function DashboardHeader({
                       setShowNotifs(false);
                       onSelectTab("candidatures");
                     }}
-                    className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-500/20 text-left cursor-pointer hover:bg-amber-100/60 transition-colors"
+                    className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-[#F4F3F0] border border-[#161615]/20 text-left cursor-pointer hover:bg-[#EAE9E5]/60 transition-colors"
                   >
-                    <Send className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                    <Send className="h-3.5 w-3.5 text-[#161615] shrink-0" />
                     <span className="flex-1">
                       {awaitingCount} candidature{awaitingCount > 1 ? "s attendent" : " attend"} ton feu vert
                     </span>
-                    <span className="text-[#006045]">Voir →</span>
+                    <span className="text-[#161615]">Voir →</span>
                   </button>
                 )}
 
                 <div className="max-h-80 overflow-y-auto scroll-discreet space-y-0.5">
                   {events.length === 0 ? (
-                    <p className="py-3 text-[#1A1918]/45">Rien de neuf pour l&apos;instant.</p>
+                    <p className="py-3 text-[#1A1918]/60">Rien de neuf pour l&apos;instant.</p>
                   ) : (
                     events.map((e, i) => (
                       <motion.div
@@ -264,7 +264,7 @@ export function DashboardHeader({
                         <p className={cn("flex-1 leading-relaxed", e.is_read ? "text-[#1A1918]/55" : "text-[#1A1918]/85")}>
                           {e.summary}
                         </p>
-                        <span className="text-[10px] text-[#1A1918]/30 shrink-0 pt-0.5">{ago(e.created_at)}</span>
+                        <span className="text-[11px] text-[#1A1918]/45 shrink-0 pt-0.5">{ago(e.created_at)}</span>
                       </motion.div>
                     ))
                   )}
@@ -276,7 +276,7 @@ export function DashboardHeader({
                     setShowNotifs(false);
                     onSelectTab("mission");
                   }}
-                  className="w-full pt-2 border-t border-[#1A1918]/8 text-[11px] text-[#006045] hover:underline cursor-pointer text-left"
+                  className="w-full pt-2 border-t border-[#1A1918]/8 text-[11px] text-[#161615] hover:underline cursor-pointer text-left"
                 >
                   Tout le journal de mission →
                 </button>
@@ -291,8 +291,8 @@ export function DashboardHeader({
           aria-label="Paramètres"
           className={`p-2 rounded-full transition-colors cursor-pointer ${
             activeTab === "parametres"
-              ? "text-[#006045] bg-[#006045]/10"
-              : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5"
+              ? "text-[#161615] bg-[#161615]/10"
+              : "text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5"
           }`}
         >
           <Settings className="w-4 h-4 stroke-[1.4]" />

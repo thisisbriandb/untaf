@@ -92,7 +92,7 @@ export function PersonalInfoForm({
               Afficher sur le CV
             </label>
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             Format JPG/PNG recommandé, photo professionnelle de préférence.
           </p>
         </div>

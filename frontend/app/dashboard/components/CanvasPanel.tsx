@@ -52,7 +52,7 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
                   <p className="text-xs font-normal text-[#1A1918] tracking-tight truncate">
                     {canvasLabel(canvas)}
                   </p>
-                  <p className="text-[11px] font-light text-[#1A1918]/45 tracking-tight truncate">
+                  <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight truncate">
                     {canvas.mode === "job_detail"
                       ? "Alice a le contexte de cette offre"
                       : "Alice suit tes modifications"}
@@ -63,7 +63,7 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
                 type="button"
                 onClick={closeCanvas}
                 aria-label="Fermer le Canvas"
-                className="p-1.5 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer shrink-0"
+                className="p-1.5 rounded-full text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4 stroke-[1.4]" />
               </button>

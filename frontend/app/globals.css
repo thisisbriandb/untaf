@@ -7,8 +7,8 @@
   --font-mono: var(--font-mono), 'Geist Mono', 'JetBrains Mono', monospace;
 
   /* Alice Identity */
-  --alice: #006045;
-  --alice-soft: #006045;
+  --alice: #161615;
+  --alice-soft: #161615;
   --alice-bg: #FAFAF8;
   --alice-text: #1A1918;
   --alice-muted: #9B9890;
@@ -26,10 +26,10 @@
   --muted-foreground: #7A786F;
   --border: #EDECEA;
   --input: #EDECEA;
-  --ring: #006045;
-  --primary: #006045;
+  --ring: #161615;
+  --primary: #161615;
   --primary-foreground: #FFFFFF;
-  --accent: #006045;
+  --accent: #161615;
   --accent-foreground: #FFFFFF;
   --success: #10B981;
   --success-foreground: #042F2E;
@@ -200,7 +200,7 @@ body {
   display: inline-block;
   width: 0.52em;
   height: 0.52em;
-  background-color: #006045;
+  background-color: #161615;
   vertical-align: 0.15em;
   margin-left: 0.45rem;
   border-radius: 9999px;
@@ -226,7 +226,7 @@ body {
   width: 9px;
   height: 9px;
   border-radius: 9999px;
-  border: 1.5px solid #006045;
+  border: 1.5px solid #161615;
   background-color: transparent;
   animation: alice-eyes-gaze 3.2s ease-in-out infinite;
 }

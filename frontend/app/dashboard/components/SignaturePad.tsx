@@ -89,7 +89,7 @@ export function SignaturePad({
 
   return (
     <div className="space-y-2.5">
-      <p className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+      <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
         Signe ici — je la réutiliserai sur toutes tes lettres.
       </p>
 
@@ -107,7 +107,7 @@ export function SignaturePad({
           type="button"
           onClick={clear}
           disabled={!hasInk}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-xs font-light text-[#1A1918]/60 tracking-tight hover:border-[#1A1918]/30 transition-colors cursor-pointer disabled:opacity-30"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-xs font-normal text-[#1A1918]/60 tracking-tight hover:border-[#1A1918]/30 transition-colors cursor-pointer disabled:opacity-30"
         >
           <Eraser className="w-3.5 h-3.5 stroke-[1.5]" />
           Effacer
@@ -118,7 +118,7 @@ export function SignaturePad({
             <button
               type="button"
               onClick={onCancel}
-              className="text-xs font-light text-[#1A1918]/45 hover:text-[#1A1918] tracking-tight cursor-pointer"
+              className="text-xs font-normal text-[#1A1918]/60 hover:text-[#1A1918] tracking-tight cursor-pointer"
             >
               Plus tard
             </button>
@@ -127,7 +127,7 @@ export function SignaturePad({
             type="button"
             onClick={save}
             disabled={!hasInk || isSaving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#006045] text-white text-xs font-light tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-30"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors cursor-pointer disabled:opacity-30"
           >
             {isSaving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

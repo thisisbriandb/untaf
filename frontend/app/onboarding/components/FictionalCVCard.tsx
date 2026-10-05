@@ -37,16 +37,16 @@ export function FictionalCVCard({
     >
       {/* Top Selection Badge */}
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/40">
-        <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-bold text-foreground">
+        <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-bold text-foreground">
           {template.badge}
         </span>
         {isSelected ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow-sm">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground shadow-sm">
             <Check className="h-3 w-3" />
             Sélectionné
           </span>
         ) : (
-          <span className="text-[10px] font-semibold text-muted-foreground group-hover:text-primary transition">
+          <span className="text-[11px] font-semibold text-muted-foreground group-hover:text-primary transition">
             Choisir ce modèle
           </span>
         )}

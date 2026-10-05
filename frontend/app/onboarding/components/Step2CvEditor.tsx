@@ -181,7 +181,7 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                   <PanelRightOpen className="h-3.5 w-3.5 text-primary" />
                   <span>Visualiser le CV</span>
                   {props.cvFile && (
-                    <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold text-primary">
                       PDF
                     </span>
                   )}
@@ -293,7 +293,7 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             ) : (
-              <div className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm">
+              <div className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#161615] px-4 text-xs font-bold text-white shadow-sm">
                 ✓ Section complète
               </div>
             )}
@@ -334,10 +334,10 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                           : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
-                      <FileCheck className="h-3.5 w-3.5 text-emerald-500" />
+                      <FileCheck className="h-3.5 w-3.5 text-[#161615]" />
                       CV Original
                       {props.cvFile && (
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="h-2 w-2 rounded-full bg-[#161615] animate-pulse" />
                       )}
                     </button>
                   </div>
@@ -360,7 +360,7 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                       <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                         Rendu en temps réel
                       </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-[11px] text-muted-foreground font-mono">
                         A4 — {props.selectedTemplate}
                       </span>
                     </div>

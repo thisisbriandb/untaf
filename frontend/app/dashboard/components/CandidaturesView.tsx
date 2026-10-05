@@ -35,6 +35,7 @@ import {
 } from "@/lib/pipeline-client";
 import { APPLY_MODE_LABELS } from "@/lib/alice-client";
 import { useAlice } from "../alice-context";
+import { STAGE_TONE } from "@/lib/stage-tone";
 import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
 import { invalidateApplication } from "@/lib/application-state";
@@ -50,19 +51,6 @@ const FILTERS: { id: Filter; label: string; stages: Stage[] | null }[] = [
   { id: "sent", label: "Envoyées", stages: ["applied"] },
   { id: "replies", label: "Réponses", stages: ["interview", "offer", "rejected", "closed"] },
 ];
-
-const STAGE_TONE: Record<Stage, string> = {
-  to_prepare: "bg-[#1A1918]/6 text-[#1A1918]/55",
-  ready: "bg-[#006045]/8 text-[#006045]",
-  awaiting: "bg-amber-500/12 text-amber-700",
-  simulated: "bg-sky-500/10 text-sky-700",
-  manual: "bg-orange-500/10 text-orange-700",
-  applied: "bg-[#006045]/12 text-[#006045]",
-  interview: "bg-violet-500/12 text-violet-700",
-  offer: "bg-[#006045] text-white",
-  rejected: "bg-[#1A1918]/6 text-[#1A1918]/40",
-  closed: "bg-[#1A1918]/6 text-[#1A1918]/40",
-};
 
 /** Ce qui attend l'utilisateur passe devant, le reste suit par score. */
 const PRIORITY: Record<Stage, number> = {
@@ -85,14 +73,14 @@ function ScoreRing({ score }: { score: number }) {
       <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
         <circle cx="18" cy="18" r={r} fill="none" stroke="#1A1918" strokeOpacity="0.07" strokeWidth="2.5" />
         <motion.circle
-          cx="18" cy="18" r={r} fill="none" stroke="#006045" strokeWidth="2.5" strokeLinecap="round"
+          cx="18" cy="18" r={r} fill="none" stroke="#161615" strokeWidth="2.5" strokeLinecap="round"
           strokeDasharray={c}
           initial={{ strokeDashoffset: c }}
           animate={{ strokeDashoffset: c * (1 - Math.min(100, score) / 100) }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[10px] tabular-nums text-[#1A1918]/70">
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] tabular-nums text-[#1A1918]/70">
         {score}
       </span>
     </div>
@@ -116,9 +104,9 @@ function ActionButton({
       disabled={busy || disabled}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default",
-        tone === "primary" && "bg-[#006045] text-white hover:bg-[#004d38]",
-        tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045]",
-        tone === "danger" && "text-[#1A1918]/45 hover:text-red-600 hover:bg-red-50",
+        tone === "primary" && "bg-[#161615] text-white hover:bg-[#000000]",
+        tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615]",
+        tone === "danger" && "text-[#1A1918]/60 hover:text-red-600 hover:bg-red-50",
       )}
     >
       {busy && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -171,8 +159,8 @@ function FollowupPanel({
 
   if (loading || !draft) {
     return (
-      <div className="flex items-center gap-2 py-3 text-xs font-light text-[#1A1918]/50">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
+      <div className="flex items-center gap-2 py-3 text-xs font-normal text-[#1A1918]/50">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#161615]" />
         Je rédige une relance courte et polie…
       </div>
     );
@@ -189,12 +177,12 @@ function FollowupPanel({
         value={draft.body ?? ""}
         onChange={(e) => setDraft({ ...draft, body: e.target.value })}
         rows={7}
-        className="w-full resize-y bg-transparent text-xs font-light leading-relaxed text-[#1A1918]/80 outline-none"
+        className="w-full resize-y bg-transparent text-xs font-normal leading-relaxed text-[#1A1918]/80 outline-none"
       />
       <div className="flex flex-wrap items-center gap-1.5">
         <a
           href={followupMailto(draft)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d38]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
         >
           <Mail className="h-3 w-3" />
           {draft.to ? `Écrire à ${draft.to}` : "Ouvrir ma messagerie"}
@@ -306,23 +294,23 @@ function Row({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-start justify-between gap-3">
             <button type="button" onClick={openJob} className="min-w-0 text-left cursor-pointer group">
-              <p className="text-sm text-[#1A1918] tracking-tight truncate group-hover:text-[#006045] transition-colors">
+              <p className="text-sm text-[#1A1918] tracking-tight truncate group-hover:text-[#161615] transition-colors">
                 {item.title}
               </p>
-              <p className="text-[11px] font-light text-[#1A1918]/50 tracking-tight truncate">{subtitle}</p>
+              <p className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight truncate">{subtitle}</p>
             </button>
             <motion.span
               key={item.stage}
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] tracking-tight", STAGE_TONE[item.stage])}
+              className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] tracking-tight", STAGE_TONE[item.stage])}
             >
               {STAGE_LABELS[item.stage]}
             </motion.span>
           </div>
 
           {detail && (
-            <p className="text-[11px] font-light text-[#1A1918]/45 tracking-tight leading-relaxed">{detail}</p>
+            <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight leading-relaxed">{detail}</p>
           )}
 
           {/* ── Le geste qui reste ── */}
@@ -358,7 +346,7 @@ function Row({
               item.dispatch?.channel === "email" && item.dispatch.mailto && (
                 <a
                   href={item.dispatch.mailto}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d38]"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
                 >
                   <Mail className="h-3 w-3" /> Envoyer depuis ma messagerie
                 </a>
@@ -370,7 +358,7 @@ function Row({
                 href={item.source_url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d38]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
               >
                 <ArrowUpRight className="h-3 w-3" /> Finir sur le site
               </a>
@@ -380,7 +368,7 @@ function Row({
               <DownloadLink
                 url={packUrl(candidateId, item.job_id)}
                 filename={`Candidature_${item.company_name}.zip`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
               >
                 <FolderDown className="h-3 w-3" /> Pack
               </DownloadLink>
@@ -410,7 +398,7 @@ function Row({
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-label="Historique"
-                className="ml-auto p-1 rounded-full text-[#1A1918]/35 hover:text-[#1A1918] cursor-pointer"
+                className="ml-auto p-1 rounded-full text-[#1A1918]/50 hover:text-[#1A1918] cursor-pointer"
               >
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
               </button>
@@ -445,7 +433,7 @@ function Row({
                 className="overflow-hidden border-l border-[#1A1918]/10 ml-1 pl-3 space-y-1.5 pt-1"
               >
                 {[...item.timeline].reverse().map((t, i) => (
-                  <li key={`${t.at}-${i}`} className="text-[11px] font-light text-[#1A1918]/55 tracking-tight">
+                  <li key={`${t.at}-${i}`} className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
                     <span className="text-[#1A1918]/75">{STAGE_LABELS[t.status as Stage] ?? t.status}</span>
                     {" · "}
                     {when(t.at)}
@@ -548,7 +536,7 @@ export function CandidaturesView({
             type="button"
             onClick={() => void refresh()}
             aria-label="Rafraîchir"
-            className="p-2 rounded-full text-[#1A1918]/35 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-[#1A1918]/50 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -563,11 +551,11 @@ export function CandidaturesView({
               exit={{ opacity: 0, y: -6, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/25 bg-amber-50/60 px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#161615]/25 bg-[#F4F3F0]/60 px-4 py-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500/60" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#161615]" />
                   </span>
                   <p className="text-xs text-[#1A1918]/80 tracking-tight">
                     {awaiting} candidature{awaiting > 1 ? "s attendent" : " attend"} ton feu vert. Tout est
@@ -607,7 +595,7 @@ export function CandidaturesView({
                   )}
                   <span className="relative">
                     {f.label}
-                    {n > 0 && <span className={cn("ml-1 tabular-nums", active ? "text-white/60" : "text-[#1A1918]/35")}>{n}</span>}
+                    {n > 0 && <span className={cn("ml-1 tabular-nums", active ? "text-white/60" : "text-[#1A1918]/50")}>{n}</span>}
                   </span>
                 </button>
               );
@@ -633,7 +621,7 @@ export function CandidaturesView({
             <p className="text-sm font-light text-[#1A1918]/60 tracking-tight">
               {filter === "all" ? "Aucune candidature pour l'instant." : "Rien ici pour le moment."}
             </p>
-            <p className="text-xs font-light text-[#1A1918]/40 tracking-tight">
+            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
               {filter === "all"
                 ? "Confie-moi une mission depuis la conversation : je retiens les offres et je prépare les packs."
                 : "Tout ce qui demande ton attention apparaîtra ici."}

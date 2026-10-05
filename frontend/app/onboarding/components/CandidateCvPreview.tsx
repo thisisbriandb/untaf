@@ -147,14 +147,14 @@ export function CandidateCvPreview({
       <div className="w-full aspect-[1/1.4142] bg-white rounded-lg border border-[#1A1918]/10 shadow-sm overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-[#006045]" />
-            <span className="text-[11px] font-light text-[#1A1918]/55 tracking-tight">
+            <Loader2 className="h-5 w-5 animate-spin text-[#161615]" />
+            <span className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
               Rendu en cours…
             </span>
           </div>
         )}
         {error && !svgContent ? (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-xs font-light text-[#1A1918]/45 tracking-tight">
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-xs font-normal text-[#1A1918]/60 tracking-tight">
             {error}
           </div>
         ) : svgContent ? (
@@ -172,10 +172,10 @@ export function CandidateCvPreview({
       {/* Indicator header */}
       <div className="bg-slate-900 text-slate-200 px-4 py-2 flex items-center justify-between text-xs border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="h-2 w-2 rounded-full bg-[#5E5D59] animate-pulse"></span>
           <span className="font-semibold tracking-wide uppercase text-[11px] text-slate-300">Aperçu Typst Temps Réel (Source Unique)</span>
         </div>
-        <span className="text-[10px] text-slate-400 font-mono">100% Fidèle au PDF</span>
+        <span className="text-[11px] text-slate-400 font-mono">100% Fidèle au PDF</span>
       </div>
 
       {/* Main container for SVG */}
