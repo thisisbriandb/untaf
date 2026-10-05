@@ -186,8 +186,15 @@ export default function DashboardPage() {
       onGoToConversation={() => selectTab("alice")}
     >
       <ToastProvider>
-      <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex flex-col overflow-hidden">
-        {/* ═══ Barre d'application, pleine largeur ═══ */}
+      <div className="h-[100dvh] bg-[#FAFAF8] text-[#1A1918] flex overflow-hidden">
+        {/* ═══ Rail des conversations, pleine hauteur, bord gauche ═══ */}
+        <ConversationSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          userName={userName}
+        />
+        <div className="flex-1 min-w-0 flex flex-col">
+        {/* ═══ Barre d'application ═══ */}
         <DashboardHeader
           activeTab={activeTab}
           onSelectTab={selectTab}
@@ -199,7 +206,6 @@ export default function DashboardPage() {
 
         {/* ═══ Ligne principale : conversation + canvas (dès lg) ═══ */}
         <main className="flex-1 min-h-0 flex justify-center overflow-hidden">
-          <ConversationSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <ConversationColumn>
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-4 md:px-8 pb-4 overflow-hidden">
               <AnimatePresence mode="wait">
@@ -237,6 +243,7 @@ export default function DashboardPage() {
           {/* ═══ Colonne canvas (CV / Lettre) ═══ */}
           <CanvasPanel candidateId={candidateId} />
         </main>
+        </div>
       </div>
       </ToastProvider>
     </AliceProvider>

@@ -94,9 +94,12 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="shrink-0 z-50 flex items-center justify-between gap-3 px-4 md:px-10 py-4 select-none">
-      <div className="flex items-center gap-1.5">
-      {onToggleSidebar && (
+    // Trois colonnes : la navigation reste centrée sur la zone de contenu, que
+    // le rail des conversations soit ouvert ou non.
+    <header className="shrink-0 z-30 h-[68px] grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 md:px-6 select-none">
+      <div className="flex items-center gap-1.5 min-w-0">
+      {/* Rail ouvert : la marque et le repli y sont déjà */}
+      {onToggleSidebar && !sidebarOpen && (
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -110,18 +113,18 @@ export function DashboardHeader({
           <PanelLeft className="w-4 h-4 stroke-[1.4]" />
         </button>
       )}
-      <button
+      {!sidebarOpen && <button
         type="button"
         onClick={() => onSelectTab("alice")}
         className="hidden sm:block text-base md:text-lg font-medium text-[#1A1918] tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
       >
         alice
-      </button>
+      </button>}
       </div>
 
       {/* Navigation — l'indicateur glisse d'un onglet à l'autre */}
       <LayoutGroup id="dashboard-nav">
-        <nav className="flex items-center gap-0.5 rounded-full bg-[#1A1918]/[0.035] p-1 overflow-x-auto min-w-0 scrollbar-none">
+        <nav className="justify-self-center max-w-full flex items-center gap-0.5 rounded-full bg-[#1A1918]/[0.035] p-1 overflow-x-auto min-w-0 scrollbar-none">
           {NAV.map((item) => {
             const active = activeTab === item.id;
             return (
@@ -159,7 +162,7 @@ export function DashboardHeader({
         </nav>
       </LayoutGroup>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1">
         <div className="relative" ref={panelRef}>
           <button
             type="button"
