@@ -68,19 +68,19 @@ export function SkillsForm({ skills, setSkills, atsAudit }: SkillsFormProps) {
 
       {/* AI Suggestions */}
       {atsAudit?.suggested_skills && atsAudit.suggested_skills.length > 0 && (
-        <div className="rounded-xl border border-[#161615]/20 bg-[#161615]/5 p-3.5 space-y-2">
+        <div className="rounded-xl border border-[#006045]/20 bg-[#006045]/5 p-3.5 space-y-2">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-[#161615]" />
-            <span className="text-[11px] font-bold text-[#161615] dark:text-[#5E5D59]">Compétences recommandées par l&apos;IA</span>
+            <Sparkles className="h-3.5 w-3.5 text-[#006045]" />
+            <span className="text-[11px] font-bold text-[#006045] dark:text-[#5E5D59]">Compétences recommandées par l&apos;IA</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {atsAudit.suggested_skills.filter((s) => !skills.includes(s)).map((sk) => (
-              <button key={sk} type="button" onClick={() => addSuggested(sk)} className="inline-flex items-center gap-1 rounded-md border border-[#161615]/30 bg-[#161615]/10 px-2.5 py-1 text-[11px] font-semibold text-[#161615] hover:bg-[#161615]/20 transition">
+              <button key={sk} type="button" onClick={() => addSuggested(sk)} className="inline-flex items-center gap-1 rounded-md border border-[#006045]/30 bg-[#006045]/10 px-2.5 py-1 text-[11px] font-semibold text-[#006045] hover:bg-[#006045]/20 transition">
                 <Plus className="h-3 w-3" />{sk}
               </button>
             ))}
             {atsAudit.suggested_skills.filter((s) => !skills.includes(s)).length === 0 && (
-              <p className="text-[11px] text-[#161615]/60 italic">Toutes les suggestions ont été ajoutées ✓</p>
+              <p className="text-[11px] text-[#006045]/60 italic">Toutes les suggestions ont été ajoutées ✓</p>
             )}
           </div>
         </div>

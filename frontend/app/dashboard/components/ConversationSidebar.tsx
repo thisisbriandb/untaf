@@ -37,8 +37,8 @@ function when(iso: string): string {
 
 /** Gris chauds, stables par entreprise : distincts sans ajouter de couleur. */
 const TINTS = [
-  ["#ECEBE7", "#161615"], ["#E3E2DD", "#161615"], ["#D9D8D2", "#161615"],
-  ["#161615", "#FAFAF8"], ["#3A3936", "#FAFAF8"], ["#F4F3F0", "#161615"],
+  ["#ECEBE7", "#006045"], ["#E3E2DD", "#006045"], ["#D9D8D2", "#006045"],
+  ["#006045", "#FAFAF8"], ["#3A3936", "#FAFAF8"], ["#F4F3F0", "#006045"],
 ];
 
 function tint(name: string) {
@@ -284,7 +284,7 @@ export function ConversationSidebar({
                 aria-label="Rechercher une conversation"
                 className={cn(
                   "p-2 rounded-full transition-colors cursor-pointer",
-                  searching ? "text-[#161615] bg-[#161615]/10" : "text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
+                  searching ? "text-[#006045] bg-[#006045]/10" : "text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
                 )}
               >
                 <Search className="h-4 w-4 stroke-[1.4]" />
@@ -387,7 +387,7 @@ export function ConversationSidebar({
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.04 }}
-                          className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left border border-dashed border-[#1A1918]/12 hover:border-[#161615]/40 hover:bg-white/60 transition-colors cursor-pointer group"
+                          className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left border border-dashed border-[#1A1918]/12 hover:border-[#006045]/40 hover:bg-white/60 transition-colors cursor-pointer group"
                         >
                           <Monogram name={companyOf(i.company_name)} size="sm" />
                           <span className="min-w-0 flex-1">
@@ -398,7 +398,7 @@ export function ConversationSidebar({
                               {companyOf(i.company_name) ? i.title : "Employeur non communiqué"}
                             </span>
                           </span>
-                          <ArrowRight className="h-3 w-3 text-[#1A1918]/40 group-hover:text-[#161615] transition-colors" />
+                          <ArrowRight className="h-3 w-3 text-[#1A1918]/40 group-hover:text-[#006045] transition-colors" />
                         </motion.button>
                       ))}
                     </div>
@@ -432,7 +432,7 @@ export function ConversationSidebar({
           {/* Le compte, en bas, comme partout ailleurs */}
           <div className="shrink-0 border-t border-[#1A1918]/[0.06] p-2">
             <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
-              <span className="h-8 w-8 shrink-0 rounded-full bg-[#161615] text-white flex items-center justify-center text-[11px] font-medium">
+              <span className="h-8 w-8 shrink-0 rounded-full bg-[#006045] text-white flex items-center justify-center text-[11px] font-medium">
                 {initials(userName || "Toi")}
               </span>
               <span className="min-w-0 flex-1">

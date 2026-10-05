@@ -107,7 +107,7 @@ function ActionButton({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default",
         tone === "primary" && "bg-[#006045] text-white hover:bg-[#004d37]",
-        tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615]",
+        tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045]",
         tone === "danger" && "text-[#1A1918]/60 hover:text-red-600 hover:bg-red-50",
       )}
     >
@@ -162,7 +162,7 @@ function FollowupPanel({
   if (loading || !draft) {
     return (
       <div className="flex items-center gap-2 py-3 text-xs font-normal text-[#1A1918]/50">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#161615]" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
         Je rédige une relance courte et polie…
       </div>
     );
@@ -309,7 +309,7 @@ function Row({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-start justify-between gap-3">
             <button type="button" onClick={openJob} className="min-w-0 text-left cursor-pointer group">
-              <p className="text-sm text-[#1A1918] tracking-tight truncate group-hover:text-[#161615] transition-colors">
+              <p className="text-sm text-[#1A1918] tracking-tight truncate group-hover:text-[#006045] transition-colors">
                 {item.title}
               </p>
               <p className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight truncate">{subtitle}</p>
@@ -385,7 +385,7 @@ function Row({
               <DownloadLink
                 url={packUrl(candidateId, item.job_id)}
                 filename={`Candidature_${item.company_name}.zip`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
               >
                 <FolderDown className="h-3 w-3" /> Pack
               </DownloadLink>
@@ -569,7 +569,7 @@ export function CandidaturesView({
               exit={{ opacity: 0, y: -6, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#161615]/25 bg-[#F4F3F0]/60 px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#006045]/25 bg-[#F4F3F0]/60 px-4 py-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006045]/50" />

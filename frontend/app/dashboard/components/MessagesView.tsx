@@ -64,7 +64,7 @@ export function MessagesView({
 
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#161615]" />
+            <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#006045]" />
             <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">Réponses</p>
           </div>
           {replies === null ? (
@@ -77,7 +77,7 @@ export function MessagesView({
                 <button
                   type="button"
                   onClick={() => onSelectTab("candidatures")}
-                  className="text-[#161615] hover:underline cursor-pointer"
+                  className="text-[#006045] hover:underline cursor-pointer"
                 >
                   Candidatures
                 </button>{" "}
@@ -104,7 +104,7 @@ export function MessagesView({
 
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Mail className="w-3 h-3 stroke-[1.6] text-[#161615]" />
+            <Mail className="w-3 h-3 stroke-[1.6] text-[#006045]" />
             <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
               Ce que je t&apos;ai écrit
             </p>
@@ -129,7 +129,7 @@ export function MessagesView({
                     <p
                       className={cn(
                         "text-[11px] font-normal tracking-tight",
-                        n.status === "sent" ? "text-[#161615]" : n.status === "failed" ? "text-red-600" : "text-[#1A1918]/55",
+                        n.status === "sent" ? "text-[#006045]" : n.status === "failed" ? "text-red-600" : "text-[#1A1918]/55",
                       )}
                     >
                       {STATUS_LABEL[n.status]}

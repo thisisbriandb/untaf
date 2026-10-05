@@ -211,7 +211,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-lg font-light text-[#161615] tabular-nums leading-none">
+            <p className="text-lg font-light text-[#006045] tabular-nums leading-none">
               {job.match_score}%
             </p>
             <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/50 pt-1">
@@ -248,7 +248,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
       <div className="scroll-discreet flex-1 min-h-0 overflow-y-auto px-5 py-5">
         {status === "loading" && (
           <div className="h-full flex flex-col items-center justify-center gap-2.5">
-            <Loader2 className="w-5 h-5 animate-spin text-[#161615]" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
             <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
               Je récupère l&apos;annonce…
             </p>
@@ -269,7 +269,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 {detail.tech_stack.map((t) => (
                   <span
                     key={t}
-                    className="px-2 py-1 rounded-md bg-[#161615]/8 text-[11px] font-normal text-[#161615] tracking-tight"
+                    className="px-2 py-1 rounded-md bg-[#006045]/8 text-[11px] font-normal text-[#006045] tracking-tight"
                   >
                     {t}
                   </span>
@@ -285,7 +285,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
       <div className="shrink-0 border-t border-[#1A1918]/8 bg-[#FAFAF8]">
         <div className="px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 stroke-[1.6] text-[#161615] shrink-0" />
+            <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />
             <span className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
               Demander à Alice
             </span>
@@ -301,7 +301,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                   goToConversation();
                 }}
                 disabled={isThinking}
-                className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-normal text-[#1A1918]/65 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-40 text-left"
+                className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-normal text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40 text-left"
               >
                 {q}
               </button>
@@ -357,7 +357,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 parcours complet conservé · modèle {templateLabel(tailored.report.template_id)}
               </p>
               {tailored.report.missing_labels.length > 0 && (
-                <p className="text-[11px] font-normal text-[#161615] tracking-tight">
+                <p className="text-[11px] font-normal text-[#006045] tracking-tight">
                   Manque encore : {tailored.report.missing_labels.join(", ")}.{" "}
                   <button
                     type="button"
@@ -372,14 +372,14 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 <button
                   type="button"
                   onClick={() => void openFile(tailoredCvUrl(candidateId, job.id))}
-                  className="text-[11px] font-normal text-[#161615] hover:underline cursor-pointer"
+                  className="text-[11px] font-normal text-[#006045] hover:underline cursor-pointer"
                 >
                   Aperçu du CV adapté
                 </button>
                 <button
                   type="button"
                   onClick={() => openCanvas({ mode: "cv_editor", pane: "design" })}
-                  className="text-[11px] font-normal text-[#161615] hover:underline cursor-pointer"
+                  className="text-[11px] font-normal text-[#006045] hover:underline cursor-pointer"
                 >
                   Changer de modèle
                 </button>
@@ -391,7 +391,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               <DownloadLink
                 url={tailoredCvUrl(candidateId, job.id)}
                 filename="CV.pdf"
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#161615]/30 text-[11px] font-normal text-[#161615] tracking-tight hover:bg-[#161615]/5 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-normal text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors"
               >
                 <Download className="w-3 h-3 stroke-[1.6]" />
                 CV adapté (PDF)
@@ -405,7 +405,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                   letter: letter ?? undefined,
                 })}
                 disabled={!letter}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#161615]/30 text-[11px] font-normal text-[#161615] tracking-tight hover:bg-[#161615]/5 transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-normal text-[#006045] tracking-tight hover:bg-[#006045]/5 transition-colors cursor-pointer"
               >
                 <PenLine className="w-3 h-3 stroke-[1.6]" />
                 Voir la lettre
@@ -416,7 +416,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               type="button"
               onClick={adaptDocuments}
               disabled={adapting || !candidateId}
-              className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-40"
+              className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
             >
               {adapting ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -431,7 +431,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               <DownloadLink
                 url={packUrl(candidateId, job.id)}
                 filename={`Candidature_${job.company_name}.zip`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615] tracking-tight transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] tracking-tight transition-colors"
               >
                 <FolderDown className="w-3 h-3 stroke-[1.5]" />
                 {packReady ? "Télécharger le dossier adapté" : "Préparer et télécharger le dossier"}
@@ -441,7 +441,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               <button
                 type="button"
                 onClick={() => openCanvas({ mode: "review", job })}
-                className="flex items-center gap-1.5 text-[11px] text-[#1A1918]/60 hover:text-[#161615] tracking-tight transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-[11px] text-[#1A1918]/60 hover:text-[#006045] tracking-tight transition-colors cursor-pointer"
               >
                 Relire ce qui a changé
               </button>
@@ -451,7 +451,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 href={applyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[11px] font-normal text-[#1A1918]/55 hover:text-[#161615] tracking-tight transition-colors"
+                className="flex items-center gap-1.5 text-[11px] font-normal text-[#1A1918]/55 hover:text-[#006045] tracking-tight transition-colors"
               >
                 Voir l&apos;annonce d&apos;origine
                 <ExternalLink className="w-3 h-3 stroke-[1.5]" />

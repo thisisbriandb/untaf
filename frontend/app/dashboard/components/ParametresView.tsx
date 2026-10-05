@@ -44,7 +44,7 @@ function Switch({ on, onChange, disabled }: { on: boolean; onChange: () => void;
       disabled={disabled}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default",
-        on ? "bg-[#161615]" : "bg-[#1A1918]/15",
+        on ? "bg-[#006045]" : "bg-[#1A1918]/15",
       )}
     >
       <motion.span
@@ -128,7 +128,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
           </div>
 
           {settings && !settings.delivery_configured && (
-            <p className="text-[11px] font-normal text-[#161615] bg-[#F4F3F0] border border-[#161615]/20 rounded-xl px-3 py-2 tracking-tight">
+            <p className="text-[11px] font-normal text-[#006045] bg-[#F4F3F0] border border-[#006045]/20 rounded-xl px-3 py-2 tracking-tight">
               Aucun service d&apos;envoi n&apos;est configuré sur ce serveur : tes réglages sont
               enregistrés, mais rien ne partira tant que Resend ou SMTP ne sont pas renseignés.
             </p>
@@ -202,7 +202,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
                 type="button"
                 onClick={test}
                 disabled={testing}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-50"
               >
                 {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                 M&apos;envoyer un essai

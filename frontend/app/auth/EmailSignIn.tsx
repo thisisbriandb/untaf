@@ -102,7 +102,7 @@ export function EmailSignIn({
             className="space-y-4"
           >
             <p className="text-center text-lg font-normal text-[#1A1918]/85 tracking-tight">{title}</p>
-            <div className="flex items-center bg-white border border-[#EDECEA] focus-within:border-[#161615] rounded-full pl-4 pr-1.5 py-1.5 shadow-sm transition-colors">
+            <div className="flex items-center bg-white border border-[#EDECEA] focus-within:border-[#006045] rounded-full pl-4 pr-1.5 py-1.5 shadow-sm transition-colors">
               <Mail className="h-4 w-4 text-[#1A1918]/45 shrink-0" />
               <input
                 type="email"
@@ -152,7 +152,7 @@ export function EmailSignIn({
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 placeholder="ou le code reçu"
-                className="w-40 text-center bg-white border border-[#EDECEA] focus:border-[#161615] rounded-full px-4 py-2 text-sm tracking-widest outline-none"
+                className="w-40 text-center bg-white border border-[#EDECEA] focus:border-[#006045] rounded-full px-4 py-2 text-sm tracking-widest outline-none"
               />
               <button
                 type="submit"

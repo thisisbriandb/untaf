@@ -37,8 +37,8 @@ export function JobCard({ job }: { job: JobCardData }) {
       aria-label={`Ouvrir le détail de l'offre ${job.title}`}
       className={`block w-full text-left p-4 rounded-xl border bg-white transition-colors cursor-pointer ${
         isOpen
-          ? "border-[#161615]/45 bg-[#161615]/4"
-          : "border-[#1A1918]/8 hover:border-[#161615]/30"
+          ? "border-[#006045]/45 bg-[#006045]/4"
+          : "border-[#1A1918]/8 hover:border-[#006045]/30"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -53,7 +53,7 @@ export function JobCard({ job }: { job: JobCardData }) {
             <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight">
               {tags}
               {job.apply_mode && (
-                <span className={job.apply_mode === "auto" ? "text-[#161615]" : ""}>
+                <span className={job.apply_mode === "auto" ? "text-[#006045]" : ""}>
                   {tags ? " · " : ""}
                   {APPLY_MODE_LABELS[job.apply_mode]}
                 </span>
@@ -61,7 +61,7 @@ export function JobCard({ job }: { job: JobCardData }) {
             </p>
           )}
         </div>
-        <span className="shrink-0 text-xs font-medium text-[#161615] tabular-nums">
+        <span className="shrink-0 text-xs font-medium text-[#006045] tabular-nums">
           {job.match_score}%
         </span>
       </div>

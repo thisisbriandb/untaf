@@ -147,7 +147,7 @@ export function CandidateCvPreview({
       <div className="w-full aspect-[1/1.4142] bg-white rounded-lg border border-[#1A1918]/10 shadow-sm overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-[#161615]" />
+            <Loader2 className="h-5 w-5 animate-spin text-[#006045]" />
             <span className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
               Rendu en cours…
             </span>

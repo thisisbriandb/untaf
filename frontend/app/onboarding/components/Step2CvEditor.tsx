@@ -293,7 +293,7 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             ) : (
-              <div className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#161615] px-4 text-xs font-bold text-white shadow-sm">
+              <div className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#006045] px-4 text-xs font-bold text-white shadow-sm">
                 ✓ Section complète
               </div>
             )}
@@ -334,10 +334,10 @@ export function Step2CvEditor(props: Step2CvEditorProps) {
                           : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
-                      <FileCheck className="h-3.5 w-3.5 text-[#161615]" />
+                      <FileCheck className="h-3.5 w-3.5 text-[#006045]" />
                       CV Original
                       {props.cvFile && (
-                        <span className="h-2 w-2 rounded-full bg-[#161615] animate-pulse" />
+                        <span className="h-2 w-2 rounded-full bg-[#006045] animate-pulse" />
                       )}
                     </button>
                   </div>

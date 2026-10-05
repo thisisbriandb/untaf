@@ -81,13 +81,13 @@ export function NextAction({
       whileTap={{ scale: 0.99 }}
       className={`group w-full flex items-center gap-3.5 text-left px-4 py-3.5 rounded-2xl border transition-colors cursor-pointer ${
         action.tone === "amber"
-          ? "border-[#161615]/25 bg-[#F4F3F0]/60 hover:border-[#161615]/45"
-          : "border-[#161615]/20 bg-[#161615]/[0.04] hover:border-[#161615]/40"
+          ? "border-[#006045]/25 bg-[#F4F3F0]/60 hover:border-[#006045]/45"
+          : "border-[#006045]/20 bg-[#006045]/[0.04] hover:border-[#006045]/40"
       }`}
     >
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-          action.tone === "amber" ? "bg-[#161615]/15 text-[#161615]" : "bg-[#161615]/10 text-[#161615]"
+          action.tone === "amber" ? "bg-[#006045]/15 text-[#006045]" : "bg-[#006045]/10 text-[#006045]"
         }`}
       >
         <Icon className="h-4 w-4 stroke-[1.6]" />
@@ -96,7 +96,7 @@ export function NextAction({
         <span className="block text-sm text-[#1A1918] tracking-tight">{action.title}</span>
         <span className="block text-xs font-normal text-[#1A1918]/50 tracking-tight">{action.detail}</span>
       </span>
-      <span className="flex shrink-0 items-center gap-1 text-xs text-[#161615]">
+      <span className="flex shrink-0 items-center gap-1 text-xs text-[#006045]">
         {action.cta}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </span>

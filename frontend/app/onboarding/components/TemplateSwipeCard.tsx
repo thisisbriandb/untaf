@@ -39,7 +39,7 @@ export function TemplateSwipeCard({
       try {
         const payload = {
           template_id: template.id,
-          color_hex: "#161615",
+          color_hex: "#006045",
           show_photo: candidateData.showPhoto ?? true,
           photo_url: candidateData.photoUrl || template.photo,
           full_name: candidateData.fullName || "Briand Bataillon",
@@ -105,7 +105,7 @@ export function TemplateSwipeCard({
       {/* Visual Badges overlay during drag */}
       <motion.div
         style={{ opacity: matchBadgeOpacity }}
-        className="absolute top-8 left-8 z-30 bg-[#161615] text-white px-4 py-1.5 rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg pointer-events-none"
+        className="absolute top-8 left-8 z-30 bg-[#006045] text-white px-4 py-1.5 rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg pointer-events-none"
       >
         <Heart className="h-4 w-4 fill-white" />
         <span>Match !</span>
@@ -122,12 +122,12 @@ export function TemplateSwipeCard({
       {/* Header Info */}
       <div className="flex items-center justify-between border-b border-[#EFECE6] pb-3 shrink-0">
         <div>
-          <span className="text-[11px] font-sans uppercase tracking-widest text-[#161615] font-semibold">
+          <span className="text-[11px] font-sans uppercase tracking-widest text-[#006045] font-semibold">
             Modèle Typst {template.layout}
           </span>
           <h3 className="text-xl font-serif font-bold text-[#1A1918]">{template.name}</h3>
         </div>
-        <div className="h-8 w-8 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#161615]">
+        <div className="h-8 w-8 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#006045]">
           <Sparkles className="h-4 w-4" />
         </div>
       </div>
@@ -137,8 +137,8 @@ export function TemplateSwipeCard({
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-xs text-[#1A1918]/70 font-sans">
             <div className="relative flex items-center justify-center">
-              <div className="h-10 w-10 border-3 border-[#161615]/20 border-t-[#161615] rounded-full animate-spin"></div>
-              <Sparkles className="h-4 w-4 text-[#161615] absolute" />
+              <div className="h-10 w-10 border-3 border-[#006045]/20 border-t-[#006045] rounded-full animate-spin"></div>
+              <Sparkles className="h-4 w-4 text-[#006045] absolute" />
             </div>
             <div className="space-y-1">
               <span className="font-semibold text-[#1A1918] block font-serif">Rendu Typst Vectoriel en cours</span>

@@ -503,7 +503,7 @@ export function AliceExperience() {
       {authOn && !isSignedIn && (
         <Link
           href="/login"
-          className="absolute top-5 right-6 z-10 text-xs font-normal text-[#1A1918]/60 hover:text-[#161615] tracking-tight"
+          className="absolute top-5 right-6 z-10 text-xs font-normal text-[#1A1918]/60 hover:text-[#006045] tracking-tight"
         >
           Déjà un compte ? Se connecter
         </Link>
@@ -574,10 +574,10 @@ export function AliceExperience() {
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.4, delay: i * 0.08 }}
-                      className="group w-full min-h-14 text-left px-0 py-3.5 rounded-none bg-transparent transition-all text-lg font-medium text-[#1A1918]/82 hover:bg-[#F4F0E8] hover:text-[#161615] hover:pl-4 cursor-pointer flex items-center justify-between"
+                      className="group w-full min-h-14 text-left px-0 py-3.5 rounded-none bg-transparent transition-all text-lg font-medium text-[#1A1918]/82 hover:bg-[#F4F0E8] hover:text-[#006045] hover:pl-4 cursor-pointer flex items-center justify-between"
                     >
                       <span>{label}</span>
-                      <ArrowRight className="h-4 w-4 mr-1 text-[#161615] opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
+                      <ArrowRight className="h-4 w-4 mr-1 text-[#006045] opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
                     </motion.button>
                   ))}
                 </div>
@@ -593,7 +593,7 @@ export function AliceExperience() {
                       const file = e.dataTransfer.files[0];
                       if (file) handleFileUpload(file);
                     }}
-                    className="relative border-2 border-dashed border-[#1A1918]/15 hover:border-[#161615]/50 bg-white/50 hover:bg-white rounded-2xl p-7 text-center transition-all cursor-pointer group shadow-sm"
+                    className="relative border-2 border-dashed border-[#1A1918]/15 hover:border-[#006045]/50 bg-white/50 hover:bg-white rounded-2xl p-7 text-center transition-all cursor-pointer group shadow-sm"
                   >
                     <input
                       type="file"
@@ -605,7 +605,7 @@ export function AliceExperience() {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                     <div className="flex flex-col items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-[#161615]/8 flex items-center justify-center text-[#161615] group-hover:scale-105 transition-transform">
+                      <div className="h-12 w-12 rounded-full bg-[#006045]/8 flex items-center justify-center text-[#006045] group-hover:scale-105 transition-transform">
                         <UploadCloud className="h-6 w-6" />
                       </div>
                       <div>
@@ -626,7 +626,7 @@ export function AliceExperience() {
                       value={linkedinUrl}
                       onChange={(e) => setLinkedinUrl(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleLinkedinSubmit()}
-                      className="w-full pl-10 pr-12 py-3 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#161615] transition-all"
+                      className="w-full pl-10 pr-12 py-3 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
                     />
                     {linkedinUrl.trim() && (
                       <button
@@ -642,7 +642,7 @@ export function AliceExperience() {
                   <button
                     type="button"
                     onClick={handleBypassCv}
-                    className="block mx-auto text-xs text-[#1A1918]/45 hover:text-[#161615] transition-colors cursor-pointer"
+                    className="block mx-auto text-xs text-[#1A1918]/45 hover:text-[#006045] transition-colors cursor-pointer"
                   >
                     je n&apos;ai pas de CV
                   </button>
@@ -660,7 +660,7 @@ export function AliceExperience() {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.35, delay: i * 0.05 }}
-                          className="px-3 py-1.5 rounded-full text-xs font-normal bg-[#161615]/8 text-[#161615]"
+                          className="px-3 py-1.5 rounded-full text-xs font-normal bg-[#006045]/8 text-[#006045]"
                         >
                           {skill}
                         </motion.span>
@@ -682,7 +682,7 @@ export function AliceExperience() {
                             <button
                               type="button"
                               onClick={() => setIsEditingProfile(true)}
-                              className="text-xs text-[#161615] hover:underline font-medium cursor-pointer"
+                              className="text-xs text-[#006045] hover:underline font-medium cursor-pointer"
                             >
                               Ajuster
                             </button>
@@ -703,7 +703,7 @@ export function AliceExperience() {
                           <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Compétences clés</p>
                           <div className="flex flex-wrap gap-1.5">
                             {profile.skills.map((s) => (
-                              <span key={s} className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#161615]/8 text-[#161615]">
+                              <span key={s} className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#006045]/8 text-[#006045]">
                                 {s}
                               </span>
                             ))}
@@ -717,10 +717,10 @@ export function AliceExperience() {
                         <button
                           type="button"
                           onClick={handleProfileValidated}
-                          className="group w-full py-3.5 text-left text-sm text-[#1A1918] font-normal hover:text-[#161615] transition-colors cursor-pointer flex items-center justify-between"
+                          className="group w-full py-3.5 text-left text-sm text-[#1A1918] font-normal hover:text-[#006045] transition-colors cursor-pointer flex items-center justify-between"
                         >
                           <span>c&apos;est bien moi, on continue</span>
-                          <ArrowRight className="h-4 w-4 text-[#161615] transition-transform group-hover:translate-x-1" />
+                          <ArrowRight className="h-4 w-4 text-[#006045] transition-transform group-hover:translate-x-1" />
                         </button>
                       </div>
                     </>
