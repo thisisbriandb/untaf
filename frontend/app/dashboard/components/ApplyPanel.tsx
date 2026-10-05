@@ -38,9 +38,9 @@ interface StepLine {
 }
 
 const MARK: Record<Requirement["status"], { mark: string; className: string }> = {
-  satisfied: { mark: "✓", className: "text-[#161615]" },
-  generate: { mark: "→", className: "text-[#161615]/70" },
-  missing: { mark: "!", className: "text-[#161615]" },
+  satisfied: { mark: "✓", className: "text-[#006045]" },
+  generate: { mark: "→", className: "text-[#006045]/70" },
+  missing: { mark: "!", className: "text-[#006045]" },
 };
 
 /**
@@ -149,7 +149,7 @@ export function ApplyPanel({
       <div className="scroll-discreet flex-1 min-h-0 overflow-y-auto px-6 py-6">
         {!plan ? (
           <div className="h-full flex flex-col items-center justify-center gap-2.5">
-            <Loader2 className="w-5 h-5 animate-spin text-[#161615]" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
             <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
               J&apos;examine l&apos;offre…
             </p>
@@ -204,9 +204,9 @@ export function ApplyPanel({
                       className="flex items-start gap-2.5 text-xs font-normal tracking-tight text-[#1A1918]/70"
                     >
                       {s.status === "running" ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#161615] shrink-0 mt-0.5" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#006045] shrink-0 mt-0.5" />
                       ) : (
-                        <Check className="w-3.5 h-3.5 text-[#161615] shrink-0 mt-0.5 stroke-[2.5]" />
+                        <Check className="w-3.5 h-3.5 text-[#006045] shrink-0 mt-0.5 stroke-[2.5]" />
                       )}
                       <span>
                         {s.label}
@@ -237,10 +237,10 @@ export function ApplyPanel({
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-3 p-4 rounded-2xl border border-[#161615]/20 bg-[#161615]/[0.03]"
+                className="space-y-3 p-4 rounded-2xl border border-[#006045]/20 bg-[#006045]/[0.03]"
               >
                 <div className="flex items-center gap-2">
-                  <FolderDown className="w-4 h-4 text-[#161615] stroke-[1.6]" />
+                  <FolderDown className="w-4 h-4 text-[#006045] stroke-[1.6]" />
                   <p className="text-sm font-normal text-[#1A1918] tracking-tight">Ton dossier est prêt</p>
                 </div>
                 <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight leading-relaxed">
@@ -261,7 +261,7 @@ export function ApplyPanel({
                   <DownloadLink
                     url={tailoredCvUrl(candidateId, jobId)}
                     filename="CV.pdf"
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
                   >
                     <FileText className="w-3 h-3 stroke-[1.6]" />
                     CV seul (PDF)
@@ -270,7 +270,7 @@ export function ApplyPanel({
                     <button
                       type="button"
                       onClick={() => openCanvas({ mode: "cv_editor", pane: "content" })}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#161615]/30 text-[11px] font-normal text-[#161615] tracking-tight hover:bg-[#F4F3F0] transition-colors cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#006045]/30 text-[11px] font-normal text-[#006045] tracking-tight hover:bg-[#F4F3F0] transition-colors cursor-pointer"
                     >
                       <FileText className="w-3 h-3 stroke-[1.6]" />
                       Compléter mon CV
@@ -281,7 +281,7 @@ export function ApplyPanel({
                       href={outcome.fallback_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
                     >
                       Ouvrir l&apos;offre
                       <ExternalLink className="w-3 h-3 stroke-[1.5]" />
@@ -306,13 +306,13 @@ export function ApplyPanel({
                         toast("Je n'ai pas pu l'enregistrer. Réessaie.", "warning");
                       }
                     }}
-                    className="flex items-center justify-center gap-1.5 w-full text-[11px] font-normal text-[#161615] hover:underline tracking-tight cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 w-full text-[11px] font-normal text-[#006045] hover:underline tracking-tight cursor-pointer"
                   >
                     <Check className="w-3 h-3" />
                     J&apos;ai postulé avec ce dossier
                   </button>
                 ) : (
-                  <p className="flex items-center justify-center gap-1.5 text-[11px] font-normal text-[#161615]">
+                  <p className="flex items-center justify-center gap-1.5 text-[11px] font-normal text-[#006045]">
                     <Check className="w-3 h-3" /> Ajoutée à ton suivi
                   </p>
                 )}
@@ -320,9 +320,9 @@ export function ApplyPanel({
             )}
 
             {outcome?.type === "blocked" && (
-              <div className="space-y-1.5 p-3.5 rounded-xl bg-[#161615]/8">
+              <div className="space-y-1.5 p-3.5 rounded-xl bg-[#006045]/8">
                 {outcome.missing.map((m) => (
-                  <p key={m.label} className="text-xs font-normal text-[#161615] tracking-tight">
+                  <p key={m.label} className="text-xs font-normal text-[#006045] tracking-tight">
                     {m.label} — {m.detail}
                   </p>
                 ))}
@@ -330,7 +330,7 @@ export function ApplyPanel({
             )}
 
             {outcome?.type === "awaiting" && (
-              <p className="text-xs font-normal text-[#161615] tracking-tight p-3.5 rounded-xl bg-[#161615]/8">
+              <p className="text-xs font-normal text-[#006045] tracking-tight p-3.5 rounded-xl bg-[#006045]/8">
                 {outcome.message}
               </p>
             )}
@@ -369,7 +369,7 @@ export function ApplyPanel({
                         <DownloadLink
                           url={dispatchResumeUrl(candidateId, result.dispatch_id)}
                           filename="CV.pdf"
-                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
                         >
                           <Download className="w-3 h-3 stroke-[1.6]" />
                           CV
@@ -379,7 +379,7 @@ export function ApplyPanel({
                         <DownloadLink
                           url={dispatchLetterUrl(candidateId, result.dispatch_id)}
                           filename="Lettre.txt"
-                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-[#1A1918]/12 text-[11px] font-normal text-[#1A1918]/70 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
                         >
                           <Download className="w-3 h-3 stroke-[1.6]" />
                           Lettre
@@ -404,7 +404,7 @@ export function ApplyPanel({
                       href={result.job_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 w-full text-[11px] font-normal text-[#1A1918]/60 hover:text-[#161615] tracking-tight transition-colors"
+                      className="flex items-center justify-center gap-1.5 w-full text-[11px] font-normal text-[#1A1918]/60 hover:text-[#006045] tracking-tight transition-colors"
                     >
                       Voir l&apos;offre d&apos;origine
                       <ExternalLink className="w-3 h-3 stroke-[1.5]" />
@@ -488,7 +488,7 @@ export function ApplyPanel({
                   type="checkbox"
                   checked={dontAskAgain}
                   onChange={(e) => setDontAskAgain(e.target.checked)}
-                  className="accent-[#161615] h-3.5 w-3.5 cursor-pointer"
+                  className="accent-[#006045] h-3.5 w-3.5 cursor-pointer"
                 />
                 <span className="text-xs font-normal text-[#1A1918]/60 tracking-tight">
                   Ne plus afficher ce message

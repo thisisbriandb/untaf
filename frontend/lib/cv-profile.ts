@@ -51,7 +51,7 @@ export const EMPTY_CV_PROFILE: CvProfile = {
   languages: [],
   experienceYears: 0,
   templateId: "classic",
-  colorHex: "#161615",
+  colorHex: "#006045",
 };
 
 const storageKey = (candidateId: string) => `cv_profile:${candidateId}`;

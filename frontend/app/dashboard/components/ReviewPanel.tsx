@@ -89,7 +89,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
   if (!state) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#161615]" />
+        <Loader2 className="h-5 w-5 animate-spin text-[#006045]" />
       </div>
     );
   }
@@ -117,7 +117,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
                 <ul className="space-y-1">
                   {c.strengths.map((s) => (
                     <li key={s} className="flex gap-2 text-[13px] text-[#161615]">
-                      <span className="mt-2 h-1 w-1 rounded-full bg-[#161615] shrink-0" />
+                      <span className="mt-2 h-1 w-1 rounded-full bg-[#006045] shrink-0" />
                       {s}
                     </li>
                   ))}
@@ -149,7 +149,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
                       <ul className="space-y-0.5">
                         {e.after.map((a) => (
                           <li key={a} className="flex gap-2 text-[13px] text-[#161615]">
-                            <span className="mt-2 h-1 w-1 rounded-full bg-[#161615] shrink-0" />
+                            <span className="mt-2 h-1 w-1 rounded-full bg-[#006045] shrink-0" />
                             {a}
                           </li>
                         ))}
@@ -167,7 +167,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
               <Section title="Compétences mises en avant">
                 <div className="flex flex-wrap gap-1.5">
                   {c.skills_first.map((s) => (
-                    <span key={s} className="rounded-full bg-[#161615]/[0.06] px-2.5 py-1 text-[12px] text-[#161615]">{s}</span>
+                    <span key={s} className="rounded-full bg-[#006045]/[0.08] px-2.5 py-1 text-[12px] text-[#006045]">{s}</span>
                   ))}
                 </div>
               </Section>
@@ -177,7 +177,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
               <button
                 type="button"
                 onClick={() => void openFile(tailoredCvUrl(candidateId, job.id))}
-                className="inline-flex items-center gap-1.5 text-[12px] text-[#161615] underline-offset-2 hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-[12px] text-[#006045] underline-offset-2 hover:underline cursor-pointer"
               >
                 <Eye className="h-3.5 w-3.5" /> Voir le CV adapté tel qu&apos;il partira
               </button>
@@ -190,13 +190,13 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
             <input
               value={letter.subject}
               onChange={(e) => setLetter({ ...letter, subject: e.target.value })}
-              className="w-full rounded-xl border border-[#1A1918]/12 bg-white px-3 py-2 text-[13px] text-[#161615] outline-none focus:border-[#161615]/40"
+              className="w-full rounded-xl border border-[#1A1918]/12 bg-white px-3 py-2 text-[13px] text-[#161615] outline-none focus:border-[#006045]/40"
             />
             <textarea
               value={letter.body}
               onChange={(e) => setLetter({ ...letter, body: e.target.value })}
               rows={12}
-              className="w-full rounded-xl border border-[#1A1918]/12 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-[#161615] outline-none focus:border-[#161615]/40 resize-y"
+              className="w-full rounded-xl border border-[#1A1918]/12 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-[#161615] outline-none focus:border-[#006045]/40 resize-y"
             />
             <div className="flex items-center gap-3">
               <button

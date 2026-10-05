@@ -125,7 +125,7 @@ function Chip({
       className={cn(
         "px-3.5 py-1.5 rounded-full text-sm transition-all cursor-pointer border",
         active
-          ? "border-[#161615] bg-[#161615]/8 text-[#161615] font-normal"
+          ? "border-[#006045] bg-[#006045]/8 text-[#006045] font-normal"
           : "border-[#1A1918]/12 text-[#1A1918]/55 hover:border-[#1A1918]/30 hover:text-[#1A1918]"
       )}
     >
@@ -199,14 +199,14 @@ export function CriteriaStep({
             {value.locations.map((city) => (
               <span
                 key={city}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#161615]/8 text-[#161615] text-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#006045]/8 text-[#006045] text-sm"
               >
                 {city}
                 <button
                   type="button"
                   onClick={() => removeCity(city)}
                   aria-label={`Retirer ${city}`}
-                  className="text-[#161615]/50 hover:text-[#161615] cursor-pointer"
+                  className="text-[#006045]/50 hover:text-[#006045] cursor-pointer"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -228,14 +228,14 @@ export function CriteriaStep({
               }
             }}
             placeholder="Ajouter une ville…"
-            className="w-full pl-10 pr-11 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#161615] transition-all"
+            className="w-full pl-10 pr-11 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
           />
           {cityInput.trim() && (
             <button
               type="button"
               onClick={() => addCity()}
               aria-label="Ajouter la ville"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#161615] hover:bg-[#161615]/8 transition-colors cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#006045] hover:bg-[#006045]/8 transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -249,7 +249,7 @@ export function CriteriaStep({
                 key={city}
                 type="button"
                 onClick={() => addCity(city)}
-                className="px-2.5 py-1 rounded-full text-xs text-[#1A1918]/55 hover:text-[#161615] transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-full text-xs text-[#1A1918]/55 hover:text-[#006045] transition-colors cursor-pointer"
               >
                 + {city}
               </button>
@@ -307,7 +307,7 @@ export function CriteriaStep({
             value={emailInput}
             onChange={(e) => setEmailInput?.(e.target.value)}
             placeholder="prenom@email.com"
-            className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#161615] transition-all"
+            className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
           />
         </Field>
       )}
@@ -319,7 +319,7 @@ export function CriteriaStep({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#161615] hover:text-[#000000] font-medium text-base transition-all cursor-pointer bg-transparent disabled:opacity-40"
+          className="group inline-flex items-center justify-center gap-2.5 py-4 px-8 text-[#006045] hover:text-[#000000] font-medium text-base transition-all cursor-pointer bg-transparent disabled:opacity-40"
         >
           <span>Oui, occupe-toi de tout</span>
           {isSubmitting ? (

@@ -52,7 +52,7 @@ function renderInline(nodes: MdInline[], keyPrefix = ""): ReactNode[] {
             href={node.href}
             target="_blank"
             rel="noopener noreferrer nofollow"
-            className="text-[#161615] underline underline-offset-2 decoration-[#161615]/30 hover:decoration-[#161615] transition-colors break-words"
+            className="text-[#006045] underline underline-offset-2 decoration-[#006045]/30 hover:decoration-[#006045] transition-colors break-words"
           >
             {renderInline(node.children, `${key}-`)}
           </a>
@@ -120,7 +120,7 @@ export function Markdown({
               <ListTag key={key} className="space-y-1.5 pl-1">
                 {block.items.map((item, j) => (
                   <li key={`${key}-${j}`} className="flex gap-2.5">
-                    <span className="shrink-0 text-[#161615] tabular-nums select-none">
+                    <span className="shrink-0 text-[#006045] tabular-nums select-none">
                       {block.ordered ? `${j + 1}.` : "—"}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -136,7 +136,7 @@ export function Markdown({
             return (
               <blockquote
                 key={key}
-                className="border-l-2 border-[#161615]/30 pl-3.5 text-[#1A1918]/60 italic"
+                className="border-l-2 border-[#006045]/30 pl-3.5 text-[#1A1918]/60 italic"
               >
                 {renderInline(parseInline(block.text), `${key}-`)}
               </blockquote>

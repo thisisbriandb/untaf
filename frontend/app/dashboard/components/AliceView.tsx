@@ -46,14 +46,14 @@ function AuditBlock({ data }: { data: CvAuditData }) {
         <span className="text-sm font-normal text-[#1A1918] tracking-tight">
           Audit ATS
         </span>
-        <span className="text-sm font-medium text-[#161615] tabular-nums">
+        <span className="text-sm font-medium text-[#006045] tabular-nums">
           {data.ats_score}/100
         </span>
       </div>
       {data.strengths.length > 0 && (
         <div className="space-y-1">
           {data.strengths.map((s, i) => (
-            <p key={i} className="text-xs font-normal text-[#161615]/80 tracking-tight">
+            <p key={i} className="text-xs font-normal text-[#006045]/80 tracking-tight">
               ✓ {s}
             </p>
           ))}
@@ -102,7 +102,7 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
             <span className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight">
               {STATUS_LABELS[app.status] || app.status}
             </span>
-            <span className="text-xs font-medium text-[#161615] tabular-nums">
+            <span className="text-xs font-medium text-[#006045] tabular-nums">
               {app.match_score}%
             </span>
           </div>
@@ -185,13 +185,13 @@ function CanvasRefChip({ canvasRef }: { canvasRef: CanvasPayload }) {
     <button
       type="button"
       onClick={() => openCanvas(canvasRef)}
-      className="group flex items-center gap-2.5 w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-[#1A1918]/10 bg-white hover:border-[#161615]/45 transition-colors cursor-pointer text-left"
+      className="group flex items-center gap-2.5 w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-[#1A1918]/10 bg-white hover:border-[#006045]/45 transition-colors cursor-pointer text-left"
     >
-      <PanelRight className="w-3.5 h-3.5 stroke-[1.5] text-[#161615] shrink-0" />
+      <PanelRight className="w-3.5 h-3.5 stroke-[1.5] text-[#006045] shrink-0" />
       <span className="flex-1 min-w-0 text-xs font-normal text-[#1A1918] tracking-tight truncate">
         {canvasLabel(canvasRef)}
       </span>
-      <span className="text-[11px] font-normal text-[#1A1918]/55 group-hover:text-[#161615] tracking-tight shrink-0">
+      <span className="text-[11px] font-normal text-[#1A1918]/55 group-hover:text-[#006045] tracking-tight shrink-0">
         {isActive ? "ouvert" : "rouvrir"}
       </span>
     </button>
@@ -438,7 +438,7 @@ export function AliceView({
                 type="button"
                 onClick={() => send(m.query)}
                 disabled={isThinking}
-                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-normal text-[#1A1918]/60 hover:border-[#161615]/35 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-40"
+                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-normal text-[#1A1918]/60 hover:border-[#006045]/35 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
               >
                 {m.label}
               </button>
@@ -450,14 +450,14 @@ export function AliceView({
             e.preventDefault();
             send(prompt);
           }}
-          className="relative flex items-center bg-white border border-[#EDECEA] hover:border-[#1A1918]/25 focus-within:border-[#161615] rounded-full px-4.5 py-3 shadow-sm transition-all"
+          className="relative flex items-center bg-white border border-[#EDECEA] hover:border-[#1A1918]/25 focus-within:border-[#006045] rounded-full px-4.5 py-3 shadow-sm transition-all"
         >
           <button
             type="button"
             onClick={() => setShowLauncher(true)}
             aria-label="Confier une mission à Alice"
             title="Confier une mission"
-            className="text-[#1A1918]/50 hover:text-[#161615] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#1A1918]/50 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <Plus className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -466,7 +466,7 @@ export function AliceView({
             onClick={() => setShowImport(true)}
             aria-label="Coller une offre"
             title="Coller une offre trouvée ailleurs"
-            className="text-[#1A1918]/50 hover:text-[#161615] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#1A1918]/50 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <ClipboardPaste className="w-4 h-4 stroke-[1.4]" />
           </button>

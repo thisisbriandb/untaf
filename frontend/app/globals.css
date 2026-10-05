@@ -11,8 +11,8 @@
      gris chauds pour tout le reste, dont ce qui t'attend (« À valider »). */
   --alice-accent: #006045;
   --alice-glow: #E5F0EC;
-  --alice: #161615;
-  --alice-soft: #161615;
+  --alice: #006045;
+  --alice-soft: #006045;
   --alice-bg: #FAFAF8;
   --alice-text: #1A1918;
   --alice-muted: #9B9890;
@@ -30,10 +30,10 @@
   --muted-foreground: #7A786F;
   --border: #EDECEA;
   --input: #EDECEA;
-  --ring: #161615;
-  --primary: #161615;
+  --ring: #006045;
+  --primary: #006045;
   --primary-foreground: #FFFFFF;
-  --accent: #161615;
+  --accent: #006045;
   --accent-foreground: #FFFFFF;
   --success: #10B981;
   --success-foreground: #042F2E;
@@ -204,7 +204,7 @@ body {
   display: inline-block;
   width: 0.52em;
   height: 0.52em;
-  background-color: #161615;
+  background-color: #006045;
   vertical-align: 0.15em;
   margin-left: 0.45rem;
   border-radius: 9999px;
@@ -230,7 +230,7 @@ body {
   width: 9px;
   height: 9px;
   border-radius: 9999px;
-  border: 1.5px solid #161615;
+  border: 1.5px solid #006045;
   background-color: transparent;
   animation: alice-eyes-gaze 3.2s ease-in-out infinite;
 }

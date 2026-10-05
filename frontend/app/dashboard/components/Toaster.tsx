@@ -57,9 +57,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <span
                   className={cn(
                     "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                    t.tone === "success" && "bg-[#161615]",
+                    t.tone === "success" && "bg-[#006045]",
                     t.tone === "info" && "bg-white/15",
-                    t.tone === "warning" && "bg-[#161615]",
+                    t.tone === "warning" && "bg-[#006045]",
                   )}
                 >
                   <Icon className="h-3 w-3 stroke-[2.2]" />

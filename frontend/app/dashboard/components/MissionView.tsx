@@ -59,10 +59,10 @@ const CONTRACT_LABELS: Record<string, string> = {
 
 const EVENT_DOT: Record<string, string> = {
   scan: "bg-[#1A1918]/25",
-  shortlist: "bg-[#161615]",
-  letter_written: "bg-[#161615]/70",
-  applied: "bg-[#161615]",
-  awaiting_approval: "bg-[#161615]",
+  shortlist: "bg-[#006045]",
+  letter_written: "bg-[#006045]/70",
+  applied: "bg-[#006045]",
+  awaiting_approval: "bg-[#006045]",
   error: "bg-red-500",
 };
 
@@ -161,7 +161,7 @@ export function MissionView() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-2.5 py-16">
-        <Loader2 className="w-5 h-5 animate-spin text-[#161615]" />
+        <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
         <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
           Je charge ta mission…
         </p>
@@ -214,7 +214,7 @@ export function MissionView() {
             className={cn(
               "flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-normal tracking-tight transition-colors cursor-pointer shrink-0 disabled:opacity-40",
               isPaused
-                ? "border-[#161615]/40 text-[#161615] hover:bg-[#161615]/6"
+                ? "border-[#006045]/40 text-[#006045] hover:bg-[#006045]/6"
                 : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]"
             )}
           >
@@ -239,9 +239,9 @@ export function MissionView() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             whileTap={{ scale: 0.99 }}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl bg-[#161615]/[0.06] border border-[#161615]/15 text-left cursor-pointer hover:bg-[#161615]/10 transition-colors"
+            className="w-full flex items-center gap-3 p-4 rounded-2xl bg-[#006045]/[0.06] border border-[#006045]/15 text-left cursor-pointer hover:bg-[#006045]/10 transition-colors"
           >
-            <FolderOpen className="h-4 w-4 text-[#161615] shrink-0" />
+            <FolderOpen className="h-4 w-4 text-[#006045] shrink-0" />
             <span className="flex-1 min-w-0">
               <span className="block text-sm text-[#1A1918] tracking-tight">
                 {readyPacks} dossier{readyPacks > 1 ? "s prêts" : " prêt"}
@@ -250,7 +250,7 @@ export function MissionView() {
                 CV adapté et lettre pour chaque offre, à télécharger ou envoyer depuis Candidatures.
               </span>
             </span>
-            <span className="inline-flex items-center gap-1 text-xs text-[#161615] shrink-0">
+            <span className="inline-flex items-center gap-1 text-xs text-[#006045] shrink-0">
               Voir <ArrowRight className="h-3 w-3" />
             </span>
           </motion.button>
@@ -275,7 +275,7 @@ export function MissionView() {
                   <span
                     className={cn(
                       "mt-0.5 w-3.5 shrink-0 text-center text-sm transition-colors",
-                      active ? "text-[#161615]" : "text-[#1A1918]/20"
+                      active ? "text-[#006045]" : "text-[#1A1918]/20"
                     )}
                   >
                     {active ? "✓" : "—"}
@@ -316,9 +316,9 @@ export function MissionView() {
                   onMouseUp={(e) =>
                     patch({ auto_apply_min_score: Number((e.target as HTMLInputElement).value) })
                   }
-                  className="flex-1 accent-[#161615] h-1 cursor-pointer"
+                  className="flex-1 accent-[#006045] h-1 cursor-pointer"
                 />
-                <span className="text-sm text-[#161615] tabular-nums w-10 text-right">
+                <span className="text-sm text-[#006045] tabular-nums w-10 text-right">
                   {mission.auto_apply_min_score}%
                 </span>
               </div>
@@ -340,9 +340,9 @@ export function MissionView() {
                 onMouseUp={(e) =>
                   patch({ weekly_quota: Number((e.target as HTMLInputElement).value) })
                 }
-                className="flex-1 accent-[#161615] h-1 cursor-pointer"
+                className="flex-1 accent-[#006045] h-1 cursor-pointer"
               />
-              <span className="text-sm text-[#161615] tabular-nums w-10 text-right">
+              <span className="text-sm text-[#006045] tabular-nums w-10 text-right">
                 {mission.weekly_quota}
               </span>
             </div>
@@ -392,7 +392,7 @@ export function MissionView() {
               <button
                 type="button"
                 onClick={() => askAlice("Pourquoi j'ai si peu d'offres ? Que dois-je changer à mon mandat ?")}
-                className="text-xs font-normal text-[#161615] hover:underline tracking-tight pt-1 cursor-pointer"
+                className="text-xs font-normal text-[#006045] hover:underline tracking-tight pt-1 cursor-pointer"
               >
                 En parler à Alice →
               </button>
@@ -403,7 +403,7 @@ export function MissionView() {
         {/* ═══ Journal ═══ */}
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Radar className="w-3 h-3 stroke-[1.6] text-[#161615]" />
+            <Radar className="w-3 h-3 stroke-[1.6] text-[#006045]" />
             <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
               Ce que j&apos;ai fait
             </p>
@@ -427,7 +427,7 @@ export function MissionView() {
                   })}
                   className={cn(
                     "flex items-start gap-3 py-3 border-b border-[#1A1918]/6",
-                    e.kind === "letter_written" && "cursor-pointer group hover:bg-[#161615]/[0.03]",
+                    e.kind === "letter_written" && "cursor-pointer group hover:bg-[#006045]/[0.03]",
                   )}
                 >
                   <span
@@ -440,7 +440,7 @@ export function MissionView() {
                     <p className="text-sm font-light text-[#1A1918]/75 leading-relaxed tracking-tight">
                       {e.summary}
                       {e.kind === "letter_written" && (
-                        <span className="ml-1.5 text-xs text-[#161615] opacity-60 group-hover:opacity-100 transition-opacity">
+                        <span className="ml-1.5 text-xs text-[#006045] opacity-60 group-hover:opacity-100 transition-opacity">
                           Voir →
                         </span>
                       )}
@@ -457,7 +457,7 @@ export function MissionView() {
 
         {/* ═══ Relais conversation ═══ */}
         <div className="flex flex-wrap gap-1.5 pt-1">
-          <Sparkles className="w-3 h-3 stroke-[1.6] text-[#161615] mt-1.5 shrink-0" />
+          <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] mt-1.5 shrink-0" />
           {[
             "Fais-moi le bilan de la semaine",
             "Qu'est-ce que tu as fait aujourd'hui ?",
@@ -466,7 +466,7 @@ export function MissionView() {
               key={q}
               type="button"
               onClick={() => askAlice(q)}
-              className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-normal text-[#1A1918]/65 tracking-tight hover:border-[#161615]/40 hover:text-[#161615] transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-[11px] font-normal text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer"
             >
               {q}
             </button>

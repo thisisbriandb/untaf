@@ -20,9 +20,9 @@ import { invalidateApplication } from "@/lib/application-state";
 const POLL_MS = 2500;
 
 const DOT: Record<string, string> = {
-  applied: "bg-[#161615]",
-  letter_written: "bg-[#161615]/70",
-  awaiting_approval: "bg-[#161615]",
+  applied: "bg-[#006045]",
+  letter_written: "bg-[#006045]/70",
+  awaiting_approval: "bg-[#006045]",
   error: "bg-red-500",
 };
 
@@ -78,7 +78,7 @@ export function MissionStream({
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#006045]" />
           </span>
         ) : (
-          <Check className="h-3 w-3 text-[#161615]" />
+          <Check className="h-3 w-3 text-[#006045]" />
         )}
         <span>
           {run.title}
@@ -125,7 +125,7 @@ export function MissionStream({
             animate={{ opacity: 1 }}
             className="flex items-center gap-2.5 text-[15px] font-light text-[#1A1918]/60 tracking-tight"
           >
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#161615]" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
             {run.current_step ? `${STEP_LABELS[run.current_step]}…` : "Je m'y mets…"}
           </motion.p>
         )}

@@ -37,13 +37,13 @@ export default function ConfirmedPage() {
       <AlicePresence emotion={state === "ok" ? "happy" : "thinking"} />
       {state === "waiting" && (
         <p className="flex items-center gap-2 text-sm font-light text-[#1A1918]/55">
-          <Loader2 className="h-4 w-4 animate-spin text-[#161615]" /> Je vérifie ton lien…
+          <Loader2 className="h-4 w-4 animate-spin text-[#006045]" /> Je vérifie ton lien…
         </p>
       )}
       {state === "ok" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-sm">
           <p className="flex items-center justify-center gap-2 text-xl font-normal text-[#1A1918]/85 tracking-tight">
-            <Check className="h-5 w-5 text-[#161615]" /> C&apos;est confirmé.
+            <Check className="h-5 w-5 text-[#006045]" /> C&apos;est confirmé.
           </p>
           <p className="text-sm font-light text-[#1A1918]/55 leading-relaxed">
             Si tu as un autre onglet ouvert avec moi, retourne-y : il a déjà repris. Sinon, on

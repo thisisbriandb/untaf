@@ -82,7 +82,7 @@ export function ImportJobDialog({
             disabled={isImporting}
             autoFocus
             aria-label="Texte de l'offre"
-            className="w-full resize-none rounded-2xl border border-[#EDECEA] bg-white px-4 py-3 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#161615] disabled:opacity-60"
+            className="w-full resize-none rounded-2xl border border-[#EDECEA] bg-white px-4 py-3 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
           />
           <input
             type="url"
@@ -92,7 +92,7 @@ export function ImportJobDialog({
             maxLength={2000}
             disabled={isImporting}
             aria-label="Lien de l'annonce"
-            className="w-full rounded-full border border-[#EDECEA] bg-white px-4 py-2.5 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#161615] disabled:opacity-60"
+            className="w-full rounded-full border border-[#EDECEA] bg-white px-4 py-2.5 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
           />
 
           {error && (
