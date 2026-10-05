@@ -407,6 +407,17 @@ notification est enregistrée en `simulated`, jamais rapportée comme partie.
 
 ---
 
+## Extension navigateur (prototype)
+
+Le dossier `extension/` contient une extension Chrome (MV3). Alice y agit dans
+le navigateur du candidat, sur sa propre session : **« Ajouter à Alice »** sur
+n'importe quelle offre, et **« Remplir avec Alice »** sur un formulaire de
+candidature (identité, lettre, CV adapté joint, réponses tirées du parcours).
+Le candidat garde la main sur « Envoyer ». Elle ouvre les sites où l'envoi
+automatique est impossible (portails, formulaires à questions), et chaque offre
+ajoutée enrichit la liste. Côté API : `GET/POST /api/candidates/{id}/extension/…`
+(`match`, `profile`, `answers`). Installation et détails : `extension/README.md`.
+
 ## État actuel
 
 **Fonctionne** : onboarding, collecte multi-sources, matching explicable,

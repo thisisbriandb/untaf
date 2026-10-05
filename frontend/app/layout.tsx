@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { API_BASE_URL } from "@/lib/config";
 
 const geist = Geist({
   variable: "--font-sans",
@@ -17,6 +18,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Alice — Votre Agent de Carrière IA",
   description: "La recherche d'emploi ne doit pas devenir un emploi. Laissez Alice trouver et candidater pour vous.",
+  // L'extension navigateur lit cette adresse pour appeler la même API que le site.
+  other: { "alice-api": API_BASE_URL },
 };
 
 export default function RootLayout({

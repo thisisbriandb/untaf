@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Alice — candidatures",
+  "short_name": "Alice",
+  "version": "0.1.0",
+  "description": "Ajoute à Alice l'offre que tu regardes, et laisse-la remplir le formulaire de candidature. Tu gardes la main sur « Envoyer ».",
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "action": { "default_popup": "popup.html", "default_title": "Alice" },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "tabs", "webNavigation"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["https://alice-agent.fr/*", "https://*.alice-agent.fr/*", "http://localhost:3000/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "exclude_matches": ["https://alice-agent.fr/*", "https://*.alice-agent.fr/*", "http://localhost:3000/*"],
+      "js": ["fields.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
