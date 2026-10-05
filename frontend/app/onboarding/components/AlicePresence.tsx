@@ -2,9 +2,7 @@
 
 import React, { useEffect, useId } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import {
-  AliceGlasses, AliceHead, BLAZER_PATH, NECK_PATH, SHIRT_PATH, TONES,
-} from "./AliceSilhouette";
+import { AliceGlasses, AliceHead, HEAD_VIEWBOX } from "./AliceSilhouette";
 
 export type AliceEmotion =
   | "idle"
@@ -25,7 +23,7 @@ interface AlicePresenceProps {
 const HEIGHT = { sm: 34, md: 64, lg: 104 } as const;
 
 /**
- * Alice, présente : sa silhouette de face, en contre-jour, qui respire.
+ * Alice, présente : sa tête de face, en contre-jour, qui respire.
  *
  * Les états se lisent dans la lumière plus que dans le geste — nette quand
  * elle t'écoute, la tête qui s'incline quand elle lit ou écrit, le contour
@@ -62,13 +60,13 @@ export function AlicePresence({ emotion, className = "", size = "lg" }: AlicePre
 
   const sharp = emotion === "listening" || emotion === "happy" ? 0.5 : 0.75;
   const height = HEIGHT[size];
-  const width = Math.round((height * 100) / 120);
+  const width = height;
   const id = (name: string) => `${name}-${uid}`;
   const pulse = { duration: 2.4, repeat: Infinity, ease: "easeInOut" } as const;
 
   return (
     <div className={`flex flex-col items-center justify-center select-none ${className}`}>
-      <svg viewBox="0 0 100 120" width={width} height={height} role="img" aria-label="Alice" className="overflow-visible">
+      <svg viewBox={HEAD_VIEWBOX} width={width} height={height} role="img" aria-label="Alice" className="overflow-visible">
         <defs>
           <filter id={id("soft")} x="-30%" y="-30%" width="160%" height="160%">
             <motion.feGaussianBlur
@@ -77,35 +75,20 @@ export function AlicePresence({ emotion, className = "", size = "lg" }: AlicePre
               transition={busy ? pulse : { duration: 0.6 }}
             />
           </filter>
-          <filter id={id("haze")} x="-40%" y="-40%" width="180%" height="180%">
-            <motion.feGaussianBlur
-              initial={false}
-              animate={{ stdDeviation: busy ? [2, 3.2, 2] : 2.2 }}
-              transition={busy ? pulse : { duration: 0.6 }}
-            />
-          </filter>
           <radialGradient id={id("glow")} cx="50%" cy="50%" r="50%">
             <stop offset="0" stopColor="#fff" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </radialGradient>
-          <linearGradient id={id("fade")} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.6" stopColor="#fff" />
-            <stop offset="0.9" stopColor="#fff" stopOpacity="0.8" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-          <mask id={id("mb")} maskContentUnits="userSpaceOnUse">
-            <rect width="100" height="120" fill={`url(#${id("fade")})`} />
-          </mask>
         </defs>
 
         {/* Le contre-jour : il s'intensifie quand elle travaille */}
         <motion.ellipse
-          cx="50" cy="48" rx="48" ry="52"
+          cx="50" cy="38" rx="34" ry="34"
           fill={`url(#${id("glow")})`}
           initial={false}
           animate={busy ? { opacity: [0.7, 1, 0.7], scale: [1, 1.06, 1] } : { opacity: emotion === "happy" ? 1 : 0.8, scale: 1 }}
           transition={busy ? pulse : { duration: 0.6 }}
-          style={{ transformOrigin: "50px 48px" }}
+          style={{ transformOrigin: "50px 38px" }}
         />
 
         {/* Elle respire */}
@@ -115,14 +98,9 @@ export function AlicePresence({ emotion, className = "", size = "lg" }: AlicePre
             scaleY: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
             y: { type: "spring", stiffness: 200, damping: 14 },
           }}
-          style={{ transformOrigin: "50px 120px" }}
+          style={{ transformOrigin: "50px 62px" }}
         >
-          <g mask={`url(#${id("mb")})`} filter={`url(#${id("haze")})`}>
-            <path d={BLAZER_PATH} fill={TONES.blazer} />
-            <path d={SHIRT_PATH} fill={TONES.shirt} />
-          </g>
           <g filter={`url(#${id("soft")})`}>
-            <path d={NECK_PATH} fill={TONES.neck} />
             <motion.g
               style={{ x: headX, y: headY, transformOrigin: "50px 62px" }}
               animate={{ rotate: tilt }}
