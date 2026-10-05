@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, FolderOpen, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowRight, FolderOpen, PanelLeft, Search, Settings, SquarePen, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteConversation, type ConversationSummary } from "@/lib/alice-client";
 import { fetchPipeline, STAGE_LABELS, type PipelineItem, type Stage } from "@/lib/pipeline-client";
@@ -159,7 +159,13 @@ function Heading({ children, count }: { children: React.ReactNode; count?: numbe
   );
 }
 
-export function ConversationSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ConversationSidebar({
+  open, onClose, userName = "",
+}: {
+  open: boolean;
+  onClose: () => void;
+  userName?: string;
+}) {
   const {
     candidateId, conversations, conversationId, openConversation, newConversation,
     refreshConversations, goToConversation, openCanvas,
@@ -229,52 +235,113 @@ export function ConversationSidebar({ open, onClose }: { open: boolean; onClose:
     if (window.innerWidth < 1024) onClose();
   };
 
+  const isMobile = () => window.innerWidth < 1024;
+  const goTab = (tab: string) => {
+    window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: tab }));
+    if (isMobile()) onClose();
+  };
+  const [searching, setSearching] = useState(false);
+
+  // Rail pleine hauteur, collé au bord gauche, comme une barre d'application :
+  // le contenu glisse à côté plutôt que d'être recouvert (dès lg). Sur mobile,
+  // le rail passe par-dessus, avec un voile pour le refermer.
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {open && (
+        <>
+          <motion.div
+            key="veil"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-[#1A1918]/20 lg:hidden"
+          />
         <motion.aside
-          initial={{ x: -28, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -28, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 420, damping: 36 }}
-          className="fixed lg:static left-2 top-[68px] bottom-2 z-40 w-[280px] shrink-0 lg:ml-3 lg:mb-3 flex flex-col rounded-2xl bg-[#F4F3F0] border border-[#1A1918]/[0.06] shadow-[0_8px_30px_rgba(26,25,24,0.06)] lg:shadow-none overflow-hidden"
+          key="rail"
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: 272, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 380, damping: 40 }}
+          className="fixed lg:relative inset-y-0 left-0 z-50 shrink-0 h-full overflow-hidden bg-[#F4F3F0] border-r border-[#1A1918]/[0.07]"
         >
-          {/* En-tête */}
-          <div className="px-3 pt-3 pb-2 space-y-2.5">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[13px] font-medium text-[#1A1918] tracking-tight">Conversations</p>
+          <div className="w-[272px] h-full flex flex-col">
+          {/* Marque et repli, à la place qu'ils occupent dans l'en-tête */}
+          <div className="h-[68px] shrink-0 flex items-center justify-between px-4">
+            <button
+              type="button"
+              onClick={() => goTab("alice")}
+              className="text-base md:text-lg font-medium text-[#1A1918] tracking-tight cursor-pointer hover:opacity-80"
+            >
+              alice
+            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setSearching((v) => !v)}
+                aria-label="Rechercher une conversation"
+                className={cn(
+                  "p-2 rounded-full transition-colors cursor-pointer",
+                  searching ? "text-[#006045] bg-[#006045]/10" : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
+                )}
+              >
+                <Search className="h-4 w-4 stroke-[1.4]" />
+              </button>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Fermer"
-                className="p-1.5 rounded-full text-[#1A1918]/35 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
+                aria-label="Masquer les conversations"
+                className="p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
               >
-                <X className="h-3.5 w-3.5" />
+                <PanelLeft className="h-4 w-4 stroke-[1.4]" />
               </button>
             </div>
-            <motion.button
+          </div>
+
+          <div className="px-2 pb-2 space-y-0.5">
+            <button
               type="button"
-              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 newConversation();
                 goToConversation();
-                if (window.innerWidth < 1024) onClose();
+                if (isMobile()) onClose();
               }}
-              className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#006045] px-3 py-2 text-[12px] text-white hover:bg-[#004d37] transition-colors cursor-pointer shadow-sm shadow-[#006045]/20"
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5" /> Nouvelle conversation
-            </motion.button>
-            {conversations.length > 4 && (
-              <label className="flex items-center gap-2 rounded-xl bg-white/70 border border-[#1A1918]/[0.06] px-2.5 py-1.5">
-                <Search className="h-3 w-3 text-[#1A1918]/35" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Une entreprise, un poste…"
-                  className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#1A1918]/30 outline-none"
-                />
-              </label>
-            )}
+              <SquarePen className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> Nouvelle conversation
+            </button>
+            <button
+              type="button"
+              onClick={() => goTab("candidatures")}
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
+            >
+              <FolderOpen className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" />
+              <span className="flex-1 text-left">Mes dossiers</span>
+              {counts.ready > 0 && (
+                <span className="rounded-full bg-[#006045]/10 px-1.5 py-px text-[10px] tabular-nums text-[#006045]">
+                  {counts.ready}
+                </span>
+              )}
+            </button>
+            <AnimatePresence initial={false}>
+              {searching && (
+                <motion.label
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="flex items-center gap-2 overflow-hidden rounded-xl bg-white border border-[#1A1918]/[0.08] px-2.5 py-1.5 mt-1"
+                >
+                  <Search className="h-3 w-3 text-[#1A1918]/35" />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Une entreprise, un poste…"
+                    className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#1A1918]/30 outline-none"
+                  />
+                </motion.label>
+              )}
+            </AnimatePresence>
           </div>
 
           <LayoutGroup id="conversations">
@@ -344,26 +411,31 @@ export function ConversationSidebar({ open, onClose }: { open: boolean; onClose:
             </div>
           </LayoutGroup>
 
-          {/* Où en sont les dossiers — un raccourci, pas un tableau de bord */}
-          {(counts.ready > 0 || counts.sent > 0) && (
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: "candidatures" }));
-                if (window.innerWidth < 1024) onClose();
-              }}
-              className="m-2 mt-0 flex items-center gap-2.5 rounded-xl bg-white/80 border border-[#1A1918]/[0.06] px-3 py-2.5 text-left hover:border-[#006045]/30 transition-colors cursor-pointer group"
-            >
-              <FolderOpen className="h-3.5 w-3.5 text-[#006045]" />
-              <span className="flex-1 text-[11px] text-[#1A1918]/70 tracking-tight">
-                <span className="tabular-nums text-[#1A1918]">{counts.ready}</span> dossier{counts.ready > 1 ? "s" : ""} prêt{counts.ready > 1 ? "s" : ""}
-                {" · "}
-                <span className="tabular-nums text-[#1A1918]">{counts.sent}</span> envoyée{counts.sent > 1 ? "s" : ""}
+          {/* Le compte, en bas, comme partout ailleurs */}
+          <div className="shrink-0 border-t border-[#1A1918]/[0.06] p-2">
+            <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
+              <span className="h-8 w-8 shrink-0 rounded-full bg-[#006045] text-white flex items-center justify-center text-[11px] font-medium">
+                {initials(userName || "Toi")}
               </span>
-              <ArrowRight className="h-3 w-3 text-[#1A1918]/30 group-hover:text-[#006045] transition-colors" />
-            </button>
-          )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] text-[#1A1918] tracking-tight">{userName || "Mon compte"}</span>
+                <span className="block truncate text-[10px] font-light text-[#1A1918]/45">
+                  {counts.ready} dossier{counts.ready > 1 ? "s" : ""} prêt{counts.ready > 1 ? "s" : ""} · {counts.sent} envoyée{counts.sent > 1 ? "s" : ""}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => goTab("parametres")}
+                aria-label="Paramètres"
+                className="p-1.5 rounded-full text-[#1A1918]/40 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
+              >
+                <Settings className="h-4 w-4 stroke-[1.4]" />
+              </button>
+            </div>
+          </div>
+          </div>
         </motion.aside>
+        </>
       )}
     </AnimatePresence>
   );
