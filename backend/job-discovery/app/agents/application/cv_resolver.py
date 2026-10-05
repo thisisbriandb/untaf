@@ -26,7 +26,13 @@ try:
     HAS_ENGINE = True
 except Exception as e:  # noqa: BLE001
     HAS_ENGINE = False
+    _ENGINE_ERROR = f"{type(e).__name__}: {e}"
     logger.warning("cv-engine indisponible pour la génération de CV : %s", e)
+
+
+#: Dernière erreur de mise en page, jointe aux alertes : sans elle, un
+#: « CV impossible à composer » ne dit pas quoi réparer.
+last_render_error: str | None = None
 
 
 def _safe_name(name: str) -> str:
@@ -49,6 +55,7 @@ def resolve_cv(
     déposé ne se réécrit pas ; l'adaptation passe donc toujours par un modèle,
     celui choisi par le candidat ou le classique à défaut.
     """
+    global last_render_error
     design = candidate.cv_design or {}
     mode = design.get("mode") or ("original" if candidate.resume_file else "template")
     template_id = design.get("template_id")
@@ -73,6 +80,7 @@ def resolve_cv(
 
     if not HAS_ENGINE:
         logger.error("Modèle demandé mais cv-engine absent.")
+        last_render_error = f"cv-engine indisponible : {globals().get('_ENGINE_ERROR', '?')}"
         # Un CV adapté ne se remplace pas par l'original : ce serait livrer
         # le document que le candidat avait déjà, sous le nom de « pack ».
         if tailored:
@@ -193,6 +201,7 @@ def resolve_cv(
     except Exception as e:  # noqa: BLE001
         # Un échec de compilation ne doit pas envoyer un document inattendu :
         # on retombe sur l'original en le signalant.
+        last_render_error = f"{type(e).__name__}: {e}"[:500]
         logger.error("Génération du CV au modèle échouée : %s", e, exc_info=True)
         # « render_failed » : l'appelant sait que la promesse (un CV mis en
         # page) n'est pas tenue, et peut le dire au lieu de servir en silence

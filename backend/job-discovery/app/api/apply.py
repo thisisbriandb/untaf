@@ -82,6 +82,11 @@ def _profile(candidate: Candidate) -> dict:
     return candidate_profile(candidate)
 
 
+def _render_error() -> str:
+    from app.agents.application import cv_resolver
+    return cv_resolver.last_render_error or "inconnue"
+
+
 def _tailoring(application: Application | None) -> dict | None:
     return (application.metadata_json or {}).get("tailored_cv") if application else None
 
@@ -229,7 +234,7 @@ async def download_tailored_cv(
     if origin == "render_failed" or not pdf:
         from app.agents.incidents import report_incident
         await report_incident("cv_render_failed", candidate_id, "téléchargement du CV adapté",
-                              context={"job": job.title})
+                              context={"job": job.title, "erreur": _render_error()})
         raise HTTPException(503, "Je n'ai pas pu mettre en page ton CV adapté. L'équipe est "
                                  "prévenue ; réessaie dans quelques minutes.")
     return Response(
@@ -288,7 +293,8 @@ async def download_pack(
             from app.agents.incidents import report_incident
             await report_incident(
                 "cv_render_failed", candidate_id, "pack demandé, CV adapté impossible à composer",
-                context={"job": job.title, "company": company_name},
+                context={"job": job.title, "company": company_name,
+                         "erreur": _render_error()},
             )
             # Mieux vaut le dire que glisser l'original dans le « pack ».
             raise HTTPException(

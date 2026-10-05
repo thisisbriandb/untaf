@@ -56,6 +56,42 @@ function filenameFrom(res: Response, fallback: string): string {
 }
 
 /** Télécharge un fichier protégé. Renvoie false si le serveur refuse. */
+/**
+ * Télécharge un fichier protégé. Renvoie null si c'est fait, sinon le motif
+ * donné par le serveur (« Je n'ai pas pu mettre en page ton CV adapté… »),
+ * pour dire à l'utilisateur ce qui se passe plutôt qu'un échec muet.
+ */
+export async function downloadFileOrReason(url: string, fallbackName = "document"): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(url);
+  } catch {
+    return "Le serveur est injoignable. Réessaie dans un instant.";
+  }
+  if (!res.ok) {
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") return body.detail;
+    } catch {
+      /* corps non JSON */
+    }
+    return res.status === 404 ? "Ce document n'existe pas (encore)." : "Téléchargement impossible pour l'instant.";
+  }
+  saveBlob(await res.blob(), filenameFrom(res, fallbackName));
+  return null;
+}
+
+function saveBlob(blob: Blob, name: string) {
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 10_000);
+}
+
 export async function downloadFile(url: string, fallbackName = "document"): Promise<boolean> {
   const res = await apiFetch(url);
   if (!res.ok) return false;

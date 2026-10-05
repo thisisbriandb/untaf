@@ -10,7 +10,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { apiFetch, downloadFile } from "@/lib/api";
+import { apiFetch, downloadFileOrReason } from "@/lib/api";
 import { useToast } from "./Toaster";
 
 export function DownloadLink({
@@ -33,9 +33,9 @@ export function DownloadLink({
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        const ok = await downloadFile(url, filename);
+        const reason = await downloadFileOrReason(url, filename);
         setBusy(false);
-        if (!ok) toast("Téléchargement impossible pour l'instant.", "warning");
+        if (reason) toast(reason, "warning");
       }}
       className={`${className ?? ""} cursor-pointer disabled:opacity-60`}
     >

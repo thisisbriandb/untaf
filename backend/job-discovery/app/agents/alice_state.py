@@ -162,8 +162,15 @@ async def load_state(candidate_id: UUID) -> AliceState:
         if design.get("mode") == "template" and design.get("template_id"):
             state.cv_presentation = f"modèle {design['template_id']}"
         elif candidate.resume_file:
-            state.cv_presentation = "original (PDF déposé, non modifiable)"
-        state.cv_missing_sections = missing_sections(candidate)
+            # Pas un blocage : chaque dossier remet le CV en page au modèle
+            # classique, automatiquement. Rien à demander au candidat.
+            state.cv_presentation = "PDF déposé — remis en page au modèle classique dans chaque dossier"
+        # Seules les sections qui affaiblissent vraiment un CV : expériences,
+        # formation, compétences. Les langues et la synthèse sont facultatives
+        # (la synthèse est rédigée pour chaque offre).
+        state.cv_missing_sections = [
+            s for s in missing_sections(candidate) if s in ("experiences", "education", "skills")
+        ]
         state.can_send_email = settings.can_send_email
         state.can_submit_forms = settings.browser_submit_enabled
 

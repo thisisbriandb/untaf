@@ -26,6 +26,7 @@ from app.agents.discovery.signals import (
     days_since,
     detect_country,
     detect_job_family,
+    is_generic_posting,
     detect_language,
     detect_seniority,
     seniority_distance,
@@ -189,6 +190,9 @@ def evaluate_match(
     if criteria.countries and job_country and job_country not in criteria.countries:
         if not (is_remote and criteria.remote_ignores_country):
             rejections.append(f"pays '{job_country}' hors du mandat")
+
+    if is_generic_posting(title):
+        rejections.append("annonce générique (candidature spontanée, vivier) : pas un poste")
 
     family_known = job_family != "unknown"
     if criteria.job_families and family_known:

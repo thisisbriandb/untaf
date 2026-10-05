@@ -208,10 +208,39 @@ _FAMILY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("engineering", ("ingénieur mécanique", "ingénieur civil", "ingénieur process",
                      "bureau d'études", "automaticien", "électronicien")),
     ("health", ("infirmier", "médecin", "aide-soignant", "pharmacien",
-                "kinésithérapeute", "sage-femme")),
+                "kinésithérapeute", "sage-femme", "radioprotection", "physique médicale",
+                "physicien médical", "dosimétri", "manipulateur", "radiolog", "biologiste",
+                "laborantin", "préparateur en pharmacie")),
 ]
 
 _FAMILY_MIN_TECH = 3
+
+#: Ce qui compte comme technologie logicielle pour le repli ci-dessous. Les
+#: « compétences » d'une annonce ne sont pas toutes des technos : une offre
+#: de radioprotection en liste trois (dosimétrie, réglementation…), et le
+#: repli la classait « software ».
+_SOFTWARE_TECH = {
+    "python", "java", "javascript", "typescript", "react", "vue", "angular", "node",
+    "next.js", "php", "symfony", "laravel", "ruby", "rails", "go", "rust", "c#", ".net",
+    "c++", "c", "kotlin", "swift", "scala", "sql", "postgresql", "mysql", "mongodb",
+    "redis", "docker", "kubernetes", "aws", "gcp", "azure", "terraform", "linux", "git",
+    "django", "flask", "fastapi", "spring", "graphql", "html", "css", "tailwind",
+    "react-native", "flutter", "dart", "elasticsearch", "kafka", "spark", "airflow",
+    "ci/cd", "jenkins", "gitlab", "github", "devops", "api", "rest", "microservices",
+}
+
+
+#: Annonces génériques des sites carrière : pas un poste, un vivier.
+_GENERIC_POSTING = re.compile(
+    r"\b(spontaneous|unsolicited|open|general)\s+application\b|candidature\s+spontan|"
+    r"talent\s+(pool|community)|vivier|future\s+opportunit|join\s+our\s+talent",
+    re.I,
+)
+
+
+def is_generic_posting(title: str | None) -> bool:
+    """« Spontaneous Application », « Talent Pool – Paris » : aucun poste derrière."""
+    return bool(_GENERIC_POSTING.search(title or ""))
 
 
 def detect_job_family(title: str | None, tech_stack: list[str] | None = None) -> str:
@@ -222,9 +251,12 @@ def detect_job_family(title: str | None, tech_stack: list[str] | None = None) ->
         if any(kw in text for kw in keywords):
             return family
 
-    # A dense tech stack on an unrecognised title is still a tech job.
-    if tech_stack and len(tech_stack) >= _FAMILY_MIN_TECH:
-        return "software"
+    # A dense *software* stack on an unrecognised title is still a tech job.
+    if tech_stack:
+        from app.agents.discovery.skills import canonical
+        techs = {canonical(t) for t in tech_stack if t}
+        if len(techs & _SOFTWARE_TECH) >= _FAMILY_MIN_TECH:
+            return "software"
 
     return "unknown"
 
