@@ -102,6 +102,10 @@ class ProfileOut(BaseModel):
     first_name: str
     last_name: str
     email: str
+    #: L'adresse à donner dans les formulaires : celle de réponse d'Alice si la
+    #: réception est configurée (les réponses arrivent alors dans Alice et sont
+    #: transférées), sinon l'adresse du candidat.
+    contact_email: str
     phone: str
     city: str
     linkedin_url: str
@@ -120,14 +124,19 @@ def split_name(full_name: str) -> tuple[str, str]:
 
 @router.get("/profile", response_model=ProfileOut)
 async def profile(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+    from app.agents.inbox import ensure_reply_address
+
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
         raise HTTPException(404, "Profil introuvable.")
+    reply = await ensure_reply_address(db, candidate)
+    await db.commit()
     first, last = split_name(candidate.full_name)
     return ProfileOut(
         full_name=candidate.full_name or "",
         first_name=first, last_name=last,
         email=candidate.email or "",
+        contact_email=reply or candidate.email or "",
         phone=candidate.phone or "",
         city=(candidate.preferred_locations or [""])[0] or "",
         linkedin_url=candidate.linkedin_url or "",

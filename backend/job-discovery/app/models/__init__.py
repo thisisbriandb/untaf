@@ -17,6 +17,7 @@ from app.models.dispatch import ApplicationDispatch, DispatchChannel, DispatchSt
 from app.models.login_token import LoginToken
 from app.models.conversation import Conversation, ConversationMessage
 from app.models.notification import Notification, NotificationKind, NotificationStatus
+from app.models.inbound_email import InboundEmail
 from app.models.mission import (
     Mission,
     MissionEvent,
@@ -54,4 +55,5 @@ __all__ = [
     "Notification",
     "NotificationKind",
     "NotificationStatus",
+    "InboundEmail",
 ]

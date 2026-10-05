@@ -85,6 +85,9 @@
   function profileValue(key, ctx) {
     const p = ctx.profile || {};
     if (key === "letter") return ctx.letter ? ctx.letter.body : null;
+    // L'adresse de réponse d'Alice : les réponses du recruteur lui arrivent,
+    // elle les lit, met à jour le suivi et les transfère.
+    if (key === "email") return p.contact_email || p.email || null;
     return p[key] || null;
   }
 

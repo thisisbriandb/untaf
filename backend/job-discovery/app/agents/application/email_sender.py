@@ -91,7 +91,10 @@ async def send_application_email(
         }
 
     # « Camille Martin via Alice » depuis le domaine vérifié : délivrable, et
-    # honnête sur l'expéditeur. La réponse du recruteur va au candidat.
+    # honnête sur l'expéditeur. La réponse du recruteur va à l'adresse de
+    # réponse du candidat (Alice la lit, la range et la lui transfère), ou
+    # directement à lui tant que la réception n'est pas configurée.
+    from app.agents.inbox import contact_of
     from app.agents.notifications.mailer import Attachment, Mail, send_mail
 
     result = await send_mail(Mail(
@@ -99,7 +102,7 @@ async def send_application_email(
         subject=subject,
         text=body,
         sender=(f"{candidate.full_name or 'Candidat'} via Alice", settings.application_sender),
-        reply_to=candidate.email or None,
+        reply_to=contact_of(candidate) or None,
         attachments=[Attachment(cv_name, cv_bytes)] if cv_bytes else [],
     ))
     if not result["ok"]:

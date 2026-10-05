@@ -407,6 +407,34 @@ notification est enregistrée en `simulated`, jamais rapportée comme partie.
 
 ---
 
+## Réponses des recruteurs
+
+Chaque candidat a une **adresse de candidature** à lui
+(`camille.martin.k7f2q@reponses.alice-agent.fr`). Alice la donne partout :
+en Reply-To des candidatures envoyées par e-mail, dans les envois Recruitee et
+La bonne alternance, dans les formulaires remplis par l'extension. Quand un
+recruteur répond :
+
+1. le webhook reçoit l'e-mail (`POST /api/inbound/resend`, signé ; ou
+   `/api/inbound/email` pour un autre relais) ;
+2. Alice le rattache à la bonne candidature (domaine de l'expéditeur, nom de
+   l'entreprise, intitulé du poste, puis le modèle en dernier recours) ;
+3. elle le lit (entretien, refus, offre, demande, accusé de réception) et met
+   le suivi à jour, sans jamais revenir en arrière ;
+4. elle le **transfère au candidat**, avec ce qu'elle en retient en tête et le
+   recruteur en Reply-To : il répond de sa messagerie habituelle.
+
+Côté interface : onglet **Messages** (adresse, réponses lues par Alice, texte
+complet, « Répondre »), compteur de non-lus dans la barre latérale, dernière
+réponse sur la fiche de l'offre.
+
+**Mise en route** : dans Resend, activer la réception sur un sous-domaine
+(ex. `reponses.alice-agent.fr`, enregistrement MX indiqué par Resend), créer
+un webhook `email.received` vers `https://<api>/api/inbound/resend`, puis
+renseigner `RESEND_WEBHOOK_SECRET` et, une fois un e-mail de test bien reçu,
+`INBOUND_DOMAIN`. Tant que `INBOUND_DOMAIN` est vide, rien ne change : les
+recruteurs répondent directement au candidat.
+
 ## Extension navigateur (prototype)
 
 Le dossier `extension/` contient une extension Chrome (MV3). Alice y agit dans
