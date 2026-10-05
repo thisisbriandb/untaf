@@ -6,7 +6,11 @@
   --font-sans: var(--font-sans), 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono), 'Geist Mono', 'JetBrains Mono', monospace;
 
-  /* Alice Identity */
+  /* Alice Identity — une encre pour agir, un vert d'eau (la lumière du
+     contre-jour) pour ce qui est vivant : Alice, l'activité, les bonnes
+     nouvelles. Jamais pour les boutons. */
+  --alice-accent: #2E6B5E;
+  --alice-glow: #E4EFEA;
   --alice: #161615;
   --alice-soft: #161615;
   --alice-bg: #FAFAF8;

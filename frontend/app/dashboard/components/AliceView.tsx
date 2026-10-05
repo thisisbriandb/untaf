@@ -207,7 +207,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
         <AliceAvatar size={28} className="mt-0.5" />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-[12px] font-medium text-[#161615] tracking-tight">Alice</span>
+            <span className="text-[12px] font-medium text-[#2E6B5E] tracking-tight">Alice</span>
             {msg.timestamp && (
               <span className="text-[11px] text-[#1A1918]/45 tabular-nums">{msg.timestamp}</span>
             )}

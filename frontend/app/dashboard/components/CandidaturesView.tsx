@@ -74,7 +74,7 @@ function ScoreRing({ score }: { score: number }) {
       <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
         <circle cx="18" cy="18" r={r} fill="none" stroke="#1A1918" strokeOpacity="0.07" strokeWidth="2.5" />
         <motion.circle
-          cx="18" cy="18" r={r} fill="none" stroke="#161615" strokeWidth="2.5" strokeLinecap="round"
+          cx="18" cy="18" r={r} fill="none" stroke="#2E6B5E" strokeWidth="2.5" strokeLinecap="round"
           strokeDasharray={c}
           initial={{ strokeDashoffset: c }}
           animate={{ strokeDashoffset: c * (1 - Math.min(100, score) / 100) }}
@@ -571,8 +571,8 @@ export function CandidaturesView({
               <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#161615]/25 bg-[#F4F3F0]/60 px-4 py-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#161615]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2E6B5E]/50" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2E6B5E]" />
                   </span>
                   <p className="text-xs text-[#1A1918]/80 tracking-tight">
                     {awaiting} candidature{awaiting > 1 ? "s attendent" : " attend"} ton feu vert. Tout est

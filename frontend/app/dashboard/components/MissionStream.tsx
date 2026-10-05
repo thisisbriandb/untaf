@@ -74,8 +74,8 @@ export function MissionStream({
       <div className="flex items-center gap-2 text-[11px] font-normal text-[#1A1918]/60 tracking-tight">
         {live ? (
           <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#161615]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2E6B5E]/50" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#2E6B5E]" />
           </span>
         ) : (
           <Check className="h-3 w-3 text-[#161615]" />

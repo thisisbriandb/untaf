@@ -308,7 +308,7 @@ export function ConversationSidebar({
               <FolderOpen className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" />
               <span className="flex-1 text-left">Mes dossiers</span>
               {counts.ready > 0 && (
-                <span className="rounded-full bg-[#161615]/10 px-1.5 py-px text-[11px] tabular-nums text-[#161615]">
+                <span className="rounded-full bg-[#2E6B5E]/12 px-1.5 py-px text-[11px] tabular-nums text-[#2E6B5E]">
                   {counts.ready}
                 </span>
               )}
