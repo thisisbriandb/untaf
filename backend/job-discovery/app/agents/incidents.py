@@ -101,7 +101,11 @@ async def _alert_team(kind: str, title: str, candidate_id: UUID | None, detail: 
         from app.models.notification import Notification, NotificationKind, NotificationStatus
 
         day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        key = f"incident:{kind}:{candidate_id or '-'}:{day}"[:200]
+        # Une erreur différente mérite sa propre alerte, même le même jour :
+        # sinon la première, souvent la moins parlante, masquait les suivantes.
+        import hashlib
+        cause = hashlib.sha1(str(context.get("erreur", "")).encode()).hexdigest()[:8]
+        key = f"incident:{kind}:{candidate_id or '-'}:{day}:{cause}"[:200]
 
         async with async_session() as session:
             if (await session.execute(

@@ -54,3 +54,38 @@ def test_un_telechargement_qui_plante_renvoie_un_message_clair(monkeypatch):
     except HTTPException as e:
         assert e.status_code == 500 and "L'équipe est prévenue" in e.detail
     assert sent["kind"] == "pack_failed" and "typst a explosé" in sent["context"]["erreur"]
+
+
+def test_cv_lu_depuis_un_pdf_se_met_en_page():
+    """Dates libres, bornes manquantes, puces en objets : le rendu ne casse plus."""
+    from types import SimpleNamespace
+    import pytest
+    from app.agents.application import cv_resolver as r
+
+    if not r.HAS_ENGINE:
+        pytest.skip("cv-engine absent")
+    cand = SimpleNamespace(
+        cv_design={"mode": "original"}, resume_file=b"%PDF", resume_filename="cv.pdf",
+        headline="Dev", full_name="Test Candidat", skills=["C#", "SQL"], email="t@ex.fr",
+        phone="06", linkedin_url=None,
+        cv_content={
+            "experiences": [
+                {"company": "A", "jobTitle": "Dev", "startDate": "Septembre 2022", "endDate": "Aujourd'hui"},
+                {"company": "B", "jobTitle": "Stage", "startDate": "09/2021", "highlights": [{"text": "API"}]},
+                {"company": "C", "jobTitle": "Job", "startDate": "??", "endDate": "06/2020"},
+            ],
+            "education": [{"institution": "IUT", "degree": "BUT", "startYear": "Sept 2019", "endYear": "en cours"}],
+        },
+    )
+    pdf, _, origin = r.resolve_cv(cand, {"headline": "Dev C#", "summary": "s"})
+    assert origin == "tailored" and pdf
+
+
+def test_dates_normalisees():
+    from app.agents.application.cv_resolver import _date
+    assert _date("09/2022") == "2022-09"
+    assert _date("Septembre 2022") == "2022-09"
+    assert _date("Sept. 2020") == "2020-09"
+    assert _date("en cours") == "present"
+    assert _date(2021) == "2021"
+    assert _date("n'importe quoi") == ""
