@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { deleteConversation, type ConversationSummary } from "@/lib/alice-client";
 import { fetchPipeline, STAGE_LABELS, type PipelineItem, type Stage } from "@/lib/pipeline-client";
 import { useAlice } from "../alice-context";
+import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -112,9 +113,7 @@ function Row({
             {c.job_id ? (
               <Monogram name={company} />
             ) : (
-              <span className="shrink-0 h-8 w-8 rounded-xl bg-[#006045] text-white flex items-center justify-center text-[12px] font-medium">
-                a
-              </span>
+              <AliceAvatar size={32} />
             )}
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5">
