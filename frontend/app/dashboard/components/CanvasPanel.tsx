@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { CoverLetterEditor } from "./CoverLetterEditor";
+import { ReviewPanel } from "./ReviewPanel";
 import { CanvasCvEditor } from "./CanvasCvEditor";
 import { JobDetailCanvas } from "./JobDetailCanvas";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
@@ -53,7 +54,7 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
                     {canvasLabel(canvas)}
                   </p>
                   <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight truncate">
-                    {canvas.mode === "job_detail"
+                    {canvas.mode === "job_detail" || canvas.mode === "review"
                       ? "Alice a le contexte de cette offre"
                       : "Alice suit tes modifications"}
                   </p>
@@ -82,6 +83,8 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
               {canvas.mode === "job_detail" && (
                 <JobDetailCanvas job={canvas.job} autoApply={canvas.autoApply} />
               )}
+
+              {canvas.mode === "review" && <ReviewPanel key={canvas.job.id} job={canvas.job} />}
 
               {canvas.mode === "cover_letter" && (
                 <CoverLetterEditor

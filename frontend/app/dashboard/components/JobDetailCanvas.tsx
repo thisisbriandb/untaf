@@ -8,6 +8,7 @@ import { API_BASE_URL } from "@/lib/config";
 import type { JobCardData } from "@/lib/alice-client";
 import { Markdown } from "./Markdown";
 import { ApplyPanel } from "./ApplyPanel";
+import { FinishOnSite } from "./FinishOnSite";
 import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
 } from "@/lib/tailor-client";
@@ -300,6 +301,15 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
         </div>
 
         <div className="px-5 py-3 border-t border-[#1A1918]/6 space-y-2">
+          {packReady && mode === "manual" && !sent && candidateId && !applyUrl.startsWith("import://") ? (
+            <FinishOnSite
+              candidateId={candidateId}
+              jobId={job.id}
+              companyName={job.company_name}
+              url={applyUrl}
+              variant="block"
+            />
+          ) : (
           <button
             type="button"
             onClick={() => {
@@ -316,6 +326,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
             {sent ? <Check className="w-3.5 h-3.5 stroke-[2]" /> : null}
             {primaryLabel}
           </button>
+          )}
           {!sent && (packReady || mode === "manual") && (
             <p className="text-[11px] font-normal text-[#1A1918]/55 text-center tracking-tight">
               {packReady
@@ -416,6 +427,15 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 <FolderDown className="w-3 h-3 stroke-[1.5]" />
                 {packReady ? "Télécharger le dossier adapté" : "Préparer et télécharger le dossier"}
               </DownloadLink>
+            )}
+            {packReady && candidateId && (
+              <button
+                type="button"
+                onClick={() => openCanvas({ mode: "review", job })}
+                className="flex items-center gap-1.5 text-[11px] text-[#1A1918]/60 hover:text-[#161615] tracking-tight transition-colors cursor-pointer"
+              >
+                Relire ce qui a changé
+              </button>
             )}
             {!applyUrl.startsWith("import://") && (
               <a

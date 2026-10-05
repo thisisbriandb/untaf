@@ -29,6 +29,40 @@ export interface ApplicationState {
   letter: CoverLetter | null;
   applied_at: string | null;
   dispatch_status: string | null;
+  dispatch_id: string | null;
+  changes: CvChanges | null;
+}
+
+/** Avant / après de l'adaptation, pour relire avant d'envoyer. */
+export interface CvChanges {
+  headline_before: string | null;
+  headline_after: string | null;
+  summary_before: string | null;
+  summary_after: string | null;
+  strengths: string[];
+  skills_first: string[];
+  experiences: { title: string; company: string; before: string[]; after: string[] }[];
+}
+
+/** Enregistre la lettre relue : c'est elle qui partira. */
+export async function saveLetter(
+  candidateId: string,
+  jobId: string,
+  letter: CoverLetter,
+): Promise<ApplicationState | null> {
+  try {
+    const res = await apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/apply/${jobId}/letter`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(letter),
+    });
+    if (!res.ok) return null;
+    const state = (await res.json()) as ApplicationState;
+    invalidateApplication(jobId);
+    return state;
+  } catch {
+    return null;
+  }
 }
 
 const EVENT = "untaf:application-changed";

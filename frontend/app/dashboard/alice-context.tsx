@@ -31,18 +31,21 @@ import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 import type { CoverLetter } from "@/lib/letter-client";
 import type { AliceEmotion } from "../onboarding/components/AlicePresence";
 
-export type CanvasMode = "cv_editor" | "cover_letter" | "job_detail";
+export type CanvasMode = "cv_editor" | "cover_letter" | "job_detail" | "review";
 
 /** What the Canvas is currently showing — mode plus everything it needs. */
 export type CanvasPayload =
   | { mode: "cv_editor"; pane?: "original" | "content" | "design" }
   | { mode: "cover_letter"; companyName?: string; jobTitle?: string; letter?: CoverLetter }
-  | { mode: "job_detail"; job: JobCardData; autoApply?: boolean };
+  | { mode: "job_detail"; job: JobCardData; autoApply?: boolean }
+  | { mode: "review"; job: JobCardData };
 
 export function canvasLabel(payload: CanvasPayload): string {
   switch (payload.mode) {
     case "cv_editor":
       return payload.pane === "design" ? "Modèles de CV" : "Éditeur de CV";
+    case "review":
+      return `Relire — ${payload.job.company_name}`;
     case "cover_letter":
       if (payload.jobTitle) return `Lettre — ${payload.jobTitle}`;
       return payload.companyName

@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import {
-  ArrowUpRight, Check, ChevronDown, Copy, FolderDown, Loader2, Mail, RefreshCw,
+  Check, ChevronDown, Eye, Copy, FolderDown, Loader2, Mail, RefreshCw,
   Send, Sparkles, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ import { useAlice } from "../alice-context";
 import { STAGE_TONE } from "@/lib/stage-tone";
 import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
+import { FinishOnSite } from "./FinishOnSite";
 import { invalidateApplication } from "@/lib/application-state";
 
 // ── Filtres ───────────────────────────────────────────────────────────────
@@ -252,6 +253,19 @@ function Row({
       toast(ok ? `${label} noté pour ${item.company_name}.` : "Changement non enregistré.", ok ? "success" : "warning");
     });
 
+  const jobCard = {
+    id: item.job_id,
+    title: item.title,
+    company_name: item.company_name,
+    location: item.location ?? "",
+    match_score: item.match_score,
+    contract_type: item.contract_type,
+    remote_policy: item.remote_policy,
+    source_url: item.source_url ?? "",
+    status: item.status,
+    apply_mode: item.apply_mode,
+  };
+
   const openJob = () =>
     openCanvas({
       mode: "job_detail",
@@ -317,6 +331,9 @@ function Row({
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {item.stage === "awaiting" && item.dispatch && (
               <>
+                <ActionButton onClick={() => openCanvas({ mode: "review", job: jobCard })}>
+                  <Eye className="h-3 w-3" /> Relire
+                </ActionButton>
                 <ActionButton tone="primary" onClick={approve} busy={busy === "approve"}>
                   <Send className="h-3 w-3" /> Valider l&apos;envoi
                 </ActionButton>
@@ -354,14 +371,13 @@ function Row({
 
             {(item.stage === "manual" || item.stage === "simulated") &&
               item.dispatch?.channel !== "email" && item.source_url && (
-              <a
-                href={item.source_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
-              >
-                <ArrowUpRight className="h-3 w-3" /> Finir sur le site
-              </a>
+              <FinishOnSite
+                candidateId={candidateId}
+                jobId={item.job_id}
+                companyName={item.company_name}
+                url={item.source_url}
+                onDone={onRefresh}
+              />
             )}
 
             {(item.pack_ready || item.dispatch) && (
@@ -387,7 +403,8 @@ function Row({
                 </ActionButton>
               ))}
 
-            {["manual", "simulated", "ready"].includes(item.stage) && (
+            {/* « Finir sur le site » demande déjà au retour ; sinon, le geste reste là. */}
+            {(item.stage === "ready" || (["manual", "simulated"].includes(item.stage) && !item.source_url)) && (
               <ActionButton busy={busy === "applied"} onClick={() => setOutcome("applied", "Envoi")}>
                 <Check className="h-3 w-3" /> J&apos;ai postulé
               </ActionButton>

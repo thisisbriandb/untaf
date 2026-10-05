@@ -711,6 +711,10 @@ class ApplicationState(BaseModel):
     letter: CoverLetterResult | None = None
     applied_at: str | None = None
     dispatch_status: str | None = None
+    dispatch_id: UUID | None = None
+    #: Ce que l'adaptation a changé par rapport au CV du candidat — pour
+    #: relire avant d'envoyer.
+    changes: dict | None = None
 
 
 @router.get("/{job_id}/state", response_model=ApplicationState)
@@ -754,4 +758,70 @@ async def application_state(
         letter=letter_out,
         applied_at=application.applied_at.isoformat() if application.applied_at else None,
         dispatch_status=latest.status.value if latest else None,
+        dispatch_id=latest.id if latest else None,
+        changes=_changes(candidate, meta.get("tailored_cv") or {}),
     )
+
+
+def _changes(candidate: Candidate, tailored: dict) -> dict | None:
+    """Avant / après, section par section : rien n'est caché au candidat."""
+    if not tailored:
+        return None
+    cv = candidate.cv_content or {}
+    experiences = []
+    for i, exp in enumerate(cv.get("experiences") or []):
+        adapted = (tailored.get("experiences") or [])
+        after = adapted[i].get("highlights") if i < len(adapted) and isinstance(adapted[i], dict) else None
+        if not after:
+            continue
+        before = exp.get("highlights") or []
+        if isinstance(before, str):
+            before = [h.strip() for h in before.split("\n") if h.strip()]
+        if not before and exp.get("description"):
+            before = [exp["description"]]
+        experiences.append({
+            "title": exp.get("jobTitle") or exp.get("position") or "",
+            "company": exp.get("company") or "",
+            "before": before,
+            "after": after,
+        })
+    return {
+        "headline_before": candidate.headline,
+        "headline_after": tailored.get("headline"),
+        "summary_before": cv.get("summary"),
+        "summary_after": tailored.get("summary"),
+        "strengths": tailored.get("strengths") or [],
+        "skills_first": (tailored.get("skills_order") or [])[:6],
+        "experiences": experiences,
+    }
+
+
+@router.put("/{job_id}/letter", response_model=ApplicationState)
+async def save_letter(
+    candidate_id: UUID, job_id: UUID, letter: CoverLetterResult,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    La lettre relue et retouchée par le candidat. Elle remplace celle du
+    dossier ET celle de l'envoi en attente : c'est celle-là qui partira.
+    """
+    from app.agents.application.email_sender import _plain_text
+    from app.models.dispatch import DispatchStatus
+
+    job, company_name, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate or not application:
+        raise HTTPException(404, "Candidature introuvable")
+    data = letter.model_dump()
+    application.metadata_json = {**(application.metadata_json or {}), "cover_letter": data}
+    pending = (await db.execute(
+        select(ApplicationDispatch)
+        .where(ApplicationDispatch.application_id == application.id)
+        .where(ApplicationDispatch.status.in_((
+            DispatchStatus.AWAITING_APPROVAL, DispatchStatus.PREPARED, DispatchStatus.APPROVED,
+        )))
+    )).scalars().all()
+    for d in pending:
+        d.letter_subject = data.get("subject")
+        d.letter_body = _plain_text(data, candidate, job.title, company_name or "")
+    await db.commit()
+    return await application_state(candidate_id, job_id, db)
