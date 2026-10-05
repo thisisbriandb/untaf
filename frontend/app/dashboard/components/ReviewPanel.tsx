@@ -20,6 +20,7 @@ import { invalidateApplication, isSent, saveLetter, useApplicationState } from "
 import type { CoverLetter } from "@/lib/letter-client";
 import { useAlice } from "../alice-context";
 import { useToast } from "./Toaster";
+import { chez, companyOf } from "@/lib/company";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -80,7 +81,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
     setSending(false);
     invalidateApplication(job.id);
     if (!d) return toast("L'envoi n'a pas pu partir.", "warning");
-    if (d.status === "sent") toast(`Candidature envoyée chez ${job.company_name}.`);
+    if (d.status === "sent") toast(`Candidature envoyée${chez(job.company_name)}.`);
     else if (d.status === "simulated") toast(`Rien n'est parti : ${d.error ?? "envoi non configuré"}.`, "info");
     else toast(d.error ?? "L'envoi n'a pas abouti — ton dossier reste prêt.", "warning");
   };
@@ -97,7 +98,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
     <div className="h-full flex flex-col min-h-0">
       <div className="shrink-0 px-5 pt-4 pb-3 border-b border-[#1A1918]/8">
         <p className="text-base text-[#161615] tracking-tight">Relire avant l&apos;envoi</p>
-        <p className="text-xs text-[#1A1918]/60">{job.title} · {job.company_name}</p>
+        <p className="text-xs text-[#1A1918]/60">{[job.title, companyOf(job.company_name)].filter(Boolean).join(" · ")}</p>
       </div>
 
       <div className="scroll-discreet flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6">

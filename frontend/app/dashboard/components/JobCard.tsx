@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { APPLY_MODE_LABELS, type JobCardData } from "@/lib/alice-client";
 import { useAlice } from "../alice-context";
+import { companyOf } from "@/lib/company";
 
 const CONTRACT_LABELS: Record<string, string> = {
   cdi: "CDI",
@@ -46,7 +47,7 @@ export function JobCard({ job }: { job: JobCardData }) {
             {job.title}
           </p>
           <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight truncate">
-            {job.company_name} · {job.location}
+            {[companyOf(job.company_name) ?? "Employeur non communiqué", job.location].filter(Boolean).join(" · ")}
           </p>
           {(tags || job.apply_mode) && (
             <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight">

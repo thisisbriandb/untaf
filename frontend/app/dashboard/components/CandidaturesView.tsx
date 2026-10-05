@@ -40,6 +40,7 @@ import { DownloadLink } from "./ProtectedFile";
 import { useToast } from "./Toaster";
 import { FinishOnSite } from "./FinishOnSite";
 import { invalidateApplication } from "@/lib/application-state";
+import { chez, companyOf } from "@/lib/company";
 
 // ── Filtres ───────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ function Row({
     run("approve", async () => {
       const d = await approveDispatch(candidateId, item.dispatch!.id);
       if (!d) return toast("L'envoi n'a pas pu partir.", "warning");
-      if (d.status === "sent") toast(`Candidature envoyée chez ${item.company_name}.`);
+      if (d.status === "sent") toast(`Candidature envoyée${chez(item.company_name)}.`);
       else if (d.status === "simulated") toast(`Répétition : rien n'est parti (${d.error}).`, "info");
       else toast(`Non abouti : ${d.error ?? "erreur inconnue"}`, "warning");
     });
@@ -250,7 +251,7 @@ function Row({
   const setOutcome = (status: ApplicationStatus, label: string) =>
     run(status, async () => {
       const ok = await updateApplicationStatus(item.application_id, status);
-      toast(ok ? `${label} noté pour ${item.company_name}.` : "Changement non enregistré.", ok ? "success" : "warning");
+      toast(ok ? `${label} noté pour « ${item.title} ».` : "Changement non enregistré.", ok ? "success" : "warning");
     });
 
   const jobCard = {
@@ -285,7 +286,7 @@ function Row({
 
   // Avant l'envoi, dire qui appuiera sur « envoyer » — c'est la promesse.
   const modeLabel = ["to_prepare", "ready"].includes(item.stage) ? APPLY_MODE_LABELS[item.apply_mode] : null;
-  const subtitle = [item.company_name, item.location, modeLabel].filter(Boolean).join(" · ");
+  const subtitle = [companyOf(item.company_name) ?? "Employeur non communiqué", item.location, modeLabel].filter(Boolean).join(" · ");
   const detail =
     item.stage === "applied" && item.applied_at
       ? `Envoyée le ${when(item.applied_at)}${item.dispatch?.destination && item.dispatch.channel === "email" ? ` à ${item.dispatch.destination}` : ""}`

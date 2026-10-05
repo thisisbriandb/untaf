@@ -21,6 +21,7 @@ import { useToast } from "./Toaster";
 import { NextAction } from "./NextAction";
 import { ConversationMenu } from "./ConversationMenu";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
+import { chez, companyOf } from "@/lib/company";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
               {app.job_title}
             </p>
             <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
-              {app.company_name}
+              {companyOf(app.company_name) ?? "Employeur non communiqué"}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -521,7 +522,7 @@ export function AliceView({
                 ? ` Attention, elle sort de ton mandat : ${job.rejections[0]}.`
                 : "";
               sayAsAlice(
-                `J'ai ajouté « ${job.title} » chez ${job.company_name} à ta liste ` +
+                `J'ai ajouté « ${job.title} »${chez(job.company_name)} à ta liste ` +
                 `(${job.match_score}% de correspondance).${fit} ` +
                 "Je peux adapter ton CV et ta lettre à cette offre.",
                 canvasRef,

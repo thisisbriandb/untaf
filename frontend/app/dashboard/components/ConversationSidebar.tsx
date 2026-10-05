@@ -17,13 +17,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, FolderOpen, Mail, PanelLeft, Search, Settings, SlidersHorizontal, SquarePen, Trash2 } from "lucide-react";
+import { ArrowRight, Briefcase, FolderOpen, Mail, PanelLeft, Search, Settings, SlidersHorizontal, SquarePen, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteConversation, type ConversationSummary } from "@/lib/alice-client";
 import { fetchPipeline, STAGE_LABELS, type PipelineItem, type Stage } from "@/lib/pipeline-client";
 import { useAlice } from "../alice-context";
 import { STAGE_TONE } from "@/lib/stage-tone";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
+import { companyOf } from "@/lib/company";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -51,8 +52,19 @@ function initials(name: string) {
   return ((words[0]?.[0] ?? "?") + (words[1]?.[0] ?? "")).toUpperCase();
 }
 
-function Monogram({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
-  const [bg, fg] = tint(name || "?");
+function Monogram({ name, size = "md" }: { name: string | null; size?: "sm" | "md" }) {
+  // Employeur non communiqué : une mallette plutôt que des initiales sans sens.
+  if (!name) {
+    return (
+      <span className={cn(
+        "shrink-0 flex items-center justify-center bg-[#ECEBE7] text-[#1A1918]/55",
+        size === "md" ? "h-8 w-8 rounded-xl" : "h-6 w-6 rounded-lg",
+      )}>
+        <Briefcase className={size === "md" ? "h-3.5 w-3.5" : "h-3 w-3"} />
+      </span>
+    );
+  }
+  const [bg, fg] = tint(name);
   return (
     <span
       className={cn(
@@ -78,7 +90,7 @@ function Row({
   onSelect: (c: ConversationSummary) => void;
   onRemove: (c: ConversationSummary) => void;
 }) {
-    const company = c.company_name || c.title;
+    const employer = companyOf(c.company_name);
     return (
       <motion.div
         layout
@@ -102,14 +114,14 @@ function Row({
             className="min-w-0 flex-1 flex items-center gap-2.5 text-left cursor-pointer"
           >
             {c.job_id ? (
-              <Monogram name={company} />
+              <Monogram name={employer} />
             ) : (
               <AliceAvatar size={32} />
             )}
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5">
                 <span className={cn("truncate text-[13px] tracking-tight", active ? "text-[#1A1918]" : "text-[#1A1918]/80")}>
-                  {c.job_id ? company : c.title}
+                  {c.job_id ? employer ?? c.job_title ?? c.title : c.title}
                 </span>
                 <span className="ml-auto shrink-0 text-[11px] font-normal text-[#1A1918]/50 group-hover:opacity-0 transition-opacity">
                   {when(c.updated_at)}
@@ -122,7 +134,7 @@ function Row({
                   </span>
                 )}
                 <span className="truncate text-[11px] font-normal text-[#1A1918]/60">
-                  {c.job_id ? c.job_title || c.title : "Conversation générale"}
+                  {c.job_id ? (employer ? c.job_title || c.title : "Employeur non communiqué") : "Conversation générale"}
                 </span>
               </span>
             </span>
@@ -377,12 +389,14 @@ export function ConversationSidebar({
                           transition={{ delay: idx * 0.04 }}
                           className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left border border-dashed border-[#1A1918]/12 hover:border-[#161615]/40 hover:bg-white/60 transition-colors cursor-pointer group"
                         >
-                          <Monogram name={i.company_name || i.title} size="sm" />
+                          <Monogram name={companyOf(i.company_name)} size="sm" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[12px] text-[#1A1918]/80">
-                              {i.company_name || "Entreprise non précisée"}
+                              {companyOf(i.company_name) ?? i.title}
                             </span>
-                            <span className="block truncate text-[11px] font-normal text-[#1A1918]/55">{i.title}</span>
+                            <span className="block truncate text-[11px] font-normal text-[#1A1918]/55">
+                              {companyOf(i.company_name) ? i.title : "Employeur non communiqué"}
+                            </span>
                           </span>
                           <ArrowRight className="h-3 w-3 text-[#1A1918]/40 group-hover:text-[#161615] transition-colors" />
                         </motion.button>
