@@ -64,20 +64,20 @@ export function MessagesView({
 
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/40 uppercase tracking-wider font-medium">Réponses</p>
+            <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#161615]" />
+            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">Réponses</p>
           </div>
           {replies === null ? (
             <div className="h-10 rounded-xl bg-[#1A1918]/5 animate-pulse" />
           ) : replies.length === 0 ? (
             <div className="space-y-1.5 py-1">
               <p className="text-sm font-light text-[#1A1918]/55 tracking-tight">Pas encore de réponse consignée.</p>
-              <p className="text-xs font-light text-[#1A1918]/40 tracking-tight">
+              <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
                 Un recruteur t&apos;a répondu ? Note-le depuis{" "}
                 <button
                   type="button"
                   onClick={() => onSelectTab("candidatures")}
-                  className="text-[#006045] hover:underline cursor-pointer"
+                  className="text-[#161615] hover:underline cursor-pointer"
                 >
                   Candidatures
                 </button>{" "}
@@ -95,7 +95,7 @@ export function MessagesView({
                   className="py-3 flex items-start justify-between gap-3"
                 >
                   <p className="text-sm font-light text-[#1A1918]/80 tracking-tight">{e.summary}</p>
-                  <span className="text-[11px] font-light text-[#1A1918]/35 shrink-0">{date(e.created_at)}</span>
+                  <span className="text-[11px] font-normal text-[#1A1918]/50 shrink-0">{date(e.created_at)}</span>
                 </motion.li>
               ))}
             </ul>
@@ -104,13 +104,13 @@ export function MessagesView({
 
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Mail className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/40 uppercase tracking-wider font-medium">
+            <Mail className="w-3 h-3 stroke-[1.6] text-[#161615]" />
+            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
               Ce que je t&apos;ai écrit
             </p>
           </div>
           {emails.length === 0 ? (
-            <p className="text-sm font-light text-[#1A1918]/45 tracking-tight py-1">
+            <p className="text-sm font-light text-[#1A1918]/60 tracking-tight py-1">
               Aucun e-mail pour l&apos;instant. Je t&apos;écris à la fin de chaque mission et quand une
               candidature attend ton accord.
             </p>
@@ -128,14 +128,14 @@ export function MessagesView({
                     <p className="text-sm font-light text-[#1A1918]/80 tracking-tight truncate">{n.subject}</p>
                     <p
                       className={cn(
-                        "text-[11px] font-light tracking-tight",
-                        n.status === "sent" ? "text-[#006045]" : n.status === "failed" ? "text-red-600" : "text-[#1A1918]/40",
+                        "text-[11px] font-normal tracking-tight",
+                        n.status === "sent" ? "text-[#161615]" : n.status === "failed" ? "text-red-600" : "text-[#1A1918]/55",
                       )}
                     >
                       {STATUS_LABEL[n.status]}
                     </p>
                   </div>
-                  <span className="text-[11px] font-light text-[#1A1918]/35 shrink-0">{date(n.created_at)}</span>
+                  <span className="text-[11px] font-normal text-[#1A1918]/50 shrink-0">{date(n.created_at)}</span>
                 </motion.li>
               ))}
             </ul>

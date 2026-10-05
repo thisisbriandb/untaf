@@ -102,8 +102,8 @@ export function EmailSignIn({
             className="space-y-4"
           >
             <p className="text-center text-lg font-normal text-[#1A1918]/85 tracking-tight">{title}</p>
-            <div className="flex items-center bg-white border border-[#EDECEA] focus-within:border-[#006045] rounded-full pl-4 pr-1.5 py-1.5 shadow-sm transition-colors">
-              <Mail className="h-4 w-4 text-[#1A1918]/30 shrink-0" />
+            <div className="flex items-center bg-white border border-[#EDECEA] focus-within:border-[#161615] rounded-full pl-4 pr-1.5 py-1.5 shadow-sm transition-colors">
+              <Mail className="h-4 w-4 text-[#1A1918]/45 shrink-0" />
               <input
                 type="email"
                 autoComplete="email"
@@ -111,18 +111,18 @@ export function EmailSignIn({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ton@email.fr"
-                className="flex-1 bg-transparent px-3 text-sm font-light outline-none placeholder:text-[#1A1918]/35"
+                className="flex-1 bg-transparent px-3 text-sm font-light outline-none placeholder:text-[#1A1918]/50"
               />
               <button
                 type="submit"
                 disabled={busy || !email.trim()}
                 aria-label="Recevoir un lien de connexion"
-                className="p-2 rounded-full bg-[#006045] text-white disabled:opacity-30 cursor-pointer"
+                className="p-2 rounded-full bg-[#161615] text-white disabled:opacity-30 cursor-pointer"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-center text-[11px] font-light text-[#1A1918]/40 tracking-tight">
+            <p className="text-center text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
               Pas de mot de passe : je t&apos;envoie un lien et un code, depuis alice@alice-agent.fr.
             </p>
           </motion.form>
@@ -152,20 +152,20 @@ export function EmailSignIn({
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 placeholder="ou le code reçu"
-                className="w-40 text-center bg-white border border-[#EDECEA] focus:border-[#006045] rounded-full px-4 py-2 text-sm tracking-widest outline-none"
+                className="w-40 text-center bg-white border border-[#EDECEA] focus:border-[#161615] rounded-full px-4 py-2 text-sm tracking-widest outline-none"
               />
               <button
                 type="submit"
                 disabled={busy || code.length < 6}
-                className="px-4 py-2 rounded-full bg-[#006045] text-white text-xs disabled:opacity-30 cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#161615] text-white text-xs disabled:opacity-30 cursor-pointer"
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Valider"}
               </button>
             </form>
-            <div className="flex items-center justify-center gap-2 text-[11px] font-light text-[#1A1918]/45">
+            <div className="flex items-center justify-center gap-2 text-[11px] font-normal text-[#1A1918]/60">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006045]/60" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#006045]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#161615]" />
               </span>
               En attente de confirmation
             </div>
@@ -175,7 +175,7 @@ export function EmailSignIn({
                 setSentTo(null);
                 setCode("");
               }}
-              className="text-[11px] font-light text-[#1A1918]/40 hover:text-[#1A1918] cursor-pointer"
+              className="text-[11px] font-normal text-[#1A1918]/55 hover:text-[#1A1918] cursor-pointer"
             >
               Changer d&apos;adresse ou renvoyer
             </button>

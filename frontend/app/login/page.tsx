@@ -35,7 +35,7 @@ export default function LoginPage() {
         <AlicePresence emotion="listening" />
         <EmailSignIn onSignedIn={handleSignedIn} />
       </motion.div>
-      <Link href="/" className="text-xs font-light text-[#1A1918]/40 hover:text-[#006045] tracking-tight">
+      <Link href="/" className="text-xs font-normal text-[#1A1918]/55 hover:text-[#161615] tracking-tight">
         Pas encore de compte ? Je te présente Alice →
       </Link>
     </main>

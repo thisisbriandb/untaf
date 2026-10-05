@@ -17,11 +17,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, FolderOpen, PanelLeft, Search, Settings, SquarePen, Trash2 } from "lucide-react";
+import { ArrowRight, FolderOpen, Mail, PanelLeft, Search, Settings, SlidersHorizontal, SquarePen, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteConversation, type ConversationSummary } from "@/lib/alice-client";
 import { fetchPipeline, STAGE_LABELS, type PipelineItem, type Stage } from "@/lib/pipeline-client";
 import { useAlice } from "../alice-context";
+import { STAGE_TONE } from "@/lib/stage-tone";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 
 function when(iso: string): string {
@@ -33,10 +34,10 @@ function when(iso: string): string {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-/** Teintes douces, stables par entreprise : on reconnaît Alan d'un coup d'œil. */
+/** Gris chauds, stables par entreprise : distincts sans ajouter de couleur. */
 const TINTS = [
-  ["#E8F3EE", "#006045"], ["#EEF0FB", "#3B4BA8"], ["#FBF1E6", "#A2561B"],
-  ["#F6ECF4", "#8E3A7C"], ["#E9F4F7", "#21708A"], ["#F3F1E4", "#6F6524"],
+  ["#ECEBE7", "#161615"], ["#E3E2DD", "#161615"], ["#D9D8D2", "#161615"],
+  ["#161615", "#FAFAF8"], ["#3A3936", "#FAFAF8"], ["#F4F3F0", "#161615"],
 ];
 
 function tint(name: string) {
@@ -56,7 +57,7 @@ function Monogram({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
     <span
       className={cn(
         "shrink-0 rounded-xl flex items-center justify-center font-medium tracking-tight",
-        size === "md" ? "h-8 w-8 text-[11px]" : "h-6 w-6 text-[9px] rounded-lg",
+        size === "md" ? "h-8 w-8 text-[11px]" : "h-6 w-6 text-[10px] rounded-lg",
       )}
       style={{ backgroundColor: bg, color: fg }}
     >
@@ -64,16 +65,6 @@ function Monogram({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
     </span>
   );
 }
-
-const STAGE_TONE: Partial<Record<Stage, string>> = {
-  ready: "bg-[#006045]/10 text-[#006045]",
-  awaiting: "bg-amber-500/15 text-amber-700",
-  manual: "bg-orange-500/10 text-orange-700",
-  simulated: "bg-sky-500/10 text-sky-700",
-  applied: "bg-[#006045] text-white",
-  interview: "bg-violet-500/15 text-violet-700",
-  offer: "bg-[#006045] text-white",
-};
 
 const PACK_STAGES: Stage[] = ["ready", "awaiting", "manual", "simulated"];
 
@@ -120,17 +111,17 @@ function Row({
                 <span className={cn("truncate text-[13px] tracking-tight", active ? "text-[#1A1918]" : "text-[#1A1918]/80")}>
                   {c.job_id ? company : c.title}
                 </span>
-                <span className="ml-auto shrink-0 text-[10px] font-light text-[#1A1918]/35 group-hover:opacity-0 transition-opacity">
+                <span className="ml-auto shrink-0 text-[11px] font-normal text-[#1A1918]/50 group-hover:opacity-0 transition-opacity">
                   {when(c.updated_at)}
                 </span>
               </span>
               <span className="flex items-center gap-1.5 mt-0.5">
                 {stage && STAGE_TONE[stage] && (
-                  <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[9px] tracking-tight", STAGE_TONE[stage])}>
+                  <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10px] tracking-tight", STAGE_TONE[stage])}>
                     {STAGE_LABELS[stage]}
                   </span>
                 )}
-                <span className="truncate text-[11px] font-light text-[#1A1918]/45">
+                <span className="truncate text-[11px] font-normal text-[#1A1918]/60">
                   {c.job_id ? c.job_title || c.title : "Conversation générale"}
                 </span>
               </span>
@@ -140,7 +131,7 @@ function Row({
             type="button"
             aria-label="Supprimer la conversation"
             onClick={() => onRemove(c)}
-            className="absolute right-2 top-2 p-1 rounded-full text-[#1A1918]/30 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-opacity"
+            className="absolute right-2 top-2 p-1 rounded-full text-[#1A1918]/45 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-opacity"
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -151,9 +142,9 @@ function Row({
 
 function Heading({ children, count }: { children: React.ReactNode; count?: number }) {
   return (
-    <p className="flex items-center gap-1.5 px-2 pb-1.5 text-[10px] uppercase tracking-[0.12em] text-[#1A1918]/40 font-medium">
+    <p className="flex items-center gap-1.5 px-2 pb-1.5 text-[11px] uppercase tracking-[0.12em] text-[#1A1918]/55 font-medium">
       {children}
-      {count ? <span className="text-[#1A1918]/25 tabular-nums">{count}</span> : null}
+      {count ? <span className="text-[#1A1918]/40 tabular-nums">{count}</span> : null}
     </p>
   );
 }
@@ -281,7 +272,7 @@ export function ConversationSidebar({
                 aria-label="Rechercher une conversation"
                 className={cn(
                   "p-2 rounded-full transition-colors cursor-pointer",
-                  searching ? "text-[#006045] bg-[#006045]/10" : "text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
+                  searching ? "text-[#161615] bg-[#161615]/10" : "text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5",
                 )}
               >
                 <Search className="h-4 w-4 stroke-[1.4]" />
@@ -290,7 +281,7 @@ export function ConversationSidebar({
                 type="button"
                 onClick={onClose}
                 aria-label="Masquer les conversations"
-                className="p-2 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
+                className="p-2 rounded-full text-[#1A1918]/60 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
               >
                 <PanelLeft className="h-4 w-4 stroke-[1.4]" />
               </button>
@@ -317,10 +308,24 @@ export function ConversationSidebar({
               <FolderOpen className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" />
               <span className="flex-1 text-left">Mes dossiers</span>
               {counts.ready > 0 && (
-                <span className="rounded-full bg-[#006045]/10 px-1.5 py-px text-[10px] tabular-nums text-[#006045]">
+                <span className="rounded-full bg-[#161615]/10 px-1.5 py-px text-[11px] tabular-nums text-[#161615]">
                   {counts.ready}
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => goTab("mission")}
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
+            >
+              <SlidersHorizontal className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> Mon mandat
+            </button>
+            <button
+              type="button"
+              onClick={() => goTab("messages")}
+              className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
+            >
+              <Mail className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> E-mails d&apos;Alice
             </button>
             <AnimatePresence initial={false}>
               {searching && (
@@ -330,13 +335,13 @@ export function ConversationSidebar({
                   exit={{ height: 0, opacity: 0 }}
                   className="flex items-center gap-2 overflow-hidden rounded-xl bg-white border border-[#1A1918]/[0.08] px-2.5 py-1.5 mt-1"
                 >
-                  <Search className="h-3 w-3 text-[#1A1918]/35" />
+                  <Search className="h-3 w-3 text-[#1A1918]/50" />
                   <input
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Une entreprise, un poste…"
-                    className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#1A1918]/30 outline-none"
+                    className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#1A1918]/45 outline-none"
                   />
                 </motion.label>
               )}
@@ -359,7 +364,7 @@ export function ConversationSidebar({
                 {byJob.length === 0 && !q && (
                   readyPacks.length > 0 ? (
                     <div className="space-y-1 px-1">
-                      <p className="px-1 pb-1 text-[11px] font-light text-[#1A1918]/45 leading-relaxed">
+                      <p className="px-1 pb-1 text-[11px] font-normal text-[#1A1918]/60 leading-relaxed">
                         Tes dossiers prêts. Ouvre-en un pour en parler : la conversation se rangera ici.
                       </p>
                       {readyPacks.map((i, idx) => (
@@ -370,21 +375,21 @@ export function ConversationSidebar({
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.04 }}
-                          className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left border border-dashed border-[#1A1918]/12 hover:border-[#006045]/40 hover:bg-white/60 transition-colors cursor-pointer group"
+                          className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left border border-dashed border-[#1A1918]/12 hover:border-[#161615]/40 hover:bg-white/60 transition-colors cursor-pointer group"
                         >
                           <Monogram name={i.company_name || i.title} size="sm" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[12px] text-[#1A1918]/80">
                               {i.company_name || "Entreprise non précisée"}
                             </span>
-                            <span className="block truncate text-[10px] font-light text-[#1A1918]/40">{i.title}</span>
+                            <span className="block truncate text-[11px] font-normal text-[#1A1918]/55">{i.title}</span>
                           </span>
-                          <ArrowRight className="h-3 w-3 text-[#1A1918]/25 group-hover:text-[#006045] transition-colors" />
+                          <ArrowRight className="h-3 w-3 text-[#1A1918]/40 group-hover:text-[#161615] transition-colors" />
                         </motion.button>
                       ))}
                     </div>
                   ) : (
-                    <p className="px-2 text-[11px] font-light text-[#1A1918]/40 leading-relaxed">
+                    <p className="px-2 text-[11px] font-normal text-[#1A1918]/55 leading-relaxed">
                       Pose une question depuis une offre : la conversation se range ici, sous le nom de
                       l&apos;entreprise, avec l&apos;état de ton dossier.
                     </p>
@@ -402,7 +407,7 @@ export function ConversationSidebar({
                     />)}
                 </AnimatePresence>
                 {general.length === 0 && (
-                  <p className="px-2 text-[11px] font-light text-[#1A1918]/40">
+                  <p className="px-2 text-[11px] font-normal text-[#1A1918]/55">
                     {q ? "Aucun résultat." : "Pas encore de conversation."}
                   </p>
                 )}
@@ -413,12 +418,12 @@ export function ConversationSidebar({
           {/* Le compte, en bas, comme partout ailleurs */}
           <div className="shrink-0 border-t border-[#1A1918]/[0.06] p-2">
             <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
-              <span className="h-8 w-8 shrink-0 rounded-full bg-[#006045] text-white flex items-center justify-center text-[11px] font-medium">
+              <span className="h-8 w-8 shrink-0 rounded-full bg-[#161615] text-white flex items-center justify-center text-[11px] font-medium">
                 {initials(userName || "Toi")}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] text-[#1A1918] tracking-tight">{userName || "Mon compte"}</span>
-                <span className="block truncate text-[10px] font-light text-[#1A1918]/45">
+                <span className="block truncate text-[11px] font-normal text-[#1A1918]/60">
                   {counts.ready} dossier{counts.ready > 1 ? "s" : ""} prêt{counts.ready > 1 ? "s" : ""} · {counts.sent} envoyée{counts.sent > 1 ? "s" : ""}
                 </span>
               </span>
@@ -426,7 +431,7 @@ export function ConversationSidebar({
                 type="button"
                 onClick={() => goTab("parametres")}
                 aria-label="Paramètres"
-                className="p-1.5 rounded-full text-[#1A1918]/40 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
+                className="p-1.5 rounded-full text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
               >
                 <Settings className="h-4 w-4 stroke-[1.4]" />
               </button>

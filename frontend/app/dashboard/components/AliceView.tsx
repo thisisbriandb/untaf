@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUp, ClipboardPaste, PanelRight, Plus,
 } from "lucide-react";
+import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 import { AlicePresence } from "../../onboarding/components/AlicePresence";
 import type {
   UiBlock, JobCardData, CvAuditData, ApplicationData, MissionReportData,
@@ -44,14 +45,14 @@ function AuditBlock({ data }: { data: CvAuditData }) {
         <span className="text-sm font-normal text-[#1A1918] tracking-tight">
           Audit ATS
         </span>
-        <span className="text-sm font-medium text-[#006045] tabular-nums">
+        <span className="text-sm font-medium text-[#161615] tabular-nums">
           {data.ats_score}/100
         </span>
       </div>
       {data.strengths.length > 0 && (
         <div className="space-y-1">
           {data.strengths.map((s, i) => (
-            <p key={i} className="text-xs font-light text-[#006045]/80 tracking-tight">
+            <p key={i} className="text-xs font-normal text-[#161615]/80 tracking-tight">
               ✓ {s}
             </p>
           ))}
@@ -60,7 +61,7 @@ function AuditBlock({ data }: { data: CvAuditData }) {
       {data.improvements.length > 0 && (
         <div className="space-y-1">
           {data.improvements.map((s, i) => (
-            <p key={i} className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+            <p key={i} className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
               → {s}
             </p>
           ))}
@@ -92,15 +93,15 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
             <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
               {app.job_title}
             </p>
-            <p className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
               {app.company_name}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-light text-[#1A1918]/50 tracking-tight">
+            <span className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight">
               {STATUS_LABELS[app.status] || app.status}
             </span>
-            <span className="text-xs font-medium text-[#006045] tabular-nums">
+            <span className="text-xs font-medium text-[#161615] tabular-nums">
               {app.match_score}%
             </span>
           </div>
@@ -123,7 +124,7 @@ function MissionBlock({ data }: { data: MissionReportData }) {
         <span className="text-sm font-normal text-[#1A1918] tracking-tight">
           {data.mission.titre}
         </span>
-        <span className="text-[11px] font-light text-[#1A1918]/45 tracking-tight">
+        <span className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight">
           {data.mission.statut === "paused" ? "en pause" : data.mission.autonomie}
         </span>
       </div>
@@ -139,7 +140,7 @@ function MissionBlock({ data }: { data: MissionReportData }) {
             <p className="text-lg font-light text-[#1A1918] tabular-nums leading-none">
               {value}
             </p>
-            <p className="text-[10px] font-light text-[#1A1918]/45 tracking-tight pt-0.5">
+            <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight pt-0.5">
               {label}
             </p>
           </div>
@@ -149,7 +150,7 @@ function MissionBlock({ data }: { data: MissionReportData }) {
       {reasons.length > 0 && (
         <div className="space-y-1 pt-1 border-t border-[#1A1918]/6">
           {reasons.map(([motif, n]) => (
-            <p key={motif} className="text-xs font-light text-[#1A1918]/55 tracking-tight">
+            <p key={motif} className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
               <span className="tabular-nums text-[#1A1918]/70">{n}</span> écartées — {motif}
             </p>
           ))}
@@ -183,13 +184,13 @@ function CanvasRefChip({ canvasRef }: { canvasRef: CanvasPayload }) {
     <button
       type="button"
       onClick={() => openCanvas(canvasRef)}
-      className="group flex items-center gap-2.5 w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-[#1A1918]/10 bg-white hover:border-[#006045]/45 transition-colors cursor-pointer text-left"
+      className="group flex items-center gap-2.5 w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-[#1A1918]/10 bg-white hover:border-[#161615]/45 transition-colors cursor-pointer text-left"
     >
-      <PanelRight className="w-3.5 h-3.5 stroke-[1.5] text-[#006045] shrink-0" />
+      <PanelRight className="w-3.5 h-3.5 stroke-[1.5] text-[#161615] shrink-0" />
       <span className="flex-1 min-w-0 text-xs font-normal text-[#1A1918] tracking-tight truncate">
         {canvasLabel(canvasRef)}
       </span>
-      <span className="text-[10px] font-light text-[#1A1918]/40 group-hover:text-[#006045] tracking-tight shrink-0">
+      <span className="text-[11px] font-normal text-[#1A1918]/55 group-hover:text-[#161615] tracking-tight shrink-0">
         {isActive ? "ouvert" : "rouvrir"}
       </span>
     </button>
@@ -199,27 +200,33 @@ function CanvasRefChip({ canvasRef }: { canvasRef: CanvasPayload }) {
 // ── Chat Bubble ────────────────────────────────────────────────────────────
 
 function ChatBubble({ msg }: { msg: ChatMessage }) {
+  // Alice : sa tête à gauche, son texte en encre pleine — c'est elle qui parle.
   if (msg.sender === "alice") {
     return (
-      <div className="space-y-2 text-left w-full opacity-80">
-        {msg.timestamp && (
-          <span className="font-mono text-[11px] text-[#006045]/75 font-medium tracking-tight">
-            {msg.timestamp}
-          </span>
-        )}
-        <Markdown
-          source={msg.text}
-          className="text-sm md:text-base text-[#1A1918]/60"
-        />
-        {msg.uiBlocks?.map((block, idx) => (
-          <UiBlockRenderer key={idx} block={block} />
-        ))}
-        {msg.canvasRef && <CanvasRefChip canvasRef={msg.canvasRef} />}
+      <div className="flex items-start gap-3 text-left w-full">
+        <AliceAvatar size={28} className="mt-0.5" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[12px] font-medium text-[#161615] tracking-tight">Alice</span>
+            {msg.timestamp && (
+              <span className="text-[11px] text-[#1A1918]/45 tabular-nums">{msg.timestamp}</span>
+            )}
+          </div>
+          <Markdown
+            source={msg.text}
+            className="text-sm md:text-[15px] text-[#1A1918]/85 leading-relaxed"
+          />
+          {msg.uiBlocks?.map((block, idx) => (
+            <UiBlockRenderer key={idx} block={block} />
+          ))}
+          {msg.canvasRef && <CanvasRefChip canvasRef={msg.canvasRef} />}
+        </div>
       </div>
     );
   }
+  // Toi : une bulle à droite, discrète, qui ne concurrence pas la réponse.
   return (
-    <div className="max-w-[85%] px-4 py-2.5 rounded-2xl bg-[#1A1918]/75 text-white/90 text-sm font-light leading-relaxed rounded-br-none tracking-tight">
+    <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-[#EDECE8] text-[#161615] text-sm leading-relaxed tracking-tight">
       {msg.text}
     </div>
   );
@@ -412,7 +419,7 @@ export function AliceView({
               />
             )}
             {isThinking && (
-              <div className="flex items-center gap-1 text-[#1A1918]/40 text-sm font-light py-2">
+              <div className="flex items-center gap-1 text-[#1A1918]/55 text-sm font-light py-2">
                 <span className="animate-pulse">{workingLabel}</span>
               </div>
             )}
@@ -430,7 +437,7 @@ export function AliceView({
                 type="button"
                 onClick={() => send(m.query)}
                 disabled={isThinking}
-                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-light text-[#1A1918]/60 hover:border-[#006045]/35 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
+                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-normal text-[#1A1918]/60 hover:border-[#161615]/35 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-40"
               >
                 {m.label}
               </button>
@@ -442,14 +449,14 @@ export function AliceView({
             e.preventDefault();
             send(prompt);
           }}
-          className="relative flex items-center bg-white border border-[#EDECEA] hover:border-[#1A1918]/25 focus-within:border-[#006045] rounded-full px-4.5 py-3 shadow-sm transition-all"
+          className="relative flex items-center bg-white border border-[#EDECEA] hover:border-[#1A1918]/25 focus-within:border-[#161615] rounded-full px-4.5 py-3 shadow-sm transition-all"
         >
           <button
             type="button"
             onClick={() => setShowLauncher(true)}
             aria-label="Confier une mission à Alice"
             title="Confier une mission"
-            className="text-[#1A1918]/35 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#1A1918]/50 hover:text-[#161615] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <Plus className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -458,7 +465,7 @@ export function AliceView({
             onClick={() => setShowImport(true)}
             aria-label="Coller une offre"
             title="Coller une offre trouvée ailleurs"
-            className="text-[#1A1918]/35 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#1A1918]/50 hover:text-[#161615] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <ClipboardPaste className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -470,7 +477,7 @@ export function AliceView({
             placeholder="Confie une mission à Alice..."
             maxLength={500}
             aria-label="Confier une mission à Alice"
-            className="flex-1 bg-transparent text-sm font-light placeholder:text-[#1A1918]/35 text-[#1A1918] focus:outline-none tracking-tight"
+            className="flex-1 bg-transparent text-sm font-light placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none tracking-tight"
           />
 
           <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -478,7 +485,7 @@ export function AliceView({
               type="submit"
               disabled={!prompt.trim() || isThinking}
               aria-label="Envoyer"
-              className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:opacity-30 transition-all cursor-pointer"
+              className="p-2 rounded-full bg-[#161615] text-white hover:bg-[#000000] disabled:opacity-30 transition-all cursor-pointer"
             >
               <ArrowUp className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>

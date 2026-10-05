@@ -17,7 +17,8 @@ from html import escape
 
 INK = "#1A1918"
 PAPER = "#FAFAF8"
-GREEN = "#006045"
+#: Une seule encre, comme dans l'application : l'action principale en noir.
+GREEN = "#161615"
 MUTED = "#8A8884"
 
 
@@ -109,12 +110,20 @@ def render_html(email: Email) -> str:
 <tr><td align="center" style="padding:32px 16px">
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#fff;border:1px solid #ECEBE7;border-radius:18px">
 <tr><td style="padding:28px 28px 8px">
-<div style="font-size:12px;color:{GREEN};letter-spacing:.04em">● Alice</div>
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="padding-right:10px"><img src="{escape(_avatar_url(), quote=True)}" width="32" height="32" alt="Alice" style="display:block;border-radius:50%"></td>
+<td style="font-size:13px;color:{INK};letter-spacing:.01em">Alice</td></tr></table>
 <h1 style="font-size:21px;font-weight:400;color:{INK};margin:10px 0 16px;line-height:1.35">{escape(email.heading)}</h1>
 {paragraphs}{stats}{items}{cta}
 </td></tr>
 <tr><td style="padding:16px 28px 26px;font-size:11px;line-height:1.5;color:{MUTED}">{footer}</td></tr>
 </table></td></tr></table></body></html>"""
+
+
+def _avatar_url() -> str:
+    """La tête d'Alice, servie par le front (les clients mail bloquent le SVG)."""
+    from app.config import settings
+    return settings.frontend_url.rstrip("/") + "/alice-mail.png"
 
 
 def render_text(email: Email) -> str:

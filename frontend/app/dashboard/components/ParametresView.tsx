@@ -44,7 +44,7 @@ function Switch({ on, onChange, disabled }: { on: boolean; onChange: () => void;
       disabled={disabled}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default",
-        on ? "bg-[#006045]" : "bg-[#1A1918]/15",
+        on ? "bg-[#161615]" : "bg-[#1A1918]/15",
       )}
     >
       <motion.span
@@ -121,14 +121,14 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
         {/* ═══ Notifications ═══ */}
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-[#1A1918]/40 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
               Notifications par e-mail
             </p>
             {prefs && <Switch on={prefs.enabled} onChange={() => update({ enabled: !prefs.enabled })} />}
           </div>
 
           {settings && !settings.delivery_configured && (
-            <p className="text-[11px] font-light text-amber-700 bg-amber-50 border border-amber-500/20 rounded-xl px-3 py-2 tracking-tight">
+            <p className="text-[11px] font-normal text-[#161615] bg-[#F4F3F0] border border-[#161615]/20 rounded-xl px-3 py-2 tracking-tight">
               Aucun service d&apos;envoi n&apos;est configuré sur ce serveur : tes réglages sont
               enregistrés, mais rien ne partira tant que Resend ou SMTP ne sont pas renseignés.
             </p>
@@ -149,7 +149,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
                 <div key={t.key} className="py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-sm text-[#1A1918] tracking-tight">{t.label}</p>
-                    <p className="text-xs font-light text-[#1A1918]/45 tracking-tight">{t.detail}</p>
+                    <p className="text-xs font-normal text-[#1A1918]/60 tracking-tight">{t.detail}</p>
                   </div>
                   <Switch
                     on={Boolean(prefs[t.key])}
@@ -162,7 +162,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
               <div className="py-3 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm text-[#1A1918] tracking-tight">Rapport d&apos;activité</p>
-                  <p className="text-xs font-light text-[#1A1918]/45 tracking-tight">
+                  <p className="text-xs font-normal text-[#1A1918]/60 tracking-tight">
                     Offres retenues, envois, réponses — seulement s&apos;il y a du nouveau.
                   </p>
                 </div>
@@ -175,7 +175,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
                       onClick={() => update({ digest: d.id })}
                       className={cn(
                         "relative rounded-full px-2.5 py-1 text-[11px] tracking-tight cursor-pointer disabled:cursor-default",
-                        prefs.digest === d.id ? "text-[#1A1918]" : "text-[#1A1918]/45",
+                        prefs.digest === d.id ? "text-[#1A1918]" : "text-[#1A1918]/60",
                       )}
                     >
                       {prefs.digest === d.id && (
@@ -195,14 +195,14 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
 
           {settings && (
             <div className="flex items-center justify-between gap-3 pt-1">
-              <p className="text-[11px] font-light text-[#1A1918]/40 tracking-tight truncate">
+              <p className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight truncate">
                 Envoyées à {settings.recipient}
               </p>
               <button
                 type="button"
                 onClick={test}
                 disabled={testing}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1.5 text-[11px] text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615] transition-colors cursor-pointer disabled:opacity-50"
               >
                 {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                 M&apos;envoyer un essai

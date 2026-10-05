@@ -68,7 +68,7 @@ export function MissionLauncher({
     <div className="space-y-6">
       {/* Combien */}
       <div className="space-y-2.5">
-        <p className="text-center text-xs text-[#1A1918]/40 uppercase tracking-wider font-medium">
+        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
           Sur combien d&apos;offres
         </p>
         <div className="flex justify-center gap-2">
@@ -81,7 +81,7 @@ export function MissionLauncher({
               className={cn(
                 "px-5 py-2 rounded-full border text-sm transition-colors cursor-pointer",
                 count === n
-                  ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
+                  ? "border-[#161615] bg-[#161615]/8 text-[#161615]"
                   : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
               )}
             >
@@ -89,14 +89,14 @@ export function MissionLauncher({
             </motion.button>
           ))}
         </div>
-        <p className="text-center text-[11px] font-light text-[#1A1918]/40">
+        <p className="text-center text-[11px] font-normal text-[#1A1918]/55">
           Les meilleures de tes offres retenues, celles que je peux envoyer en premier.
         </p>
       </div>
 
       {/* Le feu vert */}
       <div className="space-y-2.5">
-        <p className="text-center text-xs text-[#1A1918]/40 uppercase tracking-wider font-medium">
+        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
           Quand un dossier peut partir
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -112,21 +112,21 @@ export function MissionLauncher({
               className={cn(
                 "p-3 rounded-2xl border text-left transition-colors cursor-pointer",
                 allowSend === opt.send
-                  ? "border-[#006045] bg-[#006045]/[0.06]"
+                  ? "border-[#161615] bg-[#161615]/[0.06]"
                   : "border-[#1A1918]/10 hover:border-[#1A1918]/25",
               )}
             >
-              <span className={cn("block text-sm", allowSend === opt.send ? "text-[#006045]" : "text-[#1A1918]")}>
+              <span className={cn("block text-sm", allowSend === opt.send ? "text-[#161615]" : "text-[#1A1918]")}>
                 {opt.label}
               </span>
-              <span className="block text-[11px] font-light text-[#1A1918]/45 mt-0.5">{opt.detail}</span>
+              <span className="block text-[11px] font-normal text-[#1A1918]/60 mt-0.5">{opt.detail}</span>
             </motion.button>
           ))}
         </div>
       </div>
 
       {/* Le contrat, dit en clair avant de partir */}
-      <p className="text-xs font-light text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
+      <p className="text-xs font-normal text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
         Pour chaque offre : CV adapté et lettre. Les offres qui se postulent sur le site de
         l&apos;employeur restent prêtes à envoyer. Tu peux fermer l&apos;onglet, je t&apos;écris
         quand c&apos;est fini.
@@ -139,7 +139,7 @@ export function MissionLauncher({
           type="button"
           onClick={launch}
           disabled={isLaunching}
-          className="group inline-flex items-center gap-2.5 py-3 px-7 rounded-full bg-[#006045] text-white hover:bg-[#004d37] text-sm transition-all cursor-pointer disabled:opacity-40"
+          className="group inline-flex items-center gap-2.5 py-3 px-7 rounded-full bg-[#161615] text-white hover:bg-[#000000] text-sm transition-all cursor-pointer disabled:opacity-40"
         >
           <span>Vas-y, je te laisse faire</span>
           {isLaunching ? (
@@ -163,7 +163,7 @@ export function MissionLauncher({
         type="button"
         onClick={onClose}
         aria-label="Fermer"
-        className="absolute top-5 right-6 p-2 rounded-full text-[#1A1918]/40 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+        className="absolute top-5 right-6 p-2 rounded-full text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
       >
         <X className="w-4 h-4 stroke-[1.4]" />
       </button>

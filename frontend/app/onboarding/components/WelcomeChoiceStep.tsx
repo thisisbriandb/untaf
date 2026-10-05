@@ -38,7 +38,7 @@ export function WelcomeChoiceStep({
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold text-primary-foreground">
+              <span className="rounded-full bg-primary px-3 py-0.5 text-[11px] font-bold text-primary-foreground">
                 Recommandé
               </span>
             </div>
@@ -70,7 +70,7 @@ export function WelcomeChoiceStep({
                 <CheckCircle2 className="h-5 w-5" />
               </div>
 
-              <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">
                 Accès direct
               </span>
             </div>

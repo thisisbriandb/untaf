@@ -61,7 +61,7 @@ export function EditorSubStepper({
             >
               <span
                 className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold shrink-0 transition-all",
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold shrink-0 transition-all",
                   isActive
                     ? "bg-white/20 text-primary-foreground"
                     : isDone || isPast

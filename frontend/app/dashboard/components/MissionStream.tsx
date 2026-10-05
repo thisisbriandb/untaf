@@ -20,9 +20,9 @@ import { invalidateApplication } from "@/lib/application-state";
 const POLL_MS = 2500;
 
 const DOT: Record<string, string> = {
-  applied: "bg-[#006045]",
-  letter_written: "bg-[#006045]/70",
-  awaiting_approval: "bg-amber-500",
+  applied: "bg-[#161615]",
+  letter_written: "bg-[#161615]/70",
+  awaiting_approval: "bg-[#161615]",
   error: "bg-red-500",
 };
 
@@ -71,14 +71,14 @@ export function MissionStream({
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-start gap-2 w-full"
     >
-      <div className="flex items-center gap-2 text-[11px] font-light text-[#1A1918]/45 tracking-tight">
+      <div className="flex items-center gap-2 text-[11px] font-normal text-[#1A1918]/60 tracking-tight">
         {live ? (
           <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006045]/60" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#006045]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#161615]" />
           </span>
         ) : (
-          <Check className="h-3 w-3 text-[#006045]" />
+          <Check className="h-3 w-3 text-[#161615]" />
         )}
         <span>
           {run.title}
@@ -94,7 +94,7 @@ export function MissionStream({
               setStopping(false);
               if (stopped) onChange(stopped);
             }}
-            className="text-[#1A1918]/35 hover:text-red-600 underline-offset-2 hover:underline cursor-pointer disabled:opacity-40"
+            className="text-[#1A1918]/50 hover:text-red-600 underline-offset-2 hover:underline cursor-pointer disabled:opacity-40"
           >
             arrêter
           </button>
@@ -123,9 +123,9 @@ export function MissionStream({
             key={run.current_step ?? "start"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2.5 text-[15px] font-light text-[#1A1918]/45 tracking-tight"
+            className="flex items-center gap-2.5 text-[15px] font-light text-[#1A1918]/60 tracking-tight"
           >
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#161615]" />
             {run.current_step ? `${STEP_LABELS[run.current_step]}…` : "Je m'y mets…"}
           </motion.p>
         )}
@@ -137,7 +137,7 @@ export function MissionStream({
             <button
               type="button"
               onClick={onOpenCandidatures}
-              className="inline-flex items-center gap-1 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d38] cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000] cursor-pointer"
             >
               {waiting ? `Valider ${waiting} candidature${waiting > 1 ? "s" : ""}` : "Voir les dossiers"}
               <ArrowRight className="h-3 w-3" />
@@ -148,7 +148,7 @@ export function MissionStream({
               type="button"
               onClick={onDismiss}
               aria-label="Masquer"
-              className="p-1.5 rounded-full text-[#1A1918]/30 hover:text-[#1A1918] cursor-pointer"
+              className="p-1.5 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>

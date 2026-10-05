@@ -99,8 +99,8 @@ export const colorSwatches: ColorSwatch[] = [
   { id: "darknavy", name: "Bleu Nuit Untaf", bg: "bg-[#1B3C53]", border: "border-[#1B3C53]", text: "text-[#1B3C53]", hex: "#1B3C53" },
   { id: "slate", name: "Ardoise Slate", bg: "bg-[#456882]", border: "border-[#456882]", text: "text-[#456882]", hex: "#456882" },
   { id: "sand", name: "Sable Warm", bg: "bg-[#D2C1B6]", border: "border-[#D2C1B6]", text: "text-[#D2C1B6]", hex: "#D2C1B6" },
-  { id: "emerald", name: "Émeraude", bg: "bg-emerald-600", border: "border-emerald-600", text: "text-emerald-600", hex: "#059669" },
-  { id: "violet", name: "Violet Studio", bg: "bg-violet-600", border: "border-violet-600", text: "text-violet-600", hex: "#7c3aed" },
+  { id: "emerald", name: "Émeraude", bg: "bg-[#161615]", border: "border-[#161615]", text: "text-[#161615]", hex: "#059669" },
+  { id: "violet", name: "Violet Studio", bg: "bg-[#161615]", border: "border-[#161615]", text: "text-[#161615]", hex: "#7c3aed" },
 ];
 
 export const cvTemplates: CVTemplate[] = [

@@ -89,4 +89,5 @@ def test_refus_du_site_carriere(monkeypatch):
     dispatch = SimpleNamespace(destination="recruitee:acme/x", resume_blob=b"%PDF",
                                resume_name="CV.pdf", letter_body="")
     result = asyncio.run(dispatcher._send_via_recruitee(dispatch, candidate))
-    assert not result["ok"] and "422" in result["error"]
+    assert not result["ok"] and "téléphone" in result["error"]
+    assert result["proof"]["status"] == 422
