@@ -17,7 +17,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
 
@@ -52,8 +52,24 @@ class RequestIn(BaseModel):
     email: EmailStr
 
 
+def _frontend_base(request: Request) -> str:
+    """
+    Où mène le lien de connexion. `FRONTEND_URL` d'abord ; s'il est resté sur
+    sa valeur de développement (localhost) alors que la demande vient d'un
+    site autorisé, c'est ce site qui fait foi — sinon le lien envoyé en
+    production ouvrait http://localhost:3000.
+    """
+    front = settings.frontend_url.strip().rstrip("/")
+    origin = (request.headers.get("origin") or "").strip().rstrip("/")
+    local = ("://localhost", "://127.0.0.1")
+    if any(h in front for h in local) and origin and not any(h in origin for h in local):
+        if origin in settings.cors_origin_list:
+            return origin
+    return front
+
+
 @router.post("/request", status_code=202)
-async def request_link(body: RequestIn):
+async def request_link(body: RequestIn, request: Request):
     if settings.auth_bypassed:
         return {"sent": False, "reason": "authentification désactivée en développement"}
     if not settings.auth_secret:
@@ -78,7 +94,7 @@ async def request_link(body: RequestIn):
         ))
         await session.commit()
 
-    link = (f"{settings.frontend_url.rstrip('/')}/auth/confirmed"
+    link = (f"{_frontend_base(request)}/auth/confirmed"
             f"?token={quote(token)}&email={quote(email)}")
     await _send_login_mail(email, link, code)
     return {"sent": True}

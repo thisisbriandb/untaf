@@ -77,6 +77,27 @@ _PATTERNS: list[tuple[str, str, re.Pattern]] = [
 ]
 
 
+def _resume_requirement(cv_bytes, cv_name: str, cv_origin: str) -> Requirement:
+    """Le CV tel qu'il partirait maintenant."""
+    if cv_bytes:
+        origin = {
+            "original": "ton document d’origine",
+            "tailored": "adapté à cette offre",
+            "render_failed": "ton document d’origine — la mise en page a échoué",
+        }.get(cv_origin, "généré depuis ton modèle")
+        return Requirement("resume", "CV", "satisfied", f"{cv_name} — {origin}")
+    elif cv_origin == "render_failed":
+        return Requirement(
+            "resume", "CV", "missing",
+            "Ton CV adapté n'a pas pu être mis en page — l'équipe est prévenue, réessaie bientôt.",
+        )
+    else:
+        return Requirement(
+            "resume", "CV", "missing",
+            "Aucun CV enregistré — dépose-le dans l'éditeur.",
+        )
+
+
 def detect_requirements(job: JobPosting, candidate: Candidate,
                         cover_letter: dict | None = None,
                         tailoring: dict | None = None) -> ApplicationPlan:
@@ -89,26 +110,21 @@ def detect_requirements(job: JobPosting, candidate: Candidate,
 
     reqs: list[Requirement] = []
 
-    # Le CV est attendu partout, sans exception.
-    from app.agents.application.cv_resolver import resolve_cv
-    cv_bytes, cv_name, cv_origin = resolve_cv(candidate, tailoring)
-    if cv_bytes:
-        origin = {
-            "original": "ton document d’origine",
-            "tailored": "adapté à cette offre",
-            "render_failed": "ton document d’origine — la mise en page a échoué",
-        }.get(cv_origin, "généré depuis ton modèle")
-        reqs.append(Requirement("resume", "CV", "satisfied", f"{cv_name} — {origin}"))
-    elif cv_origin == "render_failed":
+    # Le CV est attendu partout, sans exception — et c'est le CV ADAPTÉ qui
+    # part. Avant que le dossier soit rédigé, on annonce celui qu'on va
+    # produire, jamais le document d'origine (qui ne partira pas).
+    from app.agents.application.cv_resolver import HAS_ENGINE, resolve_cv
+    t = tailoring or {}
+    has_material = bool(candidate.resume_file or candidate.cv_content or candidate.skills)
+    if HAS_ENGINE and has_material and not (t.get("headline") or t.get("summary")):
+        cv_bytes = b"pending"  # composé à la rédaction du dossier
         reqs.append(Requirement(
-            "resume", "CV", "missing",
-            "Ton CV adapté n'a pas pu être mis en page — l'équipe est prévenue, réessaie bientôt.",
+            "resume", "CV", "generate",
+            "Je l'adapte à cette offre : accroche, points forts, réalisations reformulées.",
         ))
     else:
-        reqs.append(Requirement(
-            "resume", "CV", "missing",
-            "Aucun CV enregistré — dépose-le dans l'éditeur.",
-        ))
+        cv_bytes, cv_name, cv_origin = resolve_cv(candidate, tailoring)
+        reqs.append(_resume_requirement(cv_bytes, cv_name, cv_origin))
 
     # La lettre : exigée si l'annonce le dit, sinon proposée par défaut sur
     # les canaux où elle fait la différence.

@@ -113,6 +113,13 @@ ALLOWED_ORIGINS = list(dict.fromkeys([
 # Un appel refusé par CORS ne laisse qu'un « OPTIONS … 400 » dans les logs :
 # la liste effective, écrite au démarrage, permet de comprendre pourquoi.
 logger.info("Origines CORS autorisées : %s", ", ".join(ALLOWED_ORIGINS))
+if not settings.debug and "localhost" in settings.frontend_url:
+    # Les liens des e-mails (connexion, comptes rendus) mèneraient à localhost.
+    logger.error(
+        "FRONTEND_URL vaut %s : les liens envoyés par e-mail ne mèneront pas au site. "
+        "Renseigner l'adresse publique du front (ex. https://alice-agent.fr).",
+        settings.frontend_url,
+    )
 
 app.add_middleware(
     CORSMiddleware,

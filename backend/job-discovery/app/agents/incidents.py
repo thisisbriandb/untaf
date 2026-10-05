@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 #: Ce qui peut casser, et ce qu'on propose au candidat à la place.
 INCIDENTS: dict[str, tuple[str, str]] = {
     "cv_render_failed": (
-        "Je n'ai pas réussi à mettre ton CV en page",
-        "Ta lettre est prête ; télécharge ton CV d'origine ou réessaie dans un moment — "
-        "l'équipe est prévenue.",
+        "Je n'ai pas réussi à mettre en page ton CV adapté",
+        "Rien n'est parti avec un autre CV que celui-là. Ta lettre est prête ; réessaie "
+        "dans un moment — l'équipe est prévenue.",
     ),
     "send_failed": (
         "L'envoi de ta candidature a échoué",
