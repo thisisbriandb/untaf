@@ -19,6 +19,7 @@ import { DownloadLink } from "./ProtectedFile";
 import { openFile } from "@/lib/api";
 import { cvTemplates } from "@/app/onboarding/types";
 import { invalidateApplication, isSent, useApplicationState } from "@/lib/application-state";
+import { chez, companyOf } from "@/lib/company";
 
 function templateLabel(id: string): string {
   return cvTemplates.find((t) => t.id === id)?.name ?? id;
@@ -105,7 +106,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
     // on le dit et on propose de choisir le modèle.
     const r = docs.report;
     const parts = [
-      `J'ai adapté ton CV et ta lettre pour « ${job.title} » chez ${job.company_name} : ` +
+      `J'ai adapté ton CV et ta lettre pour « ${job.title} »${chez(job.company_name)} : ` +
         `nouvelle accroche (« ${docs.cv.headline} »), présentation réécrite pour l'offre, ` +
         "compétences demandées mises en avant. Tout ton parcours est conservé.",
     ];
@@ -159,7 +160,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
   }, [job.id, autoApply]);
 
   const prompts = [
-    `Rédige-moi une lettre de motivation pour « ${job.title} » chez ${job.company_name}`,
+    `Rédige-moi une lettre de motivation pour « ${job.title} »${chez(job.company_name)}`,
     `Pourquoi cette offre me correspond-elle à ${job.match_score}% ?`,
     `Qu'est-ce qui manque à mon CV pour ce poste ?`,
   ];
@@ -206,7 +207,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               {job.title}
             </h2>
             <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
-              {job.company_name} · {job.location}
+              {[companyOf(job.company_name) ?? "Employeur non communiqué", job.location].filter(Boolean).join(" · ")}
             </p>
           </div>
           <div className="shrink-0 text-right">
@@ -328,7 +329,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               setApplying(true);
             }}
             disabled={!candidateId || sent}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors cursor-pointer disabled:opacity-40"
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5 stroke-[1.6]" />
             {sent ? <Check className="w-3.5 h-3.5 stroke-[2]" /> : null}

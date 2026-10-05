@@ -40,3 +40,13 @@ def test_sans_transport_candidature_simulee(monkeypatch):
         letter=None, job_title="Dev", company_name="ACME", resume=b"%PDF",
     ))
     assert result["ok"] and not result["real"] and result["proof"]["simulated"]
+
+
+def test_nom_employeur_affichable():
+    from app.agents.company_name import chez, display_company
+    assert display_company("Employeur non précisé") is None
+    assert chez("Employeur non précisé") == ""
+    assert display_company("ASSIST DEVELOPPEMENT INFORMATIQUE") == "Assist Developpement Informatique"
+    assert display_company("SNCF") == "SNCF"
+    assert display_company("ACME SAS") == "Acme SAS"
+    assert chez("Back Market") == " chez Back Market"

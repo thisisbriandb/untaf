@@ -21,6 +21,7 @@ import { useToast } from "./Toaster";
 import { NextAction } from "./NextAction";
 import { ConversationMenu } from "./ConversationMenu";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
+import { chez, companyOf } from "@/lib/company";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
               {app.job_title}
             </p>
             <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
-              {app.company_name}
+              {companyOf(app.company_name) ?? "Employeur non communiqué"}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -207,7 +208,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
         <AliceAvatar size={28} className="mt-0.5" />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-[12px] font-medium text-[#161615] tracking-tight">Alice</span>
+            <span className="text-[12px] font-medium text-[#006045] tracking-tight">Alice</span>
             {msg.timestamp && (
               <span className="text-[11px] text-[#1A1918]/45 tabular-nums">{msg.timestamp}</span>
             )}
@@ -485,7 +486,7 @@ export function AliceView({
               type="submit"
               disabled={!prompt.trim() || isThinking}
               aria-label="Envoyer"
-              className="p-2 rounded-full bg-[#161615] text-white hover:bg-[#000000] disabled:opacity-30 transition-all cursor-pointer"
+              className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:opacity-30 transition-all cursor-pointer"
             >
               <ArrowUp className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>
@@ -521,7 +522,7 @@ export function AliceView({
                 ? ` Attention, elle sort de ton mandat : ${job.rejections[0]}.`
                 : "";
               sayAsAlice(
-                `J'ai ajouté « ${job.title} » chez ${job.company_name} à ta liste ` +
+                `J'ai ajouté « ${job.title} »${chez(job.company_name)} à ta liste ` +
                 `(${job.match_score}% de correspondance).${fit} ` +
                 "Je peux adapter ton CV et ta lettre à cette offre.",
                 canvasRef,

@@ -52,7 +52,7 @@ export default function ConfirmedPage() {
           <button
             type="button"
             onClick={async () => router.replace(await destinationAfterSignIn())}
-            className="px-5 py-2.5 rounded-full bg-[#161615] text-white text-sm cursor-pointer hover:bg-[#000000]"
+            className="px-5 py-2.5 rounded-full bg-[#006045] text-white text-sm cursor-pointer hover:bg-[#004d37]"
           >
             Continuer ici
           </button>
@@ -65,7 +65,7 @@ export default function ConfirmedPage() {
           <button
             type="button"
             onClick={() => router.replace("/login")}
-            className="px-5 py-2.5 rounded-full bg-[#161615] text-white text-sm cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-[#006045] text-white text-sm cursor-pointer hover:bg-[#004d37]"
           >
             Recevoir un nouveau lien
           </button>

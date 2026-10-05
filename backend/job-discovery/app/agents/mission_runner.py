@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.agents.company_name import chez
 from app.config import settings
 from app.database import async_session
 from app.models.job_posting import JobPosting, PostingStatus
@@ -211,12 +212,12 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                     await report_incident("pack_failed", candidate_id, f"{job.title} — {company}",
                                           notify_user=False)
                     await _say(run_id, candidate_id, MissionEventKind.ERROR,
-                               f"Je n'ai pas pu préparer le dossier pour « {job.title} » "
-                               f"chez {company}. Je passe à la suivante.")
+                               f"Je n'ai pas pu préparer le dossier pour « {job.title} »"
+                               f"{chez(company)}. Je passe à la suivante.")
                     continue
             await _say(
                 run_id, candidate_id, MissionEventKind.LETTER_WRITTEN,
-                f"Dossier prêt pour « {job.title} » chez {company} — {APPLY_MODE_LABELS[mode].lower()}.",
+                f"Dossier prêt pour « {job.title} »{chez(company)} — {APPLY_MODE_LABELS[mode].lower()}.",
                 {"job_id": str(job.id), "application_id": str(app.id), "company": company,
                  "job_title": job.title,
                  "score": app.match_score, "apply_mode": mode},
@@ -276,7 +277,7 @@ async def _dispatch_all(run_id: UUID, candidate_id: UUID, prepared: list, send: 
             status = sent.status if sent else DispatchStatus.FAILED
             if status == DispatchStatus.SENT:
                 await _say(run_id, candidate_id, MissionEventKind.APPLIED,
-                           f"Candidature envoyée chez {company} pour « {job.title} ».",
+                           f"Candidature envoyée pour « {job.title} »{chez(company)}.",
                            {"dispatch_id": str(sent.id), "channel": sent.channel.value}, sent=1)
                 from app.agents.notifications import notify_application_sent
                 await notify_application_sent(candidate_id, sent.id)

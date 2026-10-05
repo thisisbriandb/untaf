@@ -81,7 +81,7 @@ export function MissionLauncher({
               className={cn(
                 "px-5 py-2 rounded-full border text-sm transition-colors cursor-pointer",
                 count === n
-                  ? "border-[#161615] bg-[#161615]/8 text-[#161615]"
+                  ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
                   : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
               )}
             >
@@ -112,11 +112,11 @@ export function MissionLauncher({
               className={cn(
                 "p-3 rounded-2xl border text-left transition-colors cursor-pointer",
                 allowSend === opt.send
-                  ? "border-[#161615] bg-[#161615]/[0.06]"
+                  ? "border-[#006045] bg-[#006045]/[0.06]"
                   : "border-[#1A1918]/10 hover:border-[#1A1918]/25",
               )}
             >
-              <span className={cn("block text-sm", allowSend === opt.send ? "text-[#161615]" : "text-[#1A1918]")}>
+              <span className={cn("block text-sm", allowSend === opt.send ? "text-[#006045]" : "text-[#1A1918]")}>
                 {opt.label}
               </span>
               <span className="block text-[11px] font-normal text-[#1A1918]/60 mt-0.5">{opt.detail}</span>
@@ -139,7 +139,7 @@ export function MissionLauncher({
           type="button"
           onClick={launch}
           disabled={isLaunching}
-          className="group inline-flex items-center gap-2.5 py-3 px-7 rounded-full bg-[#161615] text-white hover:bg-[#000000] text-sm transition-all cursor-pointer disabled:opacity-40"
+          className="group inline-flex items-center gap-2.5 py-3 px-7 rounded-full bg-[#006045] text-white hover:bg-[#004d37] text-sm transition-all cursor-pointer disabled:opacity-40"
         >
           <span>Vas-y, je te laisse faire</span>
           {isLaunching ? (

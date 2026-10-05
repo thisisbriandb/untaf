@@ -117,7 +117,7 @@ export function EmailSignIn({
                 type="submit"
                 disabled={busy || !email.trim()}
                 aria-label="Recevoir un lien de connexion"
-                className="p-2 rounded-full bg-[#161615] text-white disabled:opacity-30 cursor-pointer"
+                className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:opacity-30 cursor-pointer"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               </button>
@@ -157,15 +157,15 @@ export function EmailSignIn({
               <button
                 type="submit"
                 disabled={busy || code.length < 6}
-                className="px-4 py-2 rounded-full bg-[#161615] text-white text-xs disabled:opacity-30 cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] text-xs disabled:opacity-30 cursor-pointer"
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Valider"}
               </button>
             </form>
             <div className="flex items-center justify-center gap-2 text-[11px] font-normal text-[#1A1918]/60">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#161615]/60" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#161615]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006045]/50" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#006045]" />
               </span>
               En attente de confirmation
             </div>

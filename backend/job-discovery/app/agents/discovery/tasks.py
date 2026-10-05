@@ -32,6 +32,7 @@ from app.agents.mission_log import get_or_create_mission, log_event, log_scan
 from app.models.mission import MissionEventKind
 from app.config import settings
 from app.schemas.matching import MatchingCriteria
+from app.agents.company_name import chez
 
 logger = logging.getLogger(__name__)
 
@@ -654,7 +655,7 @@ async def _match_candidate_to_existing_jobs(candidate_id):
         for score, title, company, job_id in sorted(newly_shortlisted, reverse=True)[:10]:
             await log_event(
                 session, candidate.id, MissionEventKind.SHORTLIST,
-                f"Retenu « {title} » chez {company} — {score}% de correspondance.",
+                f"Retenu « {title} »{chez(company)} — {score}% de correspondance.",
                 payload={"job_id": str(job_id), "score": score, "company": company},
             )
 

@@ -23,6 +23,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from app.agents.company_name import chez, display_company
 from app.agents.notifications.mailer import deliver
 from app.agents.notifications.templates import Email, Item, render_html, render_text
 from app.config import settings
@@ -189,13 +190,13 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
         stats = dict(run.stats or {})
         title, report, completed = run.title, run.report, run.status == RunStatus.COMPLETED
 
-    items = [Item(d.job_title, d.company_name, "à valider") for d in waiting]
-    items += [Item(d.job_title, d.company_name, "envoyée") for d in sent]
+    items = [Item(d.job_title, display_company(d.company_name) or "", "à valider") for d in waiting]
+    items += [Item(d.job_title, display_company(d.company_name) or "", "envoyée") for d in sent]
     if not items:
         # Mission « préparer » : rien n'est parti, mais chaque dossier est là.
         items = [
             Item((e.payload or {}).get("job_title") or e.summary,
-                 (e.payload or {}).get("company") or "", "dossier prêt")
+                 display_company((e.payload or {}).get("company")) or "", "dossier prêt")
             for e in prepared
         ]
     n_wait = stats.get("awaiting_approval", 0)
@@ -245,9 +246,9 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
 
     via = f"par e-mail à {destination}" if channel == "email" else "via le formulaire de l'employeur"
     email = Email(
-        subject=f"Candidature envoyée chez {company}",
+        subject=f"Candidature envoyée{chez(company)}" if display_company(company) else f"Candidature envoyée : {title}",
         preheader=f"« {title} » — partie {via}.",
-        heading=f"Ta candidature est partie chez {company}.",
+        heading=f"Ta candidature est partie{chez(company)}.",
         paragraphs=[
             f"J'ai envoyé ta candidature pour « {title} » {via}, avec ton CV adapté "
             f"et ta lettre.",
@@ -364,7 +365,8 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
             .order_by(Application.match_score.desc())
         )).all()
         packs_ready = len(ready_rows)
-        top_items = [Item(title, company or "", "dossier prêt") for _, title, company in ready_rows[:5]]
+        top_items = [Item(title, display_company(company) or "", "dossier prêt")
+                     for _, title, company in ready_rows[:5]]
 
     by_status = {s: n for s, n in dispatch_rows}
     sent = by_status.get(DispatchStatus.SENT, 0)

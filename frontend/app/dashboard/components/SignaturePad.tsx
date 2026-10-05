@@ -127,7 +127,7 @@ export function SignaturePad({
             type="button"
             onClick={save}
             disabled={!hasInk || isSaving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors cursor-pointer disabled:opacity-30"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-30"
           >
             {isSaving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
