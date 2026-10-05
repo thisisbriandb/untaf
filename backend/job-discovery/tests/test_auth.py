@@ -129,3 +129,19 @@ def test_cors_autorise_le_site_de_frontend_url(monkeypatch):
     assert settings.cors_origin_list == [
         "https://untaf.vercel.app", "https://alice-agent.fr", "https://www.alice-agent.fr",
     ]
+
+
+def test_lien_de_connexion_vers_le_site_demandeur_si_frontend_url_reste_local(monkeypatch):
+    from types import SimpleNamespace
+    from app.api.auth_routes import _frontend_base
+
+    monkeypatch.setattr(settings, "frontend_url", "http://localhost:3000")
+    monkeypatch.setattr(settings, "cors_origins", "https://alice-agent.fr")
+    req = SimpleNamespace(headers={"origin": "https://alice-agent.fr"})
+    assert _frontend_base(req) == "https://alice-agent.fr"
+    # Une origine inconnue ne détourne jamais le lien.
+    req = SimpleNamespace(headers={"origin": "https://pirate.example"})
+    assert _frontend_base(req) == "http://localhost:3000"
+    # FRONTEND_URL renseigné : il fait foi.
+    monkeypatch.setattr(settings, "frontend_url", "https://alice-agent.fr")
+    assert _frontend_base(SimpleNamespace(headers={})) == "https://alice-agent.fr"

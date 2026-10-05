@@ -340,32 +340,37 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
             .where(Application.candidate_id == candidate_id)
             .where(Application.status.in_([ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER]))
         )).scalar() or 0
-        events = (await session.execute(
+        raw_events = (await session.execute(
             select(MissionEvent.summary)
             .join(Mission, Mission.id == MissionEvent.mission_id)
             .where(Mission.candidate_id == candidate_id)
             .where(MissionEvent.created_at >= since)
             .order_by(MissionEvent.created_at.desc())
-            .limit(6)
+            .limit(40)
         )).scalars().all()
-        top = (await session.execute(
-            select(Application)
+        # Une même alerte répétée trois fois ne dit rien de plus.
+        events = list(dict.fromkeys(e for e in raw_events if e))[:6]
+
+        # Les dossiers prêts, pas encore partis : ce que le point doit montrer.
+        from app.models.company import Company
+        from app.models.job_posting import JobPosting
+        ready_rows = (await session.execute(
+            select(Application, JobPosting.title, Company.name)
+            .join(JobPosting, Application.job_posting_id == JobPosting.id)
+            .join(Company, JobPosting.company_id == Company.id)
             .where(Application.candidate_id == candidate_id)
-            .where(Application.created_at >= since)
-            .where(Application.status == ApplicationStatus.MATCHED)
+            .where(Application.status.in_([ApplicationStatus.MATCHED, ApplicationStatus.PENDING]))
+            .where(Application.metadata_json.has_key("cover_letter"))
             .order_by(Application.match_score.desc())
-            .limit(5)
-        )).scalars().all()
-        top_items = [
-            Item(a.job_posting.title if a.job_posting else "Offre", "", f"{a.match_score} %")
-            for a in top
-        ]
+        )).all()
+        packs_ready = len(ready_rows)
+        top_items = [Item(title, company or "", "dossier prêt") for _, title, company in ready_rows[:5]]
 
     by_status = {s: n for s, n in dispatch_rows}
     sent = by_status.get(DispatchStatus.SENT, 0)
 
     # Une semaine sans rien à raconter ne mérite pas un e-mail.
-    if not (new_matches or sent or waiting_total or events):
+    if not (new_matches or sent or waiting_total or events or packs_ready):
         return None
 
     label = "aujourd'hui" if period == "daily" else "cette semaine"
@@ -380,19 +385,19 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d" if period == "daily" else "%G-W%V")
     email = Email(
         subject=f"Ton point {'du jour' if period == 'daily' else 'de la semaine'} avec Alice",
-        preheader=f"{new_matches} nouvelles offres retenues, {sent} candidatures envoyées.",
+        preheader=f"{packs_ready} dossiers prêts, {sent} candidatures envoyées.",
         heading=f"Ton point {'du jour' if period == 'daily' else 'de la semaine'}.",
         paragraphs=paragraphs,
         stats=[
-            (new_matches, "offres retenues"),
+            (packs_ready, "dossiers prêts"),
             (sent, "envoyées"),
             (waiting_total, "à valider"),
             (interviews, "entretiens"),
         ],
-        items_title="Les meilleures nouvelles offres" if top_items else "",
+        items_title="Tes dossiers prêts" if top_items else "",
         items=top_items,
         cta_label="Ouvrir mon espace",
-        cta_url=link("candidatures" if waiting_total else None),
+        cta_url=link("candidatures" if waiting_total or packs_ready else None),
         footer=FOOTER,
     )
     return await _send(
