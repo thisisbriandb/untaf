@@ -2,7 +2,9 @@
 
 import React, { useEffect, useId } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ALICE_INK, BUN, GLASSES_PATH, SILHOUETTE_PATH } from "./AliceSilhouette";
+import {
+  AliceGlasses, AliceHead, BLAZER_PATH, NECK_PATH, SHIRT_PATH, TONES,
+} from "./AliceSilhouette";
 
 export type AliceEmotion =
   | "idle"
@@ -23,118 +25,115 @@ interface AlicePresenceProps {
 const HEIGHT = { sm: 34, md: 64, lg: 104 } as const;
 
 /**
- * Alice, présente : sa silhouette en contre-jour, qui respire.
+ * Alice, présente : sa silhouette de face, en contre-jour, qui respire.
  *
- * Les états se lisent dans la lumière plus que dans le geste — nette et
- * tournée vers toi quand elle écoute, la tête qui s'incline quand elle lit ou
- * écrit, le contour qui se trouble et le halo qui pulse quand elle travaille.
- * Elle suit très légèrement le pointeur, sans jamais quitter son profil.
+ * Les états se lisent dans la lumière plus que dans le geste — nette quand
+ * elle t'écoute, la tête qui s'incline quand elle lit ou écrit, le contour
+ * qui se trouble et la lumière qui pulse derrière elle quand elle travaille.
+ * Son regard suit très légèrement le pointeur : la tête se décale à peine,
+ * la monture un peu plus, comme quand on tourne les yeux.
  */
 export function AlicePresence({ emotion, className = "", size = "lg" }: AlicePresenceProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const mouseX = useMotionValue(0);
-  const gaze = useSpring(mouseX, { damping: 30, stiffness: 120 });
+  const mouseY = useMotionValue(0);
+  const gx = useSpring(mouseX, { damping: 30, stiffness: 120 });
+  const gy = useSpring(mouseY, { damping: 30, stiffness: 120 });
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 3;
       mouseX.set(Math.max(-1, Math.min(1, (e.clientX - cx) / cx)));
+      mouseY.set(Math.max(-1, Math.min(1, (e.clientY - cy) / cy)));
     };
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, [mouseX]);
+  }, [mouseX, mouseY]);
 
   const busy = emotion === "working" || emotion === "searching" || emotion === "thinking";
-  const tilt =
-    emotion === "reading" || emotion === "writing" ? 2.2 : emotion === "thinking" ? -1.4 : 0;
-  // Le regard suit le pointeur, à peine : ±1,2° autour de l'inclinaison de l'état.
-  const rotate = useTransform(gaze, (g) => tilt + g * 1.2);
+  const reading = emotion === "reading" || emotion === "writing";
 
-  const sharp = emotion === "listening" || emotion === "happy" ? 0.55 : 0.85;
+  const headX = useTransform(gx, (g) => g * 0.7);
+  const headY = useTransform(gy, (g) => g * 0.4 + (reading ? 1.2 : 0));
+  const glassesX = useTransform(gx, (g) => g * 0.5);
+  const glassesY = useTransform(gy, (g) => g * 0.35);
+  const tilt = emotion === "thinking" ? -3 : reading ? 2.5 : 0;
+
+  const sharp = emotion === "listening" || emotion === "happy" ? 0.5 : 0.75;
   const height = HEIGHT[size];
   const width = Math.round((height * 100) / 120);
   const id = (name: string) => `${name}-${uid}`;
+  const pulse = { duration: 2.4, repeat: Infinity, ease: "easeInOut" } as const;
 
   return (
     <div className={`flex flex-col items-center justify-center select-none ${className}`}>
-      <svg
-        viewBox="0 0 100 120"
-        width={width}
-        height={height}
-        role="img"
-        aria-label="Alice"
-        className="overflow-visible"
-      >
+      <svg viewBox="0 0 100 120" width={width} height={height} role="img" aria-label="Alice" className="overflow-visible">
         <defs>
           <filter id={id("soft")} x="-30%" y="-30%" width="160%" height="160%">
             <motion.feGaussianBlur
               initial={false}
-              animate={{ stdDeviation: busy ? [sharp, sharp + 1.1, sharp] : sharp }}
-              transition={busy ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.6 }}
+              animate={{ stdDeviation: busy ? [sharp, sharp + 0.9, sharp] : sharp }}
+              transition={busy ? pulse : { duration: 0.6 }}
             />
           </filter>
           <filter id={id("haze")} x="-40%" y="-40%" width="180%" height="180%">
             <motion.feGaussianBlur
               initial={false}
-              animate={{ stdDeviation: busy ? [3.4, 4.8, 3.4] : 3.6 }}
-              transition={busy ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.6 }}
+              animate={{ stdDeviation: busy ? [2, 3.2, 2] : 2.2 }}
+              transition={busy ? pulse : { duration: 0.6 }}
             />
           </filter>
           <radialGradient id={id("glow")} cx="50%" cy="50%" r="50%">
             <stop offset="0" stopColor="#fff" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </radialGradient>
-          <linearGradient id={id("top")} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.62" stopColor="#fff" />
-            <stop offset="0.86" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id={id("bottom")} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.48" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.68" stopColor="#fff" />
-            <stop offset="0.86" stopColor="#fff" stopOpacity="0.7" />
+          <linearGradient id={id("fade")} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0.6" stopColor="#fff" />
+            <stop offset="0.9" stopColor="#fff" stopOpacity="0.8" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
-          <mask id={id("mt")} maskContentUnits="userSpaceOnUse">
-            <rect width="100" height="120" fill={`url(#${id("top")})`} />
-          </mask>
           <mask id={id("mb")} maskContentUnits="userSpaceOnUse">
-            <rect width="100" height="120" fill={`url(#${id("bottom")})`} />
+            <rect width="100" height="120" fill={`url(#${id("fade")})`} />
           </mask>
         </defs>
 
         {/* Le contre-jour : il s'intensifie quand elle travaille */}
         <motion.ellipse
-          cx="54" cy="46" rx="46" ry="50"
+          cx="50" cy="48" rx="48" ry="52"
           fill={`url(#${id("glow")})`}
           initial={false}
-          animate={
-            busy
-              ? { opacity: [0.7, 1, 0.7], scale: [1, 1.06, 1] }
-              : { opacity: emotion === "happy" ? 1 : 0.8, scale: 1 }
-          }
-          transition={busy ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.6 }}
-          style={{ transformOrigin: "54px 46px" }}
+          animate={busy ? { opacity: [0.7, 1, 0.7], scale: [1, 1.06, 1] } : { opacity: emotion === "happy" ? 1 : 0.8, scale: 1 }}
+          transition={busy ? pulse : { duration: 0.6 }}
+          style={{ transformOrigin: "50px 48px" }}
         />
 
         {/* Elle respire */}
         <motion.g
-          animate={{ scaleY: [1, 1.012, 1], y: emotion === "happy" ? -1.5 : 0 }}
+          animate={{ scaleY: [1, 1.01, 1], y: emotion === "happy" ? -1.5 : 0 }}
           transition={{
             scaleY: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
             y: { type: "spring", stiffness: 200, damping: 14 },
           }}
           style={{ transformOrigin: "50px 120px" }}
         >
-          <motion.g style={{ rotate, transformOrigin: "50px 118px" }} fill={ALICE_INK}>
-            <g mask={`url(#${id("mt")})`} filter={`url(#${id("soft")})`}>
-              <circle {...BUN} />
-              <path d={SILHOUETTE_PATH} />
-              <path d={GLASSES_PATH} fill="none" stroke={ALICE_INK} strokeWidth="1.05" />
-            </g>
-            <g mask={`url(#${id("mb")})`} filter={`url(#${id("haze")})`}>
-              <path d={SILHOUETTE_PATH} />
-            </g>
-          </motion.g>
+          <g mask={`url(#${id("mb")})`} filter={`url(#${id("haze")})`}>
+            <path d={BLAZER_PATH} fill={TONES.blazer} />
+            <path d={SHIRT_PATH} fill={TONES.shirt} />
+          </g>
+          <g filter={`url(#${id("soft")})`}>
+            <path d={NECK_PATH} fill={TONES.neck} />
+            <motion.g
+              style={{ x: headX, y: headY, transformOrigin: "50px 62px" }}
+              animate={{ rotate: tilt }}
+              transition={{ type: "spring", stiffness: 120, damping: 16 }}
+            >
+              <AliceHead />
+              <motion.g style={{ x: glassesX, y: glassesY }}>
+                <AliceGlasses />
+              </motion.g>
+            </motion.g>
+          </g>
         </motion.g>
       </svg>
     </div>
