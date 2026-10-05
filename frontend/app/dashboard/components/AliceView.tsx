@@ -208,7 +208,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
         <AliceAvatar size={28} className="mt-0.5" />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-[12px] font-medium text-[#2E6B5E] tracking-tight">Alice</span>
+            <span className="text-[12px] font-medium text-[#006045] tracking-tight">Alice</span>
             {msg.timestamp && (
               <span className="text-[11px] text-[#1A1918]/45 tabular-nums">{msg.timestamp}</span>
             )}
@@ -486,7 +486,7 @@ export function AliceView({
               type="submit"
               disabled={!prompt.trim() || isThinking}
               aria-label="Envoyer"
-              className="p-2 rounded-full bg-[#161615] text-white hover:bg-[#000000] disabled:opacity-30 transition-all cursor-pointer"
+              className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:opacity-30 transition-all cursor-pointer"
             >
               <ArrowUp className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>

@@ -329,7 +329,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               setApplying(true);
             }}
             disabled={!candidateId || sent}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors cursor-pointer disabled:opacity-40"
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5 stroke-[1.6]" />
             {sent ? <Check className="w-3.5 h-3.5 stroke-[2]" /> : null}

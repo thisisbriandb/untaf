@@ -632,7 +632,7 @@ export function AliceExperience() {
                       <button
                         type="button"
                         onClick={handleLinkedinSubmit}
-                        className="absolute right-2 top-2 px-3 py-1 bg-[#161615] text-white text-xs font-medium rounded-lg hover:bg-[#000000] transition-colors"
+                        className="absolute right-2 top-2 px-3 py-1 bg-[#006045] text-white text-xs font-medium rounded-lg hover:bg-[#004d37] transition-colors"
                       >
                         OK
                       </button>
@@ -748,7 +748,7 @@ export function AliceExperience() {
                       <button
                         type="button"
                         onClick={() => setIsEditingProfile(false)}
-                        className="w-full py-2.5 bg-[#161615] text-white text-xs font-medium rounded-lg"
+                        className="w-full py-2.5 bg-[#006045] hover:bg-[#004d37] text-white text-xs font-medium rounded-lg"
                       >
                         Enregistrer
                       </button>

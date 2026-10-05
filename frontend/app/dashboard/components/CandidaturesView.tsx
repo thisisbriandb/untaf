@@ -75,7 +75,7 @@ function ScoreRing({ score }: { score: number }) {
       <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
         <circle cx="18" cy="18" r={r} fill="none" stroke="#1A1918" strokeOpacity="0.07" strokeWidth="2.5" />
         <motion.circle
-          cx="18" cy="18" r={r} fill="none" stroke="#2E6B5E" strokeWidth="2.5" strokeLinecap="round"
+          cx="18" cy="18" r={r} fill="none" stroke="#006045" strokeWidth="2.5" strokeLinecap="round"
           strokeDasharray={c}
           initial={{ strokeDashoffset: c }}
           animate={{ strokeDashoffset: c * (1 - Math.min(100, score) / 100) }}
@@ -106,7 +106,7 @@ function ActionButton({
       disabled={busy || disabled}
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default",
-        tone === "primary" && "bg-[#161615] text-white hover:bg-[#000000]",
+        tone === "primary" && "bg-[#006045] text-white hover:bg-[#004d37]",
         tone === "ghost" && "border border-[#1A1918]/10 text-[#1A1918]/70 hover:border-[#161615]/40 hover:text-[#161615]",
         tone === "danger" && "text-[#1A1918]/60 hover:text-red-600 hover:bg-red-50",
       )}
@@ -184,7 +184,7 @@ function FollowupPanel({
       <div className="flex flex-wrap items-center gap-1.5">
         <a
           href={followupMailto(draft)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d37]"
         >
           <Mail className="h-3 w-3" />
           {draft.to ? `Écrire à ${draft.to}` : "Ouvrir ma messagerie"}
@@ -364,7 +364,7 @@ function Row({
               item.dispatch?.channel === "email" && item.dispatch.mailto && (
                 <a
                   href={item.dispatch.mailto}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-[#000000]"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d37]"
                 >
                   <Mail className="h-3 w-3" /> Envoyer depuis ma messagerie
                 </a>
@@ -572,8 +572,8 @@ export function CandidaturesView({
               <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#161615]/25 bg-[#F4F3F0]/60 px-4 py-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2E6B5E]/50" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2E6B5E]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006045]/50" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006045]" />
                   </span>
                   <p className="text-xs text-[#1A1918]/80 tracking-tight">
                     {awaiting} candidature{awaiting > 1 ? "s attendent" : " attend"} ton feu vert. Tout est

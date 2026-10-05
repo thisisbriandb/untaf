@@ -126,7 +126,7 @@ export function CoverLetterEditor({
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#161615] hover:bg-[#000000] text-white text-xs transition-colors cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#006045] hover:bg-[#004d37] text-white text-xs transition-colors cursor-pointer disabled:opacity-40"
             >
               {isDownloading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -174,7 +174,7 @@ export function TemplateSwipeCard({
           onClick={() => !loading && onMatch(template.id)}
           disabled={loading}
           type="button"
-          className="h-14 px-6 rounded-full bg-[#161615] text-white flex items-center justify-center gap-2 font-sans font-medium text-sm hover:bg-[#000000] transition-all shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="h-14 px-6 rounded-full bg-[#006045] text-white flex items-center justify-center gap-2 font-sans font-medium text-sm hover:bg-[#004d37] transition-all shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Heart className="h-5 w-5 fill-white" />
           <span>{loading ? "Chargement du modèle..." : "Choisir ce modèle"}</span>

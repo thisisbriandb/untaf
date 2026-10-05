@@ -102,7 +102,7 @@ export function ImportJobDialog({
           <button
             type="submit"
             disabled={tooShort || isImporting}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-full bg-[#161615] text-white text-sm font-light tracking-tight hover:bg-[#000000] transition-colors cursor-pointer disabled:opacity-40"
+            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-full bg-[#006045] text-white text-sm font-light tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             {isImporting ? (
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -100,7 +100,7 @@ export function FinishOnSite({
             type="button"
             onClick={confirm}
             disabled={confirming}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#161615] px-3 py-1.5 text-[11px] text-white hover:bg-black cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d37] cursor-pointer disabled:opacity-50"
           >
             {confirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             Oui, c&apos;est envoyé
@@ -121,7 +121,7 @@ export function FinishOnSite({
           onClick={start}
           disabled={phase === "working"}
           className={cn(
-            "inline-flex items-center justify-center gap-1.5 bg-[#161615] text-white hover:bg-black transition-colors cursor-pointer disabled:opacity-60",
+            "inline-flex items-center justify-center gap-1.5 bg-[#006045] text-white hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-60",
             variant === "pill" ? "rounded-full px-3 py-1.5 text-[11px]" : "w-full rounded-full px-4 py-2.5 text-xs",
           )}
         >

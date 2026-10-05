@@ -231,7 +231,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
             whileTap={{ scale: 0.98 }}
             onClick={approve}
             disabled={sending}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#161615] px-4 py-2.5 text-xs text-white hover:bg-black cursor-pointer disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#006045] px-4 py-2.5 text-xs text-white hover:bg-[#004d37] cursor-pointer disabled:opacity-50"
           >
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             {dirty ? "Enregistrer et envoyer" : "C'est bon, envoie"}

@@ -18,7 +18,7 @@ from html import escape
 INK = "#1A1918"
 PAPER = "#FAFAF8"
 #: Une seule encre, comme dans l'application : l'action principale en noir.
-GREEN = "#161615"
+GREEN = "#006045"
 MUTED = "#8A8884"
 
 
@@ -112,7 +112,7 @@ def render_html(email: Email) -> str:
 <tr><td style="padding:28px 28px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="padding-right:10px"><img src="{escape(_avatar_url(), quote=True)}" width="32" height="32" alt="Alice" style="display:block;border-radius:50%"></td>
-<td style="font-size:13px;color:#2E6B5E;letter-spacing:.01em">Alice</td></tr></table>
+<td style="font-size:13px;color:#006045;letter-spacing:.01em">Alice</td></tr></table>
 <h1 style="font-size:21px;font-weight:400;color:{INK};margin:10px 0 16px;line-height:1.35">{escape(email.heading)}</h1>
 {paragraphs}{stats}{items}{cta}
 </td></tr>

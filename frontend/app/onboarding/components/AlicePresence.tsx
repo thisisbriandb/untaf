@@ -76,7 +76,7 @@ export function AlicePresence({ emotion, className = "", size = "lg" }: AlicePre
             />
           </filter>
           <radialGradient id={id("glow")} cx="50%" cy="50%" r="50%">
-            <stop offset="0" stopColor="#E4EFEA" />
+            <stop offset="0" stopColor="#E5F0EC" />
             <stop offset="0.55" stopColor="#F3F8F6" stopOpacity="0.8" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </radialGradient>

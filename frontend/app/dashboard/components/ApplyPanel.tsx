@@ -251,7 +251,7 @@ export function ApplyPanel({
                 <DownloadLink
                   url={packUrl(candidateId, jobId)}
                   filename={`Candidature_${companyName}.zip`}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors"
                 >
                   <Download className="w-3.5 h-3.5 stroke-[1.6]" />
                   Télécharger le dossier
@@ -393,7 +393,7 @@ export function ApplyPanel({
                   {result.mailto && (
                     <a
                       href={result.mailto}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors"
                     >
                       <Mail className="w-3.5 h-3.5 stroke-[1.6]" />
                       Ouvrir l&apos;e-mail pré-rempli
@@ -506,7 +506,7 @@ export function ApplyPanel({
                 <button
                   type="button"
                   onClick={launch}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#161615] text-white text-xs font-normal tracking-tight hover:bg-[#000000] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5 stroke-[1.6]" />
                   Vas-y

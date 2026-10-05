@@ -70,7 +70,7 @@ export const HEAD_VIEWBOX = "18 5 64 64";
 export function AliceAvatar({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EEF5F2] ring-1 ring-[#2E6B5E]/15 ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ECF4F0] ring-1 ring-[#006045]/15 ${className}`}
       style={{ width: size, height: size }}
       aria-hidden
     >
