@@ -75,6 +75,32 @@ class Decision:
     needs_approval: bool = False
 
 
+FORM_NOT_AUTOMATABLE = (
+    "le site de l'employeur a son propre formulaire : je ne l'envoie pas à ta place. "
+    "Ton dossier est prêt, termine sur le site avec l'extension Alice ou « Finir sur le site »"
+)
+
+FORM_NOT_RECOGNIZED = (
+    "je n'ai reconnu aucun champ du formulaire de l'employeur (page de présentation, "
+    "compte à créer ou formulaire en plusieurs étapes) : rien n'est parti. Ton dossier "
+    "est prêt, termine sur le site avec l'extension Alice ou « Finir sur le site »"
+)
+
+
+def browser_failure(result: dict) -> tuple[str, str | None]:
+    """
+    Échec du remplissage par navigateur → (statut, incident à signaler).
+
+    Rien de reconnu sur la page, ce n'est pas une panne : c'est une page qu'on
+    ne sait pas lire. Le dossier reste prêt, à finir sur le site — sans alerte.
+    Un remplissage partiel, lui, mérite d'être signalé.
+    """
+    proof = result.get("proof") or {}
+    if not proof.get("filled_fields") and not proof.get("uploaded_files"):
+        return "prepared", None
+    return "failed", "form_incomplete"
+
+
 async def _weekly_sent(session, candidate_id: UUID) -> int:
     since = datetime.now(timezone.utc) - timedelta(days=7)
     return (await session.execute(
@@ -141,6 +167,14 @@ async def decide(
         )
     if not destination:
         return Decision(False, "aucune adresse de candidature", channel, destination)
+
+    if channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
+        # Le navigateur d'Alice ne remplit de façon fiable que les formulaires
+        # dont l'ATS publie les champs. Un formulaire propre à l'employeur
+        # échouerait, ou partirait incomplet : on ne tente pas.
+        from app.agents.application.feasibility import assess
+        if not assess(job, has_resume=True).automatable:
+            return Decision(False, FORM_NOT_AUTOMATABLE, channel, destination)
 
     # « Postule pour moi », choisi au lancement d'une mission, vaut
     # autorisation pour cette mission : pas besoin de canaux pré-cochés.
@@ -333,6 +367,7 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             await session.refresh(d)
             return d
 
+    incident = "send_failed"
     async with async_session() as session:
         d = await session.get(ApplicationDispatch, dispatch_id)
         if result["ok"]:
@@ -360,6 +395,13 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         else:
             d.status = DispatchStatus.FAILED
             d.error = result.get("error", "échec inconnu")
+            if d.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
+                outcome, incident = browser_failure(result)
+                incident = incident or "send_failed"
+                d.proof = result.get("proof")
+                if outcome == "prepared":
+                    d.status = DispatchStatus.PREPARED
+                    d.error = FORM_NOT_RECOGNIZED
 
         await session.commit()
         await session.refresh(d)
@@ -367,7 +409,7 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
     if d.status == DispatchStatus.FAILED:
         from app.agents.incidents import report_incident
         await report_incident(
-            "send_failed", d.candidate_id, d.error or "",
+            incident, d.candidate_id, d.error or "",
             context={"job": d.job_title, "company": d.company_name, "channel": d.channel.value,
                      "dispatch_id": str(d.id)},
         )
