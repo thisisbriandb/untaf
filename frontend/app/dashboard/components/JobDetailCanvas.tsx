@@ -9,6 +9,7 @@ import type { JobCardData } from "@/lib/alice-client";
 import { Markdown } from "./Markdown";
 import { ApplyPanel } from "./ApplyPanel";
 import { FinishOnSite } from "./FinishOnSite";
+import { RecruiterReply } from "./RecruiterReply";
 import { useNarration } from "@/lib/use-narration";
 import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
@@ -283,6 +284,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
 
       {/* Relais vers la conversation + candidature */}
       <div className="shrink-0 border-t border-[#1A1918]/8 bg-[#FAFAF8]">
+        {candidateId && <RecruiterReply candidateId={candidateId} jobId={job.id} />}
         <div className="px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />

@@ -25,6 +25,8 @@ export interface MissionEvent {
     job_id?: string;
     score?: number;
     company?: string;
+    /** Présent quand l'entrée vient d'un e-mail reçu sur l'adresse de réponse. */
+    inbound_id?: string;
   } | null;
   is_read: boolean;
   created_at: string;

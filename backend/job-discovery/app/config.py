@@ -169,12 +169,25 @@ class Settings(BaseSettings):
     application_from_email: str = ""
     #: Qui est prévenu quand Alice ne tient pas une promesse.
     ops_alert_email: str = "briand@alice-agent.fr"
+    #: Domaine de réception des réponses des recruteurs (ex. reponses.alice-agent.fr),
+    #: dont les MX pointent vers Resend. À ne renseigner qu'une fois la réception
+    #: vérifiée : les candidatures donnent alors cette adresse de réponse.
+    inbound_domain: str = ""
+    #: Secret de signature du webhook Resend « email.received » (whsec_…).
+    resend_webhook_secret: str = ""
+    #: Secret partagé pour un autre relais (Cloudflare Email Worker…), en en-tête
+    #: X-Inbound-Secret.
+    inbound_secret: str = ""
     #: Racine du frontend, pour les liens des e-mails.
     frontend_url: str = "http://localhost:3000"
 
     @property
     def notify_sender(self) -> str:
         return self.notify_from_email or f"alice@{self.mail_domain}"
+
+    @property
+    def inbound_configured(self) -> bool:
+        return bool(self.inbound_domain)
 
     @property
     def application_sender(self) -> str:

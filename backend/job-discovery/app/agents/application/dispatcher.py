@@ -19,6 +19,7 @@ from uuid import UUID
 from sqlalchemy import select, func
 
 from app.config import settings
+from app.agents.inbox import contact_of
 from app.database import async_session
 from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
@@ -293,6 +294,13 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         candidate = await session.get(Candidate, dispatch.candidate_id)
         application = await session.get(Application, dispatch.application_id)
         letter = (application.metadata_json or {}).get("cover_letter") if application else None
+        # L'adresse de réponse existe avant l'envoi : les réponses du recruteur
+        # arriveront à Alice, qui les lira et les transférera.
+        if candidate:
+            from app.agents.inbox import ensure_reply_address
+
+            await ensure_reply_address(session, candidate)
+            await session.commit()
 
     if dispatch.channel == DispatchChannel.EMAIL:
         result = await send_application_email(
@@ -388,7 +396,7 @@ async def _send_via_lba(dispatch: ApplicationDispatch, candidate: Candidate) -> 
         body = build_application(
             recipient_id=recipient,
             full_name=candidate.full_name or "",
-            email=candidate.email or "",
+            email=contact_of(candidate),
             phone=candidate.phone,
             resume=dispatch.resume_blob,
             resume_name=dispatch.resume_name or "CV.pdf",
@@ -430,7 +438,7 @@ async def _send_via_recruitee(dispatch: ApplicationDispatch, candidate: Candidat
     try:
         answer = await send_application(
             company=company, offer=offer,
-            name=candidate.full_name or "", email=candidate.email or "",
+            name=candidate.full_name or "", email=contact_of(candidate),
             phone=candidate.phone, resume=dispatch.resume_blob,
             resume_name=dispatch.resume_name or "CV.pdf",
             cover_letter=dispatch.letter_body,

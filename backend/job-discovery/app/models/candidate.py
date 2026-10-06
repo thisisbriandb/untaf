@@ -33,6 +33,10 @@ class Candidate(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    #: Partie locale de l'adresse de réponse (`<jeton>@<domaine de réception>`),
+    #: créée à la première utilisation. Les recruteurs y répondent ; Alice lit,
+    #: range et transfère.
+    reply_token: Mapped[str | None] = mapped_column(String(60), nullable=True, unique=True, index=True)
 
     # ── Links ─────────────────────────────────────────────
     github_url: Mapped[str | None] = mapped_column(Text, nullable=True)

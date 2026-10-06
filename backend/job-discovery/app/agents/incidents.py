@@ -52,6 +52,10 @@ INCIDENTS: dict[str, tuple[str, str]] = {
         "Ma mission s'est arrêtée sur une erreur",
         "Ce qui était fait est conservé. Relance-la quand tu veux ; l'équipe est prévenue.",
     ),
+    "reply_forward_failed": (
+        "Je n'ai pas pu te transférer la réponse d'un recruteur",
+        "Elle est dans Alice, onglet Messages : tu peux la lire et y répondre de là.",
+    ),
     "notification_failed": (
         "Je n'ai pas pu t'envoyer d'e-mail",
         "Tout reste visible ici, dans la cloche et l'onglet Mission.",

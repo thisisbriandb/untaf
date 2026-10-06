@@ -25,6 +25,7 @@ import { useAlice } from "../alice-context";
 import { STAGE_TONE } from "@/lib/stage-tone";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 import { companyOf } from "@/lib/company";
+import { fetchInbox, onInboxChanged } from "@/lib/inbox-client";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -190,6 +191,18 @@ export function ConversationSidebar({
     return () => window.removeEventListener("untaf:application-changed", onChange);
   }, [open, loadPipeline]);
 
+  // Réponses de recruteurs non lues : relues à l'ouverture, à la lecture d'un
+  // message et toutes les deux minutes.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!open || !candidateId) return;
+    const load = () => void fetchInbox(candidateId).then((b) => b && setUnread(b.unread));
+    load();
+    const timer = setInterval(load, 120_000);
+    const off = onInboxChanged(load);
+    return () => { clearInterval(timer); off(); };
+  }, [open, candidateId]);
+
   const stageByJob = useMemo(
     () => new Map(pipeline.map((i) => [i.job_id, i.stage] as const)),
     [pipeline],
@@ -337,7 +350,13 @@ export function ConversationSidebar({
               onClick={() => goTab("messages")}
               className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] text-[#1A1918]/85 hover:bg-[#1A1918]/[0.05] transition-colors cursor-pointer"
             >
-              <Mail className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" /> E-mails d&apos;Alice
+              <Mail className="h-4 w-4 stroke-[1.5] text-[#1A1918]/70" />
+              <span className="flex-1 text-left">Messages</span>
+              {unread > 0 && (
+                <span className="rounded-full bg-[#006045] px-1.5 py-px text-[11px] tabular-nums text-white">
+                  {unread}
+                </span>
+              )}
             </button>
             <AnimatePresence initial={false}>
               {searching && (

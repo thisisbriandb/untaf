@@ -25,6 +25,7 @@ from app.agents.application.candidate_agent import (
 )
 from app.config import settings
 from app.models.dispatch import ApplicationDispatch
+from app.agents.inbox import contact_of
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def _payload(dispatch: ApplicationDispatch, candidate) -> CandidatePayload:
         candidate_id=str(dispatch.candidate_id),
         first_name=first or full_name or "",
         last_name=last.strip() or "",
-        email=candidate.email or "",
+        email=contact_of(candidate),
         phone=candidate.phone or None,
         linkedin_url=candidate.linkedin_url or None,
         cover_letter_text=dispatch.letter_body or None,
