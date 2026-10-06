@@ -85,3 +85,30 @@ def test_generic_payload_and_html():
     assert msg.text.startswith("Bonjour") and "À bientôt" in msg.text
     assert incoming_from_generic({"from": "", "to": "a@b.c"}) is None
     assert html_to_text("<style>x{}</style>a<br>b") == "a\nb"
+
+
+def test_raw_mime_from_cloudflare_worker():
+    raw = (
+        "From: =?utf-8?q?H=C3=A9l=C3=A8ne?= <helene@blablacar.fr>\r\n"
+        "To: Recrutement <jobs@blablacar.fr>\r\n"
+        "Subject: =?utf-8?q?Entretien_=E2=80=94_Ing=C3=A9nieure?=\r\n"
+        "Message-ID: <abc@blablacar.fr>\r\n"
+        "MIME-Version: 1.0\r\n"
+        'Content-Type: multipart/mixed; boundary="b"\r\n\r\n'
+        "--b\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
+        "Bonjour Camille, êtes-vous disponible jeudi ?\r\n"
+        "--b\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"fiche.pdf\"\r\n"
+        "Content-Transfer-Encoding: base64\r\n\r\nJVBERi0=\r\n--b--\r\n"
+    ).encode()
+    msg = incoming_from_generic({
+        "raw": base64.b64encode(raw).decode(),
+        "from": "bounce@blablacar.fr",
+        "to": "camille.martin.k7f2q@reponses.alice-agent.fr",  # enveloppe : copie cachée
+    })
+    assert msg.from_email == "helene@blablacar.fr" and msg.from_name == "Hélène"
+    assert msg.subject == "Entretien — Ingénieure"
+    assert msg.text.startswith("Bonjour Camille, êtes-vous disponible")
+    assert msg.provider_id == "relay:<abc@blablacar.fr>"
+    assert msg.attachments == ["fiche.pdf"]
+    assert msg.to[0] == "camille.martin.k7f2q@reponses.alice-agent.fr"
+    assert incoming_from_generic({"raw": "pas du base64 !!", "to": "a@b.c"}) is None

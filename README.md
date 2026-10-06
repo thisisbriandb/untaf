@@ -428,12 +428,30 @@ Côté interface : onglet **Messages** (adresse, réponses lues par Alice, texte
 complet, « Répondre »), compteur de non-lus dans la barre latérale, dernière
 réponse sur la fiche de l'offre.
 
-**Mise en route** : dans Resend, activer la réception sur un sous-domaine
-(ex. `reponses.alice-agent.fr`, enregistrement MX indiqué par Resend), créer
-un webhook `email.received` vers `https://<api>/api/inbound/resend`, puis
-renseigner `RESEND_WEBHOOK_SECRET` et, une fois un e-mail de test bien reçu,
-`INBOUND_DOMAIN`. Tant que `INBOUND_DOMAIN` est vide, rien ne change : les
-recruteurs répondent directement au candidat.
+**Mise en route (gratuit, recommandé)** : Cloudflare Email Routing + le Worker
+de `infra/cloudflare-email-worker/` (marche à suivre dans son README). En
+bref : `INBOUND_SECRET` sur Railway, routage du sous-domaine
+`reponses.alice-agent.fr` vers le Worker, test, puis `INBOUND_DOMAIN`.
+Alternative : la réception Resend (webhook `email.received` vers
+`/api/inbound/resend`, `RESEND_WEBHOOK_SECRET`). Tant que `INBOUND_DOMAIN` est
+vide, rien ne change : les recruteurs répondent directement au candidat.
+
+### Envoi des e-mails : quel service ?
+
+Un seul transport pour tout ce qui part, choisi dans cet ordre :
+
+1. **Scaleway Transactional Email** (`SCALEWAY_TEM_SECRET_KEY` +
+   `SCALEWAY_PROJECT_ID`) : hébergé en France, facturé à l'usage (quelques
+   centimes pour mille e-mails), par API HTTPS. Le choix conseillé une fois le
+   palier gratuit de Resend dépassé.
+2. **Resend** (`RESEND_API_KEY`).
+3. **SMTP** (`SMTP_HOST`…) : **bloqué par Railway hors offre Pro** (ports
+   25/465/587). Utile en local ou sur un autre hébergeur.
+
+On n'héberge pas notre propre serveur d'envoi : un serveur neuf n'a aucune
+réputation et ses e-mails finissent en spam, ce qui est inacceptable pour
+une candidature. Quel que soit le service, le domaine doit être vérifié chez
+lui (SPF, DKIM, DMARC dans les DNS).
 
 ## Extension navigateur (prototype)
 

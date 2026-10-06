@@ -1,0 +1,8 @@
+name = "alice-inbound"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALICE_INBOUND_URL = "https://REMPLACER-PAR-L-API/api/inbound/email"
+# FALLBACK_TO = "toi@exemple.fr"
+# INBOUND_SECRET : wrangler secret put INBOUND_SECRET

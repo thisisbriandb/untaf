@@ -160,6 +160,12 @@ class Settings(BaseSettings):
     # vérifié (SPF/DKIM du domaine), une seule délivrabilité à surveiller.
     # Le SMTP ci-dessus reste un repli.
     resend_api_key: str = ""
+    # Scaleway Transactional Email (France, facturé à l'usage) par son API
+    # HTTPS : prioritaire sur Resend quand il est configuré. L'API plutôt que le
+    # SMTP, que Railway bloque hors offre Pro.
+    scaleway_tem_secret_key: str = ""
+    scaleway_project_id: str = ""
+    scaleway_region: str = "fr-par"
     mail_domain: str = "alice-agent.fr"
     #: Expéditeur des notifications et des liens de connexion.
     notify_from_email: str = ""
@@ -190,17 +196,21 @@ class Settings(BaseSettings):
         return bool(self.inbound_domain)
 
     @property
+    def scaleway_configured(self) -> bool:
+        return bool(self.scaleway_tem_secret_key and self.scaleway_project_id)
+
+    @property
     def application_sender(self) -> str:
         return self.application_from_email or f"candidatures@{self.mail_domain}"
 
     @property
     def can_send_email(self) -> bool:
         """Une candidature par e-mail peut-elle réellement partir ?"""
-        return bool(self.resend_api_key) or self.smtp_configured
+        return self.scaleway_configured or bool(self.resend_api_key) or self.smtp_configured
 
     @property
     def can_notify(self) -> bool:
-        return bool(self.resend_api_key) or self.smtp_configured
+        return self.scaleway_configured or bool(self.resend_api_key) or self.smtp_configured
 
     # ── Suivi des candidatures ───────────────────────────
     #: Jours sans réponse après lesquels Alice propose une relance.

@@ -3,8 +3,9 @@ Acheminement de tous les e-mails : candidatures, notifications, liens de
 connexion, alertes.
 
 Un seul transport pour tout ce qui part, pour qu'il n'y ait qu'un endroit où
-la délivrabilité se joue : Resend sur le domaine vérifié (alice-agent.fr),
-avec le SMTP comme repli. Sans l'un ni l'autre, rien ne part et le résultat
+la délivrabilité se joue, sur le domaine vérifié (alice-agent.fr) : Scaleway
+Transactional Email s'il est configuré (API HTTPS, facturé à l'usage), sinon
+Resend, avec le SMTP comme dernier repli (bloqué par Railway hors offre Pro). Sans l'un ni l'autre, rien ne part et le résultat
 le dit — ne jamais prétendre avoir envoyé.
 
 Ne lève jamais. Renvoie `{ok, real, provider, error?, id?}`.
@@ -28,6 +29,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 RESEND_URL = "https://api.resend.com/emails"
+SCALEWAY_URL = "https://api.scaleway.com/transactional-email/v1alpha1/regions/{region}/emails"
 
 
 @dataclass
@@ -87,13 +89,50 @@ async def _via_resend(mail: Mail) -> dict:
         return {"ok": False, "real": False, "provider": "resend", "error": str(e)[:200]}
 
 
+async def _via_scaleway(mail: Mail) -> dict:
+    name, address = mail.sender or _default_sender()
+    payload: dict = {
+        "from": {"email": address, "name": name},
+        "to": [{"email": mail.to}],
+        "subject": mail.subject,
+        "text": mail.text,
+        "html": mail.html or "",
+        "project_id": settings.scaleway_project_id,
+    }
+    if mail.reply_to:
+        payload["additional_headers"] = [{"key": "Reply-To", "value": mail.reply_to}]
+    if mail.attachments:
+        payload["attachments"] = [
+            {"name": a.filename, "type": a.mime, "content": base64.b64encode(a.content).decode()}
+            for a in mail.attachments
+        ]
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                SCALEWAY_URL.format(region=settings.scaleway_region),
+                headers={"X-Auth-Token": settings.scaleway_tem_secret_key},
+                json=payload,
+            )
+        if response.status_code >= 400:
+            return {"ok": False, "real": False, "provider": "scaleway",
+                    "error": f"Scaleway {response.status_code} : {response.text[:200]}"}
+        emails = (response.json() or {}).get("emails") or [{}]
+        return {"ok": True, "real": True, "provider": "scaleway", "id": emails[0].get("id")}
+    except Exception as e:  # noqa: BLE001
+        logger.error("Scaleway injoignable : %s", e)
+        return {"ok": False, "real": False, "provider": "scaleway", "error": str(e)[:200]}
+
+
 def _smtp_send(mail: Mail) -> dict:
     name, _ = mail.sender or _default_sender()
     message = EmailMessage()
     message["Subject"] = mail.subject
     message["To"] = mail.to
-    # En SMTP, l'adresse d'expédition doit être celle de la boîte connectée.
-    message["From"] = formataddr((name, settings.smtp_user))
+    # Boîte classique (Gmail…) : l'expéditeur est la boîte connectée. Relais
+    # (SES, Scaleway…) dont l'identifiant n'est pas une adresse : l'expéditeur
+    # est celui du domaine vérifié.
+    _, address = mail.sender or _default_sender()
+    message["From"] = formataddr((name, settings.smtp_user if "@" in settings.smtp_user else address))
     message["Message-ID"] = make_msgid()
     if mail.reply_to:
         message["Reply-To"] = mail.reply_to
@@ -120,6 +159,8 @@ async def send_mail(mail: Mail) -> dict:
     """Envoie par le meilleur transport disponible, ou simule en le disant."""
     if not mail.to:
         return {"ok": False, "real": False, "provider": None, "error": "aucun destinataire"}
+    if settings.scaleway_configured:
+        return await _via_scaleway(mail)
     if settings.resend_api_key:
         return await _via_resend(mail)
     if settings.smtp_configured:

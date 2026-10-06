@@ -223,8 +223,52 @@ async def incoming_from_resend(event: dict) -> Incoming | None:
     )
 
 
+def parse_mime(raw: bytes) -> dict:
+    """E-mail brut (RFC 822) → champs utiles. Le texte brut d'abord, sinon le HTML converti."""
+    from email import policy
+    from email.parser import BytesParser
+
+    msg = BytesParser(policy=policy.default).parsebytes(raw)
+
+    def content(part) -> str:
+        try:
+            return part.get_content() if part else ""
+        except Exception:  # noqa: BLE001 — encodage exotique
+            payload = part.get_payload(decode=True) or b""
+            return payload.decode("utf-8", "replace")
+
+    plain = content(msg.get_body(preferencelist=("plain",)))
+    html = content(msg.get_body(preferencelist=("html",))) or None
+    return {
+        "from": str(msg.get("From") or ""),
+        "to": [str(msg.get("To") or "")] + ([str(msg.get("Cc"))] if msg.get("Cc") else []),
+        "subject": str(msg.get("Subject") or ""),
+        "message_id": str(msg.get("Message-ID") or "").strip() or None,
+        "text": plain.strip(),
+        "html": html,
+        "attachments": [p.get_filename() or "" for p in msg.iter_attachments()],
+    }
+
+
 def incoming_from_generic(payload: dict) -> Incoming | None:
-    """Relais quelconque (Cloudflare Email Worker…) : {from, to, subject, text, html, message_id}."""
+    """
+    Relais quelconque. Deux formes :
+      - {raw: <e-mail brut en base64>, from, to} (Worker Cloudflare : l'enveloppe
+        SMTP en from/to, le message complet en raw) ;
+      - {from, to, subject, text, html, message_id} déjà découpé.
+    """
+    if payload.get("raw"):
+        try:
+            parsed = parse_mime(base64.b64decode(payload["raw"]))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("E-mail brut illisible : %s", e)
+            return None
+        # L'enveloppe d'abord : l'adresse de réponse peut n'être qu'en copie cachée.
+        payload = {
+            **parsed,
+            "from": parsed["from"] or payload.get("from") or "",
+            "to": _as_list(payload.get("to")) + [t for t in parsed["to"] if t],
+        }
     sender = payload.get("from") or ""
     to = _as_list(payload.get("to")) + _as_list(payload.get("cc"))
     if not sender or not to:
@@ -235,7 +279,8 @@ def incoming_from_generic(payload: dict) -> Incoming | None:
         f"{sender}|{','.join(to)}|{payload.get('subject')}|{text[:500]}".encode()
     ).hexdigest()
     return Incoming(provider_id=f"relay:{pid}"[:300], from_raw=sender, to=to,
-                    subject=payload.get("subject") or "", text=text, html=html)
+                    subject=payload.get("subject") or "", text=text, html=html,
+                    attachments=[a for a in payload.get("attachments") or [] if a])
 
 
 # ── Rattacher à une candidature ────────────────────────────────────────────
