@@ -21,6 +21,7 @@ import type { CoverLetter } from "@/lib/letter-client";
 import { useAlice } from "../alice-context";
 import { useToast } from "./Toaster";
 import { chez, companyOf } from "@/lib/company";
+import { CvLookPicker } from "./CvLookPicker";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -174,13 +175,16 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
             )}
 
             {candidateId && (
-              <button
-                type="button"
-                onClick={() => void openFile(tailoredCvUrl(candidateId, job.id))}
-                className="inline-flex items-center gap-1.5 text-[12px] text-[#006045] underline-offset-2 hover:underline cursor-pointer"
-              >
-                <Eye className="h-3.5 w-3.5" /> Voir le CV adapté tel qu&apos;il partira
-              </button>
+              <Section title="Ton CV tel qu'il partira">
+                <CvLookPicker candidateId={candidateId} jobId={job.id} />
+                <button
+                  type="button"
+                  onClick={() => void openFile(tailoredCvUrl(candidateId, job.id))}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-[#006045] underline-offset-2 hover:underline cursor-pointer"
+                >
+                  <Eye className="h-3.5 w-3.5" /> Ouvrir le CV adapté en grand
+                </button>
+              </Section>
             )}
           </>
         )}

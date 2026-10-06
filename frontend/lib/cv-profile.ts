@@ -188,6 +188,10 @@ export interface CvDesign {
   original_filename: string | null;
   /** False tant que le candidat n'a rien choisi : on est sur le défaut. */
   is_explicit: boolean;
+  /** Une photo est enregistrée côté serveur. */
+  has_photo: boolean;
+  /** Le modèle réellement utilisé pour les CV adaptés (le classique à défaut). */
+  effective_template_id: string;
 }
 
 export function resumeUrl(candidateId: string): string {
@@ -214,6 +218,79 @@ export async function saveCvDesign(
       body: JSON.stringify(patch),
     });
     return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Photo ──────────────────────────────────────────────────────────────────
+
+export function photoUrl(candidateId: string): string {
+  return `${API_BASE_URL}/api/candidates/${candidateId}/photo`;
+}
+
+/**
+ * Réduit la photo dans le navigateur (600 px max, JPEG) : légère à stocker et
+ * à joindre, et assez nette pour un CV. Renvoie un data URL.
+ */
+export function shrinkPhoto(file: File, max = 600): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const src = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("canvas"));
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(src);
+      resolve(canvas.toDataURL("image/jpeg", 0.86));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(src);
+      reject(new Error("image illisible"));
+    };
+    img.src = src;
+  });
+}
+
+/** Enregistre la photo côté serveur ; elle figure ensuite sur les CV. */
+export async function uploadPhoto(candidateId: string, dataUrl: string): Promise<boolean> {
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const form = new FormData();
+    form.append("file", blob, "photo.jpg");
+    const res = await apiFetch(photoUrl(candidateId), { method: "PUT", body: form });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function deletePhoto(candidateId: string): Promise<boolean> {
+  try {
+    return (await apiFetch(photoUrl(candidateId), { method: "DELETE" })).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** La photo enregistrée, en data URL (pour l'aperçu local), ou null. */
+export async function fetchPhotoDataUrl(candidateId: string): Promise<string | null> {
+  try {
+    const res = await apiFetch(photoUrl(candidateId));
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) ?? null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
   } catch {
     return null;
   }

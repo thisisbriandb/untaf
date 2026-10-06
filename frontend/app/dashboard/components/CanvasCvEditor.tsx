@@ -22,7 +22,10 @@ import { CandidateCvPreview } from "@/app/onboarding/components/CandidateCvPrevi
 import {
   downloadCvPdf,
   fetchCvDesign,
+  fetchPhotoDataUrl,
   loadCvProfile,
+  shrinkPhoto,
+  uploadPhoto,
   resumeUrl,
   saveCvDesign,
   saveCvProfile,
@@ -287,6 +290,12 @@ export function CanvasCvEditor({
         if (!alive) return;
         setProfile(p);
         setDesign(d);
+        // La photo enregistrée sur le serveur fait foi, sur tous les appareils.
+        if (d?.has_photo) {
+          void fetchPhotoDataUrl(candidateId).then((url) => {
+            if (alive && url) setProfile((prev) => (prev ? { ...prev, photoUrl: url } : prev));
+          });
+        }
         // Le CV déposé s'ouvre en premier tant qu'aucun modèle n'a été demandé.
         // Sauf si l'on a été ouvert exprès sur un autre volet (les modèles).
         if (!initialPane && d?.has_original && d.mode === "original") setPane("original");
@@ -308,6 +317,29 @@ export function CanvasCvEditor({
     },
     [candidateId],
   );
+
+  /**
+   * La photo part au serveur : c'est là qu'on compose les CV adaptés. La
+   * déposer, c'est demander à la voir sur ses CV.
+   */
+  const savePhoto = async (file: File) => {
+    if (!candidateId) return;
+    try {
+      const dataUrl = await shrinkPhoto(file);
+      setField("photoUrl")(dataUrl);
+      setField("showPhotoOnCv")(true);
+      const ok = await uploadPhoto(candidateId, dataUrl);
+      if (ok) setDesign(await fetchCvDesign(candidateId));
+      sayAsAlice(
+        ok
+          ? "Ta photo est enregistrée : elle figure maintenant sur tes CV, y compris ceux déjà préparés et pas encore envoyés."
+          : "Je n'ai pas pu enregistrer ta photo. Réessaie avec une image JPEG ou PNG.",
+        { mode: "cv_editor" },
+      );
+    } catch {
+      sayAsAlice("Cette image est illisible : choisis une photo JPEG ou PNG.", { mode: "cv_editor" });
+    }
+  };
 
   /** Adapter so the onboarding forms keep their `useState`-shaped setters. */
   const setField = useCallback(
@@ -591,14 +623,14 @@ export function CanvasCvEditor({
                 userPhotoUrl={profile.photoUrl}
                 handlePhotoUpload={(e) => {
                   const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) =>
-                    setField("photoUrl")((ev.target?.result as string) ?? null);
-                  reader.readAsDataURL(file);
+                  e.target.value = "";
+                  if (file) void savePhoto(file);
                 }}
-                showPhotoOnCv={profile.showPhotoOnCv}
-                setShowPhotoOnCv={setField("showPhotoOnCv")}
+                showPhotoOnCv={design?.show_photo ?? profile.showPhotoOnCv}
+                setShowPhotoOnCv={(next: boolean) => {
+                  setField("showPhotoOnCv")(next);
+                  void updateDesign({ show_photo: next });
+                }}
                 atsAudit={null}
               />
               </div>

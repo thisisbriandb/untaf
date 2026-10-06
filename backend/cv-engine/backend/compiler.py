@@ -58,6 +58,17 @@ def _setup_package_cache(typst_lib_dir: pathlib.Path) -> pathlib.Path:
     return temp_dir
 
 
+def _localize_images(typst_source: str, work_dir: pathlib.Path) -> str:
+    """Copie les images référencées par chemin absolu (photo) là où Typst les trouve."""
+    import re
+    for img_path_str in re.findall(r'image\("([^"]+)"', typst_source):
+        img_path = pathlib.Path(img_path_str)
+        if img_path.is_absolute() and img_path.exists():
+            shutil.copy2(img_path, work_dir / img_path.name)
+            typst_source = typst_source.replace(img_path_str, img_path.name)
+    return typst_source
+
+
 def compile_typst_to_pdf(
     typst_source: str,
     output_path: pathlib.Path | str | None = None,
@@ -78,16 +89,7 @@ def compile_typst_to_pdf(
     # Write typst source to a temp file
     work_dir = pathlib.Path(tempfile.mkdtemp(prefix="cv-engine-work-"))
     
-    # Copy any referenced local image files into work_dir so Typst can resolve them
-    import re
-    image_matches = re.findall(r'image\("([^"]+)"', typst_source)
-    for img_path_str in image_matches:
-        img_path = pathlib.Path(img_path_str)
-        if img_path.is_absolute() and img_path.exists():
-            dest = work_dir / img_path.name
-            shutil.copy2(img_path, dest)
-            typst_source = typst_source.replace(img_path_str, img_path.name)
-
+    typst_source = _localize_images(typst_source, work_dir)
     typst_file = work_dir / "cv.typ"
     typst_file.write_text(typst_source, encoding="utf-8")
 
@@ -145,6 +147,7 @@ def compile_typst_to_png(
     typst_lib_dir = pathlib.Path(__file__).parent / "typst"
 
     work_dir = pathlib.Path(tempfile.mkdtemp(prefix="cv-engine-work-"))
+    typst_source = _localize_images(typst_source, work_dir)
     typst_file = work_dir / "cv.typ"
     typst_file.write_text(typst_source, encoding="utf-8")
 
@@ -178,7 +181,7 @@ def compile_typst_to_png(
             (output_dir / f"cv_page_{i + 1}.png").write_bytes(png_bytes)
 
     shutil.rmtree(work_dir, ignore_errors=True)
-    shutil.rmtree(pkg_path, ignore_errors=True)
+    # Le cache de paquets est partagé (singleton) : on ne le détruit pas.
 
     return png_bytes_list
 
