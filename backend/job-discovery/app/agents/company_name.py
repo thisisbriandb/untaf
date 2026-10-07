@@ -37,6 +37,11 @@ def display_company(name: str | None) -> str | None:
     return "".join(out)
 
 
+def is_anonymous_company(name: str | None) -> bool:
+    """Employeur non identifié (vide ou « Employeur non précisé »)."""
+    return display_company(name) is None
+
+
 def chez(name: str | None) -> str:
     """« chez Acme », ou rien quand l'employeur est anonyme."""
     c = display_company(name)

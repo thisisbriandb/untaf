@@ -26,3 +26,11 @@ def test_sanitize_keeps_known_options_only_and_fills_missing():
     raw = [Answer(id="a", value="oui"), Answer(id="b", value="Mars"), Answer(id="zz", value="x")]
     out = {a.id: a.value for a in _sanitize(qs, raw)}
     assert out == {"a": "Oui", "b": None, "c": None}
+
+
+def test_url_key_keeps_offer_identifiers():
+    a = url_key("https://fr.indeed.com/viewjob?jk=abc123&from=serp&utm_source=x")
+    b = url_key("https://fr.indeed.com/viewjob?jk=def456&from=serp")
+    assert a != b and a == "fr.indeed.com/viewjob?jk=abc123"
+    assert url_key("https://www.linkedin.com/jobs/search/?currentJobId=42&keywords=dev") == \
+        "linkedin.com/jobs/search?currentjobid=42"

@@ -181,13 +181,17 @@ def resolve_cv(
     # Réalisations reformulées pour l'offre, expérience par expérience.
     rewritten = (tailoring.get("experiences") or []) if tailored else []
 
+    from app.agents.experience_key import adapted_for
+
     experiences = []
-    for i, exp in enumerate(cv.get("experiences") or []):
+    source_experiences = cv.get("experiences") or []
+    matched = adapted_for(source_experiences, rewritten)
+    for i, exp in enumerate(source_experiences):
         if not isinstance(exp, dict):
             continue
         highlights = _lines(exp.get("highlights"))
         description = _text(exp.get("description"))
-        adapted = rewritten[i] if i < len(rewritten) and isinstance(rewritten[i], dict) else {}
+        adapted = matched[i]
         if adapted.get("highlights"):
             highlights = _lines(adapted["highlights"])
             # La description d'origine est déjà fondue dans les puces adaptées.

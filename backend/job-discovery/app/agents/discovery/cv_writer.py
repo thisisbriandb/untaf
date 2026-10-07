@@ -148,7 +148,8 @@ def _adapted_experiences(raw, experiences: list[dict]) -> list[dict]:
             if isinstance(b, str) and b.strip()
         ][:4]
         if bullets:
-            adapted[i] = {"highlights": [b[:220] for b in bullets]}
+            from app.agents.experience_key import experience_key
+            adapted[i] = {"key": experience_key(source), "highlights": [b[:220] for b in bullets]}
     return adapted if any(adapted) else []
 
 
@@ -179,9 +180,9 @@ def _fallback(req: CvContentRequest) -> CvContentResult:
     if top_skills:
         facts.append(f"Travaille avec {top_skills}")
 
-    summary = ". ".join(facts) + "." if facts else (
-        "Profil à compléter — ajoute tes expériences pour que je puisse rédiger."
-    )
+    # Rien d'inventé, et jamais une consigne adressée au candidat : cette
+    # synthèse peut finir sur le CV envoyé au recruteur.
+    summary = ". ".join(facts) + "." if facts else ""
 
     return CvContentResult(
         headline=role,

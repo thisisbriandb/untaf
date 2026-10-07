@@ -131,6 +131,27 @@ class FranceTravailClient:
             self._expires_at = now + timedelta(seconds=payload.get("expires_in", 1500) - 60)
             return self._token
 
+    async def offer_exists(self, offer_id: str) -> bool | None:
+        """
+        L'offre est-elle toujours en ligne ? True / False, ou None si on ne
+        peut pas le savoir (API injoignable) — l'appelant décide alors.
+        """
+        try:
+            token = await self._get_token()
+            async with httpx.AsyncClient(timeout=settings.scrape_request_timeout) as client:
+                resp = await client.get(
+                    f"{API_BASE}/offres/{offer_id}",
+                    headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Vérification de l'offre %s impossible : %s", offer_id, e)
+            return None
+        if resp.status_code == 200:
+            return True
+        if resp.status_code in (204, 404, 410):
+            return False
+        return None
+
     async def search(self, **params) -> tuple[list[dict], int]:
         """
         Une page de résultats.

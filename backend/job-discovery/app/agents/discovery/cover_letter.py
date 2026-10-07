@@ -133,12 +133,16 @@ def _fallback_body(
     role = last.get("jobTitle") or last.get("position")
     company = last.get("company")
 
-    intro = (
-        f"Actuellement {role} chez {company}, je souhaite mettre cette expérience "
-        f"au service de **{poste}**."
-        if role and company
-        else f"Je vous adresse ma candidature pour **{poste}**."
-    )
+    # « Actuellement » seulement pour un poste en cours : sinon la lettre
+    # affirmerait au recruteur un emploi que le candidat a quitté.
+    if role and company and last.get("isCurrent"):
+        intro = (f"Actuellement {role} chez {company}, je souhaite mettre cette expérience "
+                 f"au service de **{poste}**.")
+    elif role and company:
+        intro = (f"Après une expérience de {role} chez {company}, je vous adresse ma "
+                 f"candidature pour **{poste}**.")
+    else:
+        intro = f"Je vous adresse ma candidature pour **{poste}**."
 
     bullets = []
     for exp in experiences[:3]:
@@ -228,7 +232,10 @@ async def write_cover_letter(
             skills=", ".join(skills) or "Non renseignées",
             summary=summary or "Non renseignée",
             job_title=job_title or "non précisé",
-            company_name=company_name or "non précisée",
+            company_name=company_name or (
+                "non communiquée par l'annonce : n'écris pas « pourquoi cette entreprise », "
+                "appuie l'accroche sur le poste et ses missions"
+            ),
             location=location or "non précisée",
             tech_stack=", ".join(tech_stack) or "non précisées",
             job_excerpt=(job_excerpt or "non disponible")[:3000],

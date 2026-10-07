@@ -280,9 +280,7 @@ async def prepare_dispatch(
                                verdict.channel, verdict.destination)
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
 
-        dispatch = ApplicationDispatch(
-            candidate_id=candidate_id,
-            application_id=application_id,
+        fields = dict(
             run_id=run_id,
             job_title=job.title[:500],
             company_name=(company_name or "")[:300],
@@ -303,11 +301,125 @@ async def prepare_dispatch(
             or f"Candidature — {job.title}"[:500],
             letter_body=letter_body or None,
         )
-        session.add(dispatch)
+
+        # Un envoi déjà ouvert pour cette candidature est mis à jour, pas
+        # doublé : deux envois en attente finissaient par partir tous les deux.
+        dispatch = (await session.execute(
+            select(ApplicationDispatch)
+            .where(ApplicationDispatch.application_id == application_id)
+            .where(ApplicationDispatch.status.in_([
+                DispatchStatus.PREPARED, DispatchStatus.AWAITING_APPROVAL, DispatchStatus.APPROVED,
+            ]))
+            .order_by(ApplicationDispatch.created_at.desc())
+        )).scalars().first()
+        if dispatch:
+            for key, value in fields.items():
+                setattr(dispatch, key, value)
+            dispatch.approved_at = None
+        else:
+            dispatch = ApplicationDispatch(
+                candidate_id=candidate_id, application_id=application_id, **fields,
+            )
+            session.add(dispatch)
         await session.commit()
         await session.refresh(dispatch)
 
     return dispatch
+
+
+#: Au-delà, une offre qu'on n'a plus revue en source est peut-être pourvue.
+STALE_AFTER_DAYS = 45
+
+
+async def offer_still_open(job: JobPosting, company_domain: str | None) -> bool | None:
+    """
+    L'offre est-elle encore en ligne ? Vérifiée à la source quand c'est
+    possible (France Travail), sinon d'après sa dernière apparition.
+    None : on ne sait pas, et ce n'est pas une raison de bloquer.
+    """
+    from app.models.job_posting import PostingStatus
+
+    if job.status in (PostingStatus.CLOSED, PostingStatus.EXPIRED):
+        return False
+    if (company_domain or "").endswith(".francetravail.local") and job.external_id:
+        from app.agents.discovery.france_travail import FranceTravailClient
+        client = FranceTravailClient()
+        if client.configured:
+            exists = await client.offer_exists(job.external_id)
+            if exists is not None:
+                return exists
+    seen = job.last_seen_at
+    if seen is not None:
+        if seen.tzinfo is None:
+            seen = seen.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - seen > timedelta(days=STALE_AFTER_DAYS):
+            return False
+    return None
+
+
+@dataclass
+class Hold:
+    """Un envoi retenu au dernier moment, avec son motif et le statut où il reste."""
+    status: DispatchStatus
+    reason: str
+
+
+async def pre_send_check(session, dispatch: ApplicationDispatch,
+                         application: Application | None) -> Hold | None:
+    """
+    Les vérifications faites JUSTE avant de partir, quel que soit le chemin
+    (mission, « Valider », « Tout valider », relance d'un envoi) : ce qui était
+    vrai à la préparation peut ne plus l'être.
+    """
+    from app.models.job_posting import PostingStatus
+
+    # Déjà parti pour cette candidature : jamais deux fois le même dossier.
+    already = (await session.execute(
+        select(ApplicationDispatch.id)
+        .where(ApplicationDispatch.application_id == dispatch.application_id)
+        .where(ApplicationDispatch.status == DispatchStatus.SENT)
+        .where(ApplicationDispatch.id != dispatch.id)
+    )).first()
+    if already or (application and application.status in (
+        ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER,
+    )):
+        return Hold(DispatchStatus.REJECTED, "candidature déjà envoyée : rien n'est reparti")
+
+    if application:
+        row = (await session.execute(
+            select(JobPosting, Company.domain)
+            .join(Company, JobPosting.company_id == Company.id)
+            .where(JobPosting.id == application.job_posting_id)
+        )).first()
+        if row:
+            job, domain = row
+            open_ = await offer_still_open(job, domain)
+            if open_ is False:
+                if job.status == PostingStatus.ACTIVE:
+                    job.status = PostingStatus.EXPIRED
+                return Hold(DispatchStatus.PREPARED,
+                            "l'offre n'est plus en ligne : je n'ai rien envoyé")
+
+        # Contenu rédigé sans le modèle (indisponible) : relu par le candidat
+        # avant tout envoi. Son feu vert explicite (approved_at) suffit.
+        meta = application.metadata_json or {}
+        fallback = (meta.get("cover_letter") or {}).get("source") == "fallback" or \
+            (meta.get("tailored_cv") or {}).get("source") == "fallback"
+        if fallback and not dispatch.approved_at:
+            return Hold(DispatchStatus.AWAITING_APPROVAL,
+                        "lettre et CV rédigés sans mon assistant de rédaction (indisponible) : "
+                        "relis-les avant que je les envoie")
+
+    mission = (await session.execute(
+        select(Mission).where(Mission.candidate_id == dispatch.candidate_id)
+    )).scalars().first()
+    if mission:
+        sent = await _weekly_sent(session, dispatch.candidate_id)
+        if sent >= mission.weekly_quota:
+            return Hold(DispatchStatus.AWAITING_APPROVAL,
+                        f"quota de la semaine atteint ({sent}/{mission.weekly_quota}) : "
+                        "valide-le à nouveau quand tu veux l'envoyer")
+    return None
 
 
 async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
@@ -328,6 +440,17 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         candidate = await session.get(Candidate, dispatch.candidate_id)
         application = await session.get(Application, dispatch.application_id)
         letter = (application.metadata_json or {}).get("cover_letter") if application else None
+
+        hold = await pre_send_check(session, dispatch, application)
+        if hold:
+            dispatch.status = hold.status
+            dispatch.error = hold.reason
+            # Un nouveau feu vert sera demandé : l'ancien ne vaut plus.
+            if hold.status == DispatchStatus.AWAITING_APPROVAL:
+                dispatch.approved_at = None
+            await session.commit()
+            await session.refresh(dispatch)
+            return dispatch
         # L'adresse de réponse existe avant l'envoi : les réponses du recruteur
         # arriveront à Alice, qui les lira et les transférera.
         if candidate:

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.agents.company_name import is_anonymous_company
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.france_travail import ROME_BY_FAMILY
 from app.agents.discovery.france_travail_task import _get_or_create_company
@@ -54,7 +55,10 @@ async def persist(jobs: list[ScrapedJob]) -> int:
                 pg_insert(JobPosting).values(
                     company_id=company.id,
                     external_id=job.external_id,
-                    fingerprint=compute_fingerprint(company.domain, job.title, job.location),
+                    fingerprint=compute_fingerprint(
+                        company.domain, job.title, job.location,
+                        external_id=job.external_id if is_anonymous_company(company.name) else None,
+                    ),
                     title=job.title,
                     location=job.location,
                     source_url=job.source_url or "https://labonnealternance.apprentissage.beta.gouv.fr",

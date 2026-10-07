@@ -29,15 +29,23 @@ def compute_fingerprint(
     company_domain: str,
     title: str,
     location: str | None = None,
+    external_id: str | None = None,
 ) -> str:
     """
     Compute a stable SHA-256 fingerprint for a job posting.
     Same job reposted under different ATS IDs will get the same fingerprint.
+
+    `external_id` : à fournir quand l'employeur n'est pas identifié. Toutes les
+    offres anonymes partagent le même « employeur » : sans l'identifiant de la
+    source, deux « Comptable H/F » à Lyon de deux employeurs différents
+    fusionneraient, et le dossier de l'un partirait à l'adresse de l'autre.
     """
     parts = [
         normalize_text(company_domain),
         normalize_text(title),
         normalize_text(location or ""),
     ]
+    if external_id:
+        parts.append(f"id:{external_id}")
     raw = "|".join(parts)
     return hashlib.sha256(raw.encode()).hexdigest()

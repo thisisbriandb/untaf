@@ -827,11 +827,16 @@ def _changes(candidate: Candidate, tailored: dict) -> dict | None:
     """Avant / après, section par section : rien n'est caché au candidat."""
     if not tailored:
         return None
+    from app.agents.experience_key import adapted_for
+
     cv = candidate.cv_content or {}
     experiences = []
-    for i, exp in enumerate(cv.get("experiences") or []):
-        adapted = (tailored.get("experiences") or [])
-        after = adapted[i].get("highlights") if i < len(adapted) and isinstance(adapted[i], dict) else None
+    source = cv.get("experiences") or []
+    matched = adapted_for(source, tailored.get("experiences") or [])
+    for i, exp in enumerate(source):
+        if not isinstance(exp, dict):
+            continue
+        after = matched[i].get("highlights")
         if not after:
             continue
         before = exp.get("highlights") or []
