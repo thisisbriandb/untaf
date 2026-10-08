@@ -30,6 +30,12 @@ const API = (process.env.MODEL_API_BASE || "https://api.meta.ai/v1").replace(/\/
 const MODEL = process.env.MODEL || "muse-spark-1.3";
 const KEY = process.env.MODEL_API_KEY;
 const MAX_STEPS = Number(process.env.MAX_STEPS || 40);
+//: Réflexion du modèle : low | medium | high. « high » (défaut chez Meta) est lent et coûteux.
+const EFFORT = process.env.EFFORT || "low";
+const CALL_TIMEOUT_MS = Number(process.env.CALL_TIMEOUT || 180) * 1000;
+const t0 = Date.now();
+const elapsed = () => `${Math.round((Date.now() - t0) / 1000)}s`;
+let firstCallShown = false;
 const VIEWPORT = { width: 1280, height: 900 };
 
 // Candidat fictif : jamais de vraies données personnelles dans un banc d'essai.
@@ -58,11 +64,22 @@ ${CANDIDATE.cover_letter}`;
 // ── API ─────────────────────────────────────────────────────────────────────
 
 async function call(body) {
-  const res = await fetch(`${API}/responses`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  if (EFFORT && !body.reasoning) body = { ...body, reasoning: { effort: EFFORT } };
+  const started = Date.now();
+  process.stdout.write(`  … appel au modèle (${elapsed()})`);
+  let res;
+  try {
+    res = await fetch(`${API}/responses`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    });
+  } catch (e) {
+    process.stdout.write("\n");
+    throw new Error(`pas de réponse du modèle en ${CALL_TIMEOUT_MS / 1000}s (${e.name})`);
+  }
+  process.stdout.write(` → ${res.status} en ${Math.round((Date.now() - started) / 1000)}s\n`);
   const text = await res.text();
   let json = null;
   try { json = JSON.parse(text); } catch { /* corps non JSON */ }
@@ -168,18 +185,41 @@ async function runOne(browser, url) {
       }
       const output = resp.output || [];
       const calls = output.filter((o) => o.type === "computer_call");
+      // La première fois, on montre la forme exacte d'un appel : utile si
+      // le format diffère de ce que le script attend.
+      if (calls.length && !firstCallShown) {
+        firstCallShown = true;
+        console.log("  forme d'un appel :", JSON.stringify(calls[0]).slice(0, 400));
+      }
+      if (!calls.length) {
+        console.log(`  fin : sorties ${JSON.stringify(output.map((o) => o.type))}, statut ${resp.status}`);
+      }
       finalText = output.filter((o) => o.type === "message")
         .flatMap((m) => (m.content || []).map((c) => c.text || "")).join("\n") || finalText;
       if (!calls.length) break;
 
       const outputs = [];
       for (const c of calls) {
-        for (const a of actionsOf(c)) {
+        const acts = actionsOf(c);
+        if (!acts.length) console.log("  ⚠ appel sans action reconnue :", JSON.stringify(c).slice(0, 300));
+        for (const a of acts) {
           log.push({ step: steps, action: a.type, ...(a.text ? { text: String(a.text).slice(0, 40) } : {}) });
-          await execute(page, a, log);
+          console.log(`  étape ${steps + 1} : ${a.type}${a.text ? ` « ${String(a.text).slice(0, 30)} »` : ""}` +
+            `${a.x != null ? ` (${a.x},${a.y})` : ""}`);
+          const r = await execute(page, a, log);
+          if (r === "BLOCKED_SUBMIT") console.log("    ⛔ clic d'envoi refusé : rien n'est parti");
+        }
+        // Points de vigilance signalés par le modèle (site sensible, action à
+        // confirmer…) : l'API exige qu'on les confirme un par un. On les garde
+        // dans le rapport — c'est ce qu'il faudrait montrer au candidat.
+        const checks = c.pending_safety_checks || [];
+        for (const chk of checks) {
+          log.push({ safety_check: chk.code || chk.id, message: chk.message });
+          console.log(`    ⚠ point de vigilance : ${chk.code || ""} ${chk.message || ""}`.trimEnd());
         }
         outputs.push({
           type: "computer_call_output", call_id: c.call_id || c.id,
+          ...(checks.length ? { acknowledged_safety_checks: checks.map((k) => ({ id: k.id, code: k.code, message: k.message })) } : {}),
           output: { type: "computer_screenshot", image_url: await shot(page) },
         });
       }
