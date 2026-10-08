@@ -14,7 +14,7 @@ Trois appels ici :
 
 import json
 import logging
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -35,11 +35,17 @@ router = APIRouter(prefix="/candidates/{candidate_id}/extension", tags=["extensi
 # ── Retrouver l'offre de la page ───────────────────────────────────────────
 
 
+#: Paramètres qui désignent l'offre elle-même (Indeed `jk`, LinkedIn
+#: `currentJobId`, Taleo `job`, Greenhouse `gh_jid`…) : ils font partie de la
+#: clé. Les autres (utm, ref, from…) varient d'un lien à l'autre, pas l'offre.
+_ID_PARAMS = {"jk", "vjk", "job", "jobid", "job_id", "currentjobid", "gh_jid",
+              "id", "offerid", "offer_id", "reference", "requisitionid", "postingid", "pid"}
+
+
 def url_key(url: str) -> str:
     """
     Clé de comparaison d'une adresse : hôte sans « www. » + chemin sans « / »
-    final, sans requête ni ancre. Les paramètres de suivi (utm, ref…) varient
-    d'un lien à l'autre, pas l'offre.
+    final + paramètres identifiant l'offre, sans ancre ni paramètres de suivi.
     """
     try:
         parts = urlsplit(url.strip())
@@ -50,7 +56,13 @@ def url_key(url: str) -> str:
     for suffix in ("/apply", "/application", "/postuler", "/candidater"):
         if path.endswith(suffix):
             path = path[: -len(suffix)]
-    return f"{host}{path}" if host else ""
+    ids = sorted(
+        f"{k.lower()}={v}" for k, v in parse_qsl(parts.query)
+        if k.lower() in _ID_PARAMS and v
+    )
+    if not host:
+        return ""
+    return f"{host}{path}" + (f"?{'&'.join(ids)}" if ids else "")
 
 
 class MatchOut(BaseModel):
@@ -82,16 +94,25 @@ async def match_page(candidate_id: UUID, url: str, db: AsyncSession = Depends(ge
                    JobPosting.apply_url.ilike(f"%{host}%")))
         .limit(500)
     )).all()
+    exact, prefix = [], []
     for job, company_name, application in rows:
-        keys = {url_key(job.source_url or ""), url_key(job.apply_url or "")}
-        if key in keys or any(k and key.startswith(k + "/") for k in keys):
-            return MatchOut(
-                job_id=job.id, title=job.title,
-                company_name=display_company(company_name) or "",
-                pack_ready=is_pack_ready(application),
-                status=application.status.value,
-            )
-    return None
+        keys = {url_key(job.source_url or ""), url_key(job.apply_url or "")} - {""}
+        if key in keys:
+            exact.append((job, company_name, application))
+        elif any("?" not in k and "?" not in key and key.startswith(k + "/") for k in keys):
+            prefix.append((job, company_name, application))
+    # Plusieurs offres pour une même page : mieux vaut ne rien proposer que
+    # remplir le formulaire avec le dossier d'une autre entreprise.
+    found = exact if exact else prefix
+    if len({j.id for j, _, _ in found}) != 1:
+        return None
+    job, company_name, application = found[0]
+    return MatchOut(
+        job_id=job.id, title=job.title,
+        company_name=display_company(company_name) or "",
+        pack_ready=is_pack_ready(application),
+        status=application.status.value,
+    )
 
 
 # ── Identité à reporter dans les champs ────────────────────────────────────

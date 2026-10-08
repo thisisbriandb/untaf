@@ -179,6 +179,7 @@ def apply_mode(job: JobPosting) -> str:
         return "auto" if settings.can_send_email else "assisted"
     if channel in AUTOMATABLE_SOON:
         return "auto" if settings.browser_submit_enabled else "assisted"
-    if channel == "web_form":
-        return "assisted"
+    # Formulaire propre à l'employeur, sans schéma publié : Alice ne sait pas
+    # le lire de façon fiable depuis son serveur. Le candidat finit sur le
+    # site (extension ou « Finir sur le site ») avec le dossier prêt.
     return "manual"

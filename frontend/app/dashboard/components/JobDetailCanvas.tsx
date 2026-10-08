@@ -10,6 +10,7 @@ import { Markdown } from "./Markdown";
 import { ApplyPanel } from "./ApplyPanel";
 import { FinishOnSite } from "./FinishOnSite";
 import { RecruiterReply } from "./RecruiterReply";
+import { CvLookPicker } from "./CvLookPicker";
 import { useNarration } from "@/lib/use-narration";
 import {
   packUrl, tailorDocuments, tailoredCvUrl, type TailoredDocuments,
@@ -388,6 +389,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
               </div>
             </div>
           )}
+          {packReady && candidateId && <CvLookPicker candidateId={candidateId} jobId={job.id} />}
           {packReady && candidateId ? (
             <div className="grid grid-cols-2 gap-2">
               <DownloadLink

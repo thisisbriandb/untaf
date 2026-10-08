@@ -22,7 +22,7 @@ if str(CV_ENGINE_PATH) not in sys.path:
 
 try:
     from backend.renderer import render_cv
-    from backend.compiler import compile_typst_to_pdf
+    from backend.compiler import compile_typst_to_pdf, compile_typst_to_png
     HAS_ENGINE = True
 except Exception as e:  # noqa: BLE001
     HAS_ENGINE = False
@@ -117,7 +117,7 @@ def _lines(value) -> list[str]:
 
 
 def resolve_cv(
-    candidate: Candidate, tailoring: dict | None = None,
+    candidate: Candidate, tailoring: dict | None = None, image: bool = False,
 ) -> tuple[bytes | None, str, str]:
     """
     Renvoie (pdf, nom_de_fichier, origine).
@@ -181,13 +181,17 @@ def resolve_cv(
     # Réalisations reformulées pour l'offre, expérience par expérience.
     rewritten = (tailoring.get("experiences") or []) if tailored else []
 
+    from app.agents.experience_key import adapted_for
+
     experiences = []
-    for i, exp in enumerate(cv.get("experiences") or []):
+    source_experiences = cv.get("experiences") or []
+    matched = adapted_for(source_experiences, rewritten)
+    for i, exp in enumerate(source_experiences):
         if not isinstance(exp, dict):
             continue
         highlights = _lines(exp.get("highlights"))
         description = _text(exp.get("description"))
-        adapted = rewritten[i] if i < len(rewritten) and isinstance(rewritten[i], dict) else {}
+        adapted = matched[i]
         if adapted.get("highlights"):
             highlights = _lines(adapted["highlights"])
             # La description d'origine est déjà fondue dans les puces adaptées.
@@ -251,6 +255,16 @@ def resolve_cv(
         "sections": sections,
     }
 
+    # Sa photo s'il l'a déposée et veut la voir ; jamais une autre.
+    photo_path = None
+    if design.get("show_photo") and getattr(candidate, "photo", None):
+        import tempfile
+        suffix = ".png" if (candidate.photo_mime or "").endswith("png") else ".jpg"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+            f.write(candidate.photo)
+            photo_path = f.name
+        data["photo"] = photo_path
+
     try:
         typst = render_cv(
             data,
@@ -270,7 +284,14 @@ def resolve_cv(
             locale="fr",
             bold_keywords=list(candidate.skills or []),
         )
-        pdf = compile_typst_to_pdf(typst)
+        try:
+            # `image` : première page en PNG, pour un aperçu qui s'affiche
+            # partout (le lecteur PDF intégré manque souvent sur mobile).
+            pdf = compile_typst_to_png(typst)[0] if image else compile_typst_to_pdf(typst)
+        finally:
+            if photo_path:
+                import os
+                os.unlink(photo_path)
         if tailored:
             return pdf, f"CV_{_safe_name(candidate.full_name)}.pdf", "tailored"
         return pdf, f"CV_{_safe_name(candidate.full_name)}_{template_id}.pdf", "template"

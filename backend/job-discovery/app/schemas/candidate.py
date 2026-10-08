@@ -79,6 +79,10 @@ class CvDesignOut(BaseModel):
     original_filename: str | None = None
     # True dès que le candidat a exprimé un choix — sinon on est sur le défaut.
     is_explicit: bool = False
+    #: Une photo est enregistrée côté serveur.
+    has_photo: bool = False
+    #: Le modèle qui sert réellement aux CV adaptés (le classique à défaut de choix).
+    effective_template_id: str = "classic"
 
 
 class EffectiveCriteriaOut(BaseModel):

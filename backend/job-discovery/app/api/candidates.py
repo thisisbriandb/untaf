@@ -180,6 +180,12 @@ async def update_candidate(
     await db.commit()
     await db.refresh(candidate)
 
+    # Le CV des envois pas encore partis suit le parcours corrigé.
+    if update_data.keys() & {"full_name", "email", "phone", "linkedin_url", "headline",
+                             "skills", "cv_content"}:
+        from app.agents.application.cv_refresh import refresh_pending_resumes
+        background_tasks.add_task(refresh_pending_resumes, candidate_id)
+
     # Anything that feeds the matcher invalidates the existing scores.
     if update_data.keys() & {
         "skills", "experience_years", "headline", "matching_criteria",
@@ -277,6 +283,73 @@ async def upload_resume(
     }
 
 
+# ── Photo ──────────────────────────────────────────────────────────────────
+
+MAX_PHOTO_BYTES = 2 * 1024 * 1024
+
+
+def photo_mime_of(data: bytes) -> str | None:
+    """JPEG ou PNG reconnus à leurs premiers octets ; le reste est refusé."""
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    return None
+
+
+@router.put("/{candidate_id}/photo")
+async def upload_photo(
+    candidate_id: UUID,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Enregistre la photo du candidat et l'affiche sur ses CV : la déposer, c'est
+    demander à la voir. Les dossiers pas encore envoyés sont remis à jour.
+    """
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Profil introuvable.")
+    data = await file.read()
+    if len(data) > MAX_PHOTO_BYTES:
+        raise HTTPException(413, "Photo trop lourde (2 Mo maximum).")
+    mime = photo_mime_of(data)
+    if not mime:
+        raise HTTPException(415, "Photo au format JPEG ou PNG uniquement.")
+    candidate.photo, candidate.photo_mime = data, mime
+    candidate.cv_design = {**(candidate.cv_design or {}), "show_photo": True}
+    await db.commit()
+
+    from app.agents.application.cv_refresh import refresh_pending_resumes
+    background_tasks.add_task(refresh_pending_resumes, candidate_id)
+    return {"size": len(data), "mime": mime, "show_photo": True}
+
+
+@router.get("/{candidate_id}/photo")
+async def get_photo(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate or not candidate.photo:
+        raise HTTPException(404, "Aucune photo enregistrée.")
+    return Response(content=candidate.photo, media_type=candidate.photo_mime or "image/jpeg",
+                    headers={"Cache-Control": "private, max-age=60"})
+
+
+@router.delete("/{candidate_id}/photo", status_code=204)
+async def delete_photo(
+    candidate_id: UUID, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db),
+):
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Profil introuvable.")
+    candidate.photo = candidate.photo_mime = None
+    candidate.cv_design = {**(candidate.cv_design or {}), "show_photo": False}
+    await db.commit()
+
+    from app.agents.application.cv_refresh import refresh_pending_resumes
+    background_tasks.add_task(refresh_pending_resumes, candidate_id)
+
+
 @router.get("/{candidate_id}/resume")
 async def get_resume(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
     """Restitue le CV d'origine, pour l'afficher tel quel dans le Canvas."""
@@ -316,6 +389,8 @@ async def get_cv_design(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
         has_original=has_original,
         original_filename=candidate.resume_filename,
         is_explicit=bool(stored),
+        has_photo=candidate.photo is not None,
+        effective_template_id=stored.get("template_id") or "classic",
     )
 
 
@@ -323,6 +398,7 @@ async def get_cv_design(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
 async def set_cv_design(
     candidate_id: UUID,
     design: CvDesignUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -341,6 +417,11 @@ async def set_cv_design(
 
     await db.commit()
     await db.refresh(candidate)
+
+    # Les CV figés dans les dossiers pas encore envoyés suivent la nouvelle
+    # mise en page : ce qui part est ce que le candidat vient de choisir.
+    from app.agents.application.cv_refresh import refresh_pending_resumes
+    background_tasks.add_task(refresh_pending_resumes, candidate_id)
 
     return await get_cv_design(candidate_id, db)
 
@@ -484,43 +565,32 @@ _PHOTO_CACHE: dict[str, str] = {}
 
 
 def _prepare_photo_path(photo_url: str | None) -> str | None:
-    if not photo_url:
+    """
+    Photo envoyée par le navigateur (data URL JPEG/PNG) → fichier temporaire.
+
+    Jamais d'adresse web ni de chemin local : le serveur n'irait pas chercher
+    ce que le navigateur lui désigne (requêtes internes, fichiers du serveur).
+    """
+    if not photo_url or not photo_url.startswith("data:image"):
         return None
-
-    if photo_url in _PHOTO_CACHE:
-        cached_path = _PHOTO_CACHE[photo_url]
-        if Path(cached_path).exists():
-            return cached_path
-
+    if photo_url in _PHOTO_CACHE and Path(_PHOTO_CACHE[photo_url]).exists():
+        return _PHOTO_CACHE[photo_url]
     try:
-        if photo_url.startswith("http://") or photo_url.startswith("https://"):
-            import urllib.request
-            import tempfile
-            req = urllib.request.Request(photo_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
-                img_data = resp.read()
-                ext = ".png" if img_data.startswith(b"\x89PNG") else ".jpg"
-                temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
-                temp_img.write(img_data)
-                temp_img.close()
-                _PHOTO_CACHE[photo_url] = temp_img.name
-                return temp_img.name
-        elif photo_url.startswith("data:image"):
-            import base64
-            import tempfile
-            header, encoded = photo_url.split(",", 1)
-            img_data = base64.b64decode(encoded)
-            ext = ".png" if ("png" in header.lower() or img_data.startswith(b"\x89PNG")) else ".jpg"
-            temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
-            temp_img.write(img_data)
-            temp_img.close()
-            _PHOTO_CACHE[photo_url] = temp_img.name
-            return temp_img.name
-        elif Path(photo_url).exists():
-            return photo_url
-    except Exception as e:
-        logger.warning(f"Impossible de charger la photo du CV ({photo_url}): {e}")
-    return None
+        import base64
+        import tempfile
+        _, encoded = photo_url.split(",", 1)
+        data = base64.b64decode(encoded)
+        mime = photo_mime_of(data)
+        if not mime or len(data) > MAX_PHOTO_BYTES:
+            return None
+        temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png" if mime == "image/png" else ".jpg")
+        temp_img.write(data)
+        temp_img.close()
+        _PHOTO_CACHE[photo_url] = temp_img.name
+        return temp_img.name
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Photo du CV illisible : %s", e)
+        return None
 
 
 def _normalize_date(date_val: str | None, default: str = "2021-01") -> str:
@@ -630,10 +700,8 @@ def _build_cv_data_from_request(data: CVRenderRequest) -> dict:
             "url": data.linkedin_url
         })
 
-    photo_path = None
-    if data.show_photo:
-        photo_url = data.photo_url or "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80"
-        photo_path = _prepare_photo_path(photo_url)
+    # Sa photo, ou aucune : jamais une image de remplacement.
+    photo_path = _prepare_photo_path(data.photo_url) if data.show_photo else None
 
     return {
         "name": normalized_name,

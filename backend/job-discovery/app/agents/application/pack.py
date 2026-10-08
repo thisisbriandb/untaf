@@ -92,7 +92,9 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
         languages = (candidate.cv_content or {}).get("languages") or []
         experience_years = candidate.experience_years
 
-    company_name = company_name or ""
+    # Un employeur anonyme ne s'écrit pas « Employeur non précisé » dans une lettre.
+    from app.agents.company_name import display_company
+    company_name = display_company(company_name) or ""
     tech_stack = list((job.description_parsed or {}).get("tech_stack") or job.tech_stack or [])
     cv_request = CvContentRequest(
         full_name=profile["full_name"],
@@ -138,6 +140,9 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
                 # qui distingue ce CV de celui que le candidat avait déjà.
                 "experiences": cv.experiences,
                 "strengths": cv.differentiators[:4] if cv.tailored_to_job else [],
+                # « fallback » : rédigé sans le modèle (indisponible). Un tel
+                # dossier ne part jamais sans que le candidat l'ait relu.
+                "source": cv.source,
             },
             "cover_letter": letter.model_dump(),
             "pack_ready_at": datetime.now(timezone.utc).isoformat(),

@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.agents.company_name import is_anonymous_company
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.france_travail import (
     ROME_BY_FAMILY, FranceTravailAuthError, FranceTravailClient, fetch_offers,
@@ -89,7 +90,10 @@ async def _persist(jobs: list[ScrapedJob]) -> tuple[int, int]:
                 session, job.extra.get("company_name", "")
             )
 
-            fingerprint = compute_fingerprint(company.domain, job.title, job.location)
+            fingerprint = compute_fingerprint(
+                company.domain, job.title, job.location,
+                external_id=job.external_id if is_anonymous_company(company.name) else None,
+            )
 
             parsed = job.extra.get("parsed") or {}
             remote = {
@@ -269,7 +273,8 @@ async def ingest_for_candidate(candidate_id) -> dict:
 
     # Les ATS (dont Recruitee, où Alice envoie elle-même) : collectés en
     # arrière-plan si aucun beat ne l'a fait récemment.
-    from app.agents.discovery.freshness import ensure_fresh
+    from app.agents.discovery.freshness import ensure_fresh, expire_stale_postings
+    await expire_stale_postings()
     await ensure_fresh()
 
     # La bonne alternance : les offres auxquelles Alice peut transmettre la

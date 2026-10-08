@@ -277,6 +277,25 @@ async def download_tailored_cv(
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
 
+@router.get("/{job_id}/cv/preview")
+@_guard_download("aperçu du CV adapté")
+async def preview_tailored_cv(
+    candidate_id: UUID,
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Première page du CV adapté, en image : l'aperçu de la relecture."""
+    from app.agents.application.cv_resolver import resolve_cv
+
+    job, _, candidate, application = await _load(db, candidate_id, job_id)
+    if not job or not candidate:
+        raise HTTPException(404, "Offre ou candidat introuvable")
+    png, _, origin = await asyncio.to_thread(resolve_cv, candidate, _tailoring(application), True)
+    if origin == "render_failed" or not png or origin == "original":
+        raise HTTPException(503, "Aperçu indisponible pour l'instant.")
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/{job_id}/pack")
 @_guard_download("téléchargement du dossier")
 async def download_pack(
@@ -808,11 +827,16 @@ def _changes(candidate: Candidate, tailored: dict) -> dict | None:
     """Avant / après, section par section : rien n'est caché au candidat."""
     if not tailored:
         return None
+    from app.agents.experience_key import adapted_for
+
     cv = candidate.cv_content or {}
     experiences = []
-    for i, exp in enumerate(cv.get("experiences") or []):
-        adapted = (tailored.get("experiences") or [])
-        after = adapted[i].get("highlights") if i < len(adapted) and isinstance(adapted[i], dict) else None
+    source = cv.get("experiences") or []
+    matched = adapted_for(source, tailored.get("experiences") or [])
+    for i, exp in enumerate(source):
+        if not isinstance(exp, dict):
+            continue
+        after = matched[i].get("highlights")
         if not after:
             continue
         before = exp.get("highlights") or []

@@ -57,6 +57,10 @@ class Candidate(Base):
     resume_file: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     resume_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     resume_mime: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    #: Photo du candidat (JPEG/PNG, redimensionnée par le navigateur). Elle
+    #: figure sur ses CV quand `cv_design.show_photo` est vrai.
+    photo: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    photo_mime: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # ── Parcours détaillé ─────────────────────────────────
     # Expériences, formation, langues. Ces données ne vivaient que dans le

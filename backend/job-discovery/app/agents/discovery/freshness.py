@@ -70,6 +70,35 @@ async def _refresh() -> None:
         logger.error("Collecte ATS de secours échouée : %s", e, exc_info=True)
 
 
+#: Une offre qu'aucune source n'a remontée depuis ce délai est tenue pour pourvue.
+EXPIRE_AFTER = timedelta(days=45)
+
+
+async def expire_stale_postings() -> int:
+    """
+    Passe en EXPIRED les offres qu'aucune collecte n'a revues depuis longtemps :
+    sans cela, une offre retirée restait « active » pour toujours et Alice
+    pouvait encore y postuler. Renvoie le nombre d'offres expirées.
+    """
+    from sqlalchemy import update
+
+    from app.models.job_posting import JobPosting, PostingStatus
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                update(JobPosting)
+                .where(JobPosting.status == PostingStatus.ACTIVE)
+                .where(JobPosting.last_seen_at < datetime.now(timezone.utc) - EXPIRE_AFTER)
+                .values(status=PostingStatus.EXPIRED)
+            )
+            await session.commit()
+            return result.rowcount or 0
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Expiration des offres anciennes impossible : %s", e)
+        return 0
+
+
 async def ensure_fresh() -> bool:
     """Lance la passe si les ATS n'ont pas été collectés récemment. Ne bloque pas."""
     global _running, _last_start

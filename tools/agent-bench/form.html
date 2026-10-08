@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<form id="f" onsubmit="event.preventDefault();document.body.dataset.sent=1">
+<div><label for="fn">Prénom *</label><input id="fn" name="first_name"></div>
+<div><label for="ln">Nom *</label><input id="ln" name="last_name"></div>
+<div><label for="em">Adresse e-mail</label><input id="em" type="email" name="email"></div>
+<div><label for="ph">Téléphone</label><input id="ph" type="tel" name="phone"></div>
+<div><label for="li">Profil LinkedIn</label><input id="li" name="urls[LinkedIn]"></div>
+<div><label for="cv">CV / Résumé</label><input id="cv" type="file" name="resume"></div>
+<div><label for="cl">Lettre de motivation</label><textarea id="cl" name="cover"></textarea></div>
+<fieldset><legend>Avez-vous le permis B ?</legend>
+<label><input type="radio" name="permis" value="y"> Oui</label><label><input type="radio" name="permis" value="n"> Non</label></fieldset>
+<div><label for="sal">Prétentions salariales</label><input id="sal" name="salary"></div>
+<div><label><input type="checkbox" name="gdpr"> J'accepte la politique de confidentialité</label></div>
+<button type="submit">Envoyer ma candidature</button>
+</form>
+<script>window.events=0;document.addEventListener('input',()=>window.events++,true);</script>
+</body></html>
