@@ -30,6 +30,12 @@ const API = (process.env.MODEL_API_BASE || "https://api.meta.ai/v1").replace(/\/
 const MODEL = process.env.MODEL || "muse-spark-1.3";
 const KEY = process.env.MODEL_API_KEY;
 const MAX_STEPS = Number(process.env.MAX_STEPS || 40);
+//: Réflexion du modèle : low | medium | high. « high » (défaut chez Meta) est lent et coûteux.
+const EFFORT = process.env.EFFORT || "low";
+const CALL_TIMEOUT_MS = Number(process.env.CALL_TIMEOUT || 180) * 1000;
+const t0 = Date.now();
+const elapsed = () => `${Math.round((Date.now() - t0) / 1000)}s`;
+let firstCallShown = false;
 const VIEWPORT = { width: 1280, height: 900 };
 
 // Candidat fictif : jamais de vraies données personnelles dans un banc d'essai.
@@ -58,11 +64,22 @@ ${CANDIDATE.cover_letter}`;
 // ── API ─────────────────────────────────────────────────────────────────────
 
 async function call(body) {
-  const res = await fetch(`${API}/responses`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  if (EFFORT && !body.reasoning) body = { ...body, reasoning: { effort: EFFORT } };
+  const started = Date.now();
+  process.stdout.write(`  … appel au modèle (${elapsed()})`);
+  let res;
+  try {
+    res = await fetch(`${API}/responses`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    });
+  } catch (e) {
+    process.stdout.write("\n");
+    throw new Error(`pas de réponse du modèle en ${CALL_TIMEOUT_MS / 1000}s (${e.name})`);
+  }
+  process.stdout.write(` → ${res.status} en ${Math.round((Date.now() - started) / 1000)}s\n`);
   const text = await res.text();
   let json = null;
   try { json = JSON.parse(text); } catch { /* corps non JSON */ }
@@ -94,7 +111,37 @@ async function isSubmitAt(page, x, y) {
   }, [x, y, SUBMIT_TEXT.source]);
 }
 
+/** Noms de touches façon X11 / xdotool (BackSpace, Return, ctrl…) → Playwright. */
+const KEY_MAP = {
+  backspace: "Backspace", return: "Enter", enter: "Enter", tab: "Tab", escape: "Escape", esc: "Escape",
+  delete: "Delete", del: "Delete", space: " ", home: "Home", end: "End", insert: "Insert",
+  page_up: "PageUp", pageup: "PageUp", prior: "PageUp", page_down: "PageDown", pagedown: "PageDown", next: "PageDown",
+  up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight",
+  arrowup: "ArrowUp", arrowdown: "ArrowDown", arrowleft: "ArrowLeft", arrowright: "ArrowRight",
+  ctrl: "Control", control: "Control", control_l: "Control", control_r: "Control",
+  alt: "Alt", alt_l: "Alt", shift: "Shift", shift_l: "Shift", super: "Meta", cmd: "Meta", meta: "Meta", win: "Meta",
+};
+function pwKey(k) {
+  const name = String(k).trim();
+  const mapped = KEY_MAP[name.toLowerCase()];
+  if (mapped) return mapped;
+  if (/^f\d{1,2}$/i.test(name)) return name.toUpperCase();
+  return name.length === 1 ? name : name[0].toUpperCase() + name.slice(1);
+}
+
 async function execute(page, a, log) {
+  try {
+    return await executeRaw(page, a, log);
+  } catch (e) {
+    // Une action ratée ne fait pas tomber le test : on la note, le modèle
+    // verra l'écran inchangé et pourra s'adapter.
+    log.push({ failed_action: a, error: String(e.message || e).slice(0, 200) });
+    console.log(`    ✗ action ${a.type} impossible : ${String(e.message || e).split("\n")[0].slice(0, 120)}`);
+    return "FAILED";
+  }
+}
+
+async function executeRaw(page, a, log) {
   const t = a.type;
   if (t === "click" || t === "double_click") {
     if (await isSubmitAt(page, a.x, a.y)) {
@@ -109,11 +156,13 @@ async function execute(page, a, log) {
   } else if (t === "type") {
     await page.keyboard.type(a.text ?? "", { delay: 5 });
   } else if (t === "keypress" || t === "key") {
-    for (const k of [].concat(a.keys ?? a.key ?? [])) {
-      const key = String(k).replace(/^ENTER$/i, "Enter").replace(/^CTRL$/i, "Control");
-      if (/^Enter$/.test(key)) { log.push({ blocked: "Entrée refusée (pourrait envoyer)" }); continue; }
-      await page.keyboard.press(key);
+    const keys = [].concat(a.keys ?? a.key ?? []).flatMap((k) => String(k).split("+")).map(pwKey);
+    if (keys.includes("Enter")) {
+      log.push({ blocked: "Entrée refusée (pourrait envoyer)" });
+      return "OK";
     }
+    // Plusieurs touches = un raccourci (ctrl+a…), pas une suite de frappes.
+    if (keys.length) await page.keyboard.press(keys.join("+"));
   } else if (t === "scroll") {
     await page.mouse.move(a.x ?? 640, a.y ?? 450);
     await page.mouse.wheel(a.scroll_x ?? 0, a.scroll_y ?? 400);
@@ -168,18 +217,42 @@ async function runOne(browser, url) {
       }
       const output = resp.output || [];
       const calls = output.filter((o) => o.type === "computer_call");
+      // La première fois, on montre la forme exacte d'un appel : utile si
+      // le format diffère de ce que le script attend.
+      if (calls.length && !firstCallShown) {
+        firstCallShown = true;
+        console.log("  forme d'un appel :", JSON.stringify(calls[0]).slice(0, 400));
+      }
+      if (!calls.length) {
+        console.log(`  fin : sorties ${JSON.stringify(output.map((o) => o.type))}, statut ${resp.status}`);
+      }
       finalText = output.filter((o) => o.type === "message")
         .flatMap((m) => (m.content || []).map((c) => c.text || "")).join("\n") || finalText;
       if (!calls.length) break;
 
       const outputs = [];
       for (const c of calls) {
-        for (const a of actionsOf(c)) {
+        const acts = actionsOf(c);
+        if (!acts.length) console.log("  ⚠ appel sans action reconnue :", JSON.stringify(c).slice(0, 300));
+        for (const a of acts) {
           log.push({ step: steps, action: a.type, ...(a.text ? { text: String(a.text).slice(0, 40) } : {}) });
-          await execute(page, a, log);
+          const keysTxt = a.keys || a.key ? ` [${[].concat(a.keys ?? a.key).join("+")}]` : "";
+          console.log(`  étape ${steps + 1} : ${a.type}${keysTxt}${a.text ? ` « ${String(a.text).slice(0, 30)} »` : ""}` +
+            `${a.x != null ? ` (${a.x},${a.y})` : ""}`);
+          const r = await execute(page, a, log);
+          if (r === "BLOCKED_SUBMIT") console.log("    ⛔ clic d'envoi refusé : rien n'est parti");
+        }
+        // Points de vigilance signalés par le modèle (site sensible, action à
+        // confirmer…) : l'API exige qu'on les confirme un par un. On les garde
+        // dans le rapport — c'est ce qu'il faudrait montrer au candidat.
+        const checks = c.pending_safety_checks || [];
+        for (const chk of checks) {
+          log.push({ safety_check: chk.code || chk.id, message: chk.message });
+          console.log(`    ⚠ point de vigilance : ${chk.code || ""} ${chk.message || ""}`.trimEnd());
         }
         outputs.push({
           type: "computer_call_output", call_id: c.call_id || c.id,
+          ...(checks.length ? { acknowledged_safety_checks: checks.map((k) => ({ id: k.id, code: k.code, message: k.message })) } : {}),
           output: { type: "computer_screenshot", image_url: await shot(page) },
         });
       }
