@@ -26,6 +26,7 @@ import { STAGE_TONE } from "@/lib/stage-tone";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 import { companyOf } from "@/lib/company";
 import { fetchInbox, onInboxChanged } from "@/lib/inbox-client";
+import { UpgradeCard } from "./Subscription";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -450,6 +451,7 @@ export function ConversationSidebar({
 
           {/* Le compte, en bas, comme partout ailleurs */}
           <div className="shrink-0 border-t border-[#1A1918]/[0.06] p-2">
+            <UpgradeCard candidateId={candidateId} />
             <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
               <span className="h-8 w-8 shrink-0 rounded-full bg-[#006045] text-white flex items-center justify-center text-[11px] font-medium">
                 {initials(userName || "Toi")}

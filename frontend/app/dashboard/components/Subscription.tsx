@@ -197,3 +197,42 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
     </AnimatePresence>
   );
 }
+
+/**
+ * En bas de la barre latérale, pour la formule gratuite seulement : ce qu'il
+ * reste cette semaine, et de quoi passer à l'abonnement.
+ */
+export function UpgradeCard({ candidateId }: { candidateId: string | null }) {
+  const [billing, setBilling] = useState<Billing | null>(null);
+  const { busy, go } = useGoTo(candidateId);
+
+  useEffect(() => {
+    if (!candidateId) return;
+    const load = () => void fetchBilling(candidateId).then(setBilling);
+    load();
+    // Une limite atteinte ou un dossier rédigé change les compteurs.
+    window.addEventListener("untaf:plan-limit", load);
+    return () => window.removeEventListener("untaf:plan-limit", load);
+  }, [candidateId]);
+
+  if (!billing?.enabled || billing.plan !== "free") return null;
+  const packs = billing.usage.pack;
+
+  return (
+    <div className="mx-2 mb-2 rounded-xl border border-[#006045]/15 bg-[#006045]/[0.04] px-3 py-2.5 space-y-2">
+      <p className="text-[11px] font-normal text-[#1A1918]/65 tracking-tight">
+        Formule gratuite
+        {packs ? ` · ${Math.max(0, packs.limit - packs.used)} dossier${packs.limit - packs.used > 1 ? "s" : ""} restant${packs.limit - packs.used > 1 ? "s" : ""} cette semaine` : ""}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => go("checkout")}
+        className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[12px] text-white hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-50"
+      >
+        {busy && <Loader2 className="h-3 w-3 animate-spin" />}
+        Passer à l&apos;abonnement — {billing.price_label}
+      </button>
+    </div>
+  );
+}
