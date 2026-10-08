@@ -50,6 +50,16 @@ export async function fetchBilling(candidateId: string): Promise<Billing | null>
   }
 }
 
+/** Relit l'abonnement chez Lemon Squeezy (retour de paiement, webhook en retard). */
+export async function syncBilling(candidateId: string): Promise<Billing | null> {
+  try {
+    const res = await apiFetch(`${base(candidateId)}/sync`, { method: "POST" });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 async function urlFrom(res: Response): Promise<string> {
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.url) {

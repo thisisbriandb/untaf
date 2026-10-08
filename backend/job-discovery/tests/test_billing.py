@@ -127,3 +127,44 @@ def test_check_against_plan(monkeypatch, paid, used, ok):
     else:
         with pytest.raises(billing.LimitReached):
             asyncio.run(billing.check(None, uuid4(), "pack"))
+
+
+def test_sync_keeps_only_alice_variant(monkeypatch):
+    for key, value in {"lemonsqueezy_api_key": "k", "lemonsqueezy_store_id": "1",
+                       "lemonsqueezy_variant_id": "7"}.items():
+        monkeypatch.setattr(billing.settings, key, value)
+    cid = uuid4()
+    mine = _payload(cid)["data"]
+    other = {**_payload(cid)["data"], "id": "999",
+             "attributes": {**mine["attributes"], "variant_id": 8}}
+
+    class Res:
+        status_code = 200
+
+        def json(self):
+            return {"data": [mine, other]}
+
+    class Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, headers, params):
+            assert params["filter[user_email]"] == "ada@b.fr"
+            return Res()
+
+    seen = []
+
+    async def apply_event(session, event):
+        seen.append(event)
+        return True
+
+    monkeypatch.setattr(billing.httpx, "AsyncClient", Client)
+    monkeypatch.setattr(billing, "apply_event", apply_event)
+    assert asyncio.run(billing.sync_from_provider(None, cid, " Ada@B.fr ")) == 1
+    assert [e.provider_id for e in seen] == ["123456"] and seen[0].candidate_id == cid
