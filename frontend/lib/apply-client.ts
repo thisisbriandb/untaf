@@ -165,7 +165,11 @@ export async function streamApply(
 
       if (!dataLines.length) continue;
       try {
-        onEvent({ type: eventName, ...JSON.parse(dataLines.join("")) } as ApplyEvent);
+        const data = JSON.parse(dataLines.join(""));
+        if (eventName === "error" && data?.plan_limit) {
+          window.dispatchEvent(new CustomEvent("untaf:plan-limit", { detail: data.plan_limit }));
+        }
+        onEvent({ type: eventName, ...data } as ApplyEvent);
       } catch {
         // Un fragment illisible ne doit pas interrompre le flux.
       }

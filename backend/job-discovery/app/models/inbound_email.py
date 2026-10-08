@@ -10,7 +10,7 @@ rangé ici, rattaché à la candidature quand on la reconnaît, lu par Alice
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -49,3 +49,20 @@ class InboundEmail(Base):
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+class InboundAttachment(Base):
+    """Pièce jointe d'une réponse (offre en PDF, test technique…), gardée telle quelle."""
+
+    __tablename__ = "inbound_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    inbound_email_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("inbound_emails.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    filename: Mapped[str] = mapped_column(String(300), nullable=False)
+    mime: Mapped[str] = mapped_column(String(150), nullable=False, default="application/octet-stream")
+    size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

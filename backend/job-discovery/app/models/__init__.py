@@ -17,8 +17,9 @@ from app.models.dispatch import ApplicationDispatch, DispatchChannel, DispatchSt
 from app.models.login_token import LoginToken
 from app.models.conversation import Conversation, ConversationMessage
 from app.models.notification import Notification, NotificationKind, NotificationStatus
-from app.models.inbound_email import InboundEmail
+from app.models.inbound_email import InboundAttachment, InboundEmail
 from app.models.email_optout import EmailOptout
+from app.models.billing import Subscription, UsageEvent
 from app.models.mission import (
     Mission,
     MissionEvent,
@@ -57,5 +58,8 @@ __all__ = [
     "NotificationKind",
     "NotificationStatus",
     "InboundEmail",
+    "InboundAttachment",
     "EmailOptout",
+    "Subscription",
+    "UsageEvent",
 ]

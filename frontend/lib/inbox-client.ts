@@ -23,10 +23,33 @@ export interface Reply {
   job_id: string | null;
   job_title: string | null;
   company_name: string | null;
+  application_id: string | null;
+  /** Rattachement incertain : c'est au candidat de dire quelle candidature. */
+  to_link: boolean;
+  suggested_application_id: string | null;
+  attachments_count: number;
+}
+
+export interface ReplyAttachment {
+  id: string;
+  filename: string;
+  mime: string;
+  size: number;
 }
 
 export interface ReplyDetail extends Reply {
   text: string;
+  attachments: ReplyAttachment[];
+  /** Trop lourdes pour être gardées : le nom seulement. */
+  skipped_attachments: { filename: string; size: number }[];
+}
+
+/** Une candidature à laquelle rattacher un message. */
+export interface LinkChoice {
+  application_id: string;
+  job_title: string;
+  company_name: string | null;
+  status: string;
 }
 
 export interface Inbox {
@@ -34,6 +57,7 @@ export interface Inbox {
   configured: boolean;
   unread: number;
   replies: Reply[];
+  choices: LinkChoice[];
 }
 
 export const KIND_LABEL: Record<ReplyKind, string> = {
@@ -65,6 +89,27 @@ export async function fetchReply(candidateId: string, replyId: string) {
   const r = await json<ReplyDetail>(apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/inbox/${replyId}`));
   if (r && typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
   return r;
+}
+
+/** Dit à quelle candidature répond un message (null : aucune). Le suivi suit. */
+export async function linkReply(candidateId: string, replyId: string, applicationId: string | null) {
+  const r = await json<{ reply: Reply; status: string | null }>(
+    apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/inbox/${replyId}/link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ application_id: applicationId }),
+    }),
+  );
+  if (r && typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
+  return r;
+}
+
+export const attachmentUrl = (candidateId: string, replyId: string, attachmentId: string) =>
+  `${API_BASE_URL}/api/candidates/${candidateId}/inbox/${replyId}/attachments/${attachmentId}`;
+
+export function fileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
+  return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
 }
 
 export function onInboxChanged(cb: () => void) {

@@ -130,7 +130,8 @@ def heuristic_extract_profile(raw_text: str) -> ParsedCandidateProfile:
         phone=phone,
         github_url=github_url,
         linkedin_url=linkedin_url,
-        headline=f"Profil extrait depuis CV" if full_name else None,
+        # Pas de titre inventé : sans IA, on ne sait pas le lire.
+        headline=None,
         summary=preview,
         skills=skills,
         experience_years=exp_years,
@@ -173,7 +174,8 @@ async def parse_resume(pdf_bytes: bytes, filename: str = "cv.pdf") -> ParsedCand
     raw_text = extract_text_from_pdf(pdf_bytes)
     if not raw_text.strip():
         logger.warning(f"Empty text extracted from PDF {filename}.")
-        return ParsedCandidateProfile(headline=f"Document PDF : {filename} (aucun texte détecté)")
+        # CV scanné : rien à lire, on le dit au lieu d'inventer un titre.
+        return ParsedCandidateProfile(text_detected=False)
 
     api_key = settings.gemini_api_key
     if not api_key:

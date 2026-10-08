@@ -13,6 +13,7 @@ import {
   type NotificationSettings,
 } from "@/lib/pipeline-client";
 import { useToast } from "./Toaster";
+import { PlanSection } from "./Subscription";
 
 interface ParametresViewProps {
   candidateId: string | null;
@@ -117,6 +118,8 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
             <span className="font-medium text-[#1A1918] truncate">{userEmail || "Non renseigné"}</span>
           </div>
         </section>
+
+        <PlanSection candidateId={candidateId} />
 
         {/* ═══ Notifications ═══ */}
         <section className="space-y-3">

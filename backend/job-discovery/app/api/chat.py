@@ -76,6 +76,9 @@ async def chat_endpoint(req: ChatRequest, user: AuthUser = Depends(require_user)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
+    from app import billing
+    await billing.consume(candidate_id, "message")
+
     from app.agents.conversations import append_turn, history_for, job_context, open_conversation
 
     job_uuid = None

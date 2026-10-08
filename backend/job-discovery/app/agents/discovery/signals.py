@@ -173,6 +173,9 @@ _FAMILY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("data", ("data scientist", "data engineer", "data analyst", "analytics engineer",
               "machine learning", "ml engineer", "ai engineer", "deep learning",
               "business intelligence", "statisticien", "datamining", "big data")),
+    ("education", ("enseignant", "professeur", " formateur", " formatrice", "teacher",
+                   "instituteur", "institutrice", "soutien scolaire",
+                   "conseiller pédagogique", "conseillère pédagogique")),
     ("sales", ("account executive", "account manager", "business developer",
                "business development", "sales development", "sales manager",
                "sales representative", " sdr", " bdr", "commercial", "vente",
@@ -197,6 +200,11 @@ _FAMILY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("ops", ("supply chain", "logistique", "logistics", "office manager",
              "operations manager", "onboarding consultant", "responsable d'exploitation",
              "planificateur", "achats", "procurement")),
+    ("construction", ("conducteur de travaux", "conductrice de travaux", "chef de chantier",
+                      "cheffe de chantier", "btp", "maçon", "macon", "électricien",
+                      "electricien", "plombier", "chauffagiste", "plaquiste", "couvreur",
+                      "charpentier", "carreleur", "menuisier", "peintre en bâtiment",
+                      "économiste de la construction", "ingénieur travaux", "géomètre")),
     ("software", ("developer", "développeur", "developpeur", "software engineer",
                   "ingénieur logiciel", "backend", "back-end", "frontend",
                   "front-end", "full stack", "fullstack", "devops", "sre",
@@ -324,6 +332,14 @@ def seniority_from_experience(years: float | None) -> str:
     if years < 8:
         return "senior"
     return "lead"
+
+
+def seniority_gap(job: str, candidate: str) -> int:
+    """Écart signé : positif quand le poste est plus senior que le profil."""
+    try:
+        return SENIORITY_ORDER.index(job) - SENIORITY_ORDER.index(candidate)
+    except ValueError:
+        return 0
 
 
 def seniority_distance(a: str, b: str) -> int:

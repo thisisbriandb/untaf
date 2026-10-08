@@ -7,14 +7,18 @@ API (Recruitee, La bonne alternance) ou qu'elle remplit via l'extension. Ce qui
 y arrive passe ici :
 
   1. on retrouve le candidat par le jeton de l'adresse ;
-  2. on rattache le message à une de ses candidatures (domaine de l'expéditeur,
-     nom de l'entreprise, intitulé du poste) ;
+  2. on rattache le message à une de ses candidatures (adresse ou domaine de
+     l'expéditeur, nom de l'entreprise, intitulé du poste) ;
   3. Alice le lit : refus, entretien, offre, demande, accusé de réception ;
-  4. le suivi se met à jour (un refus clôt, un entretien fait avancer) ;
-  5. le message est transféré au candidat, avec ce qu'Alice en retient en tête
-     et l'adresse du recruteur en Reply-To : il répond directement.
+  4. le suivi se met à jour (un refus clôt, un entretien fait avancer) — mais
+     seulement si le rattachement est sûr et la lecture faite par l'IA ; sinon
+     le message attend que le candidat dise à quelle candidature il répond ;
+  5. le message est transféré au candidat, pièces jointes comprises, avec ce
+     qu'Alice en retient en tête et l'adresse du recruteur en Reply-To : il
+     répond directement.
 
-Rien ne se perd : même non rattaché ou mal compris, le message est transféré.
+Rien ne se perd : même non rattaché ou mal compris, le message est transféré,
+et ses pièces jointes restent téléchargeables dans Alice.
 """
 
 from __future__ import annotations
@@ -32,7 +36,7 @@ from email.utils import parseaddr
 from uuid import UUID
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +46,7 @@ from app.database import async_session
 from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
 from app.models.company import Company
-from app.models.inbound_email import InboundEmail
+from app.models.inbound_email import InboundAttachment, InboundEmail
 from app.models.job_posting import JobPosting
 
 logger = logging.getLogger(__name__)
@@ -145,6 +149,35 @@ def verify_svix(secret: str, msg_id: str, timestamp: str, body: bytes, signature
     return False
 
 
+#: Plafonds des pièces jointes gardées : au-delà, on garde le nom et on le dit.
+MAX_ATTACHMENT = 10 * 1024 * 1024
+MAX_ATTACHMENTS_TOTAL = 25 * 1024 * 1024
+MAX_ATTACHMENTS_COUNT = 20
+
+
+@dataclass
+class Piece:
+    """Une pièce jointe reçue. `content` à None : non gardée (trop lourde, illisible)."""
+    filename: str
+    mime: str = "application/octet-stream"
+    content: bytes | None = None
+    size: int = 0
+
+
+def cap_attachments(pieces: list[Piece]) -> list[Piece]:
+    """Garde ce qui tient dans les plafonds ; le reste perd son contenu mais pas son nom."""
+    out, total = [], 0
+    for i, p in enumerate(pieces):
+        size = len(p.content) if p.content is not None else p.size
+        keep = (p.content is not None and i < MAX_ATTACHMENTS_COUNT
+                and size <= MAX_ATTACHMENT and total + size <= MAX_ATTACHMENTS_TOTAL)
+        if keep:
+            total += size
+        out.append(Piece(p.filename or "piece-jointe", p.mime or "application/octet-stream",
+                         p.content if keep else None, size))
+    return out
+
+
 @dataclass
 class Incoming:
     provider_id: str
@@ -153,7 +186,15 @@ class Incoming:
     subject: str = ""
     text: str = ""
     html: str | None = None
-    attachments: list[str] = field(default_factory=list)
+    attachments: list[Piece] = field(default_factory=list)
+
+    @property
+    def kept(self) -> list[Piece]:
+        return [p for p in self.attachments if p.content is not None]
+
+    @property
+    def skipped(self) -> list[Piece]:
+        return [p for p in self.attachments if p.content is None]
 
     @property
     def from_email(self) -> str:
@@ -212,6 +253,7 @@ async def incoming_from_resend(event: dict) -> Incoming | None:
     except Exception as e:  # noqa: BLE001 — on traite au moins les métadonnées
         logger.error("Corps de l'e-mail %s introuvable chez Resend : %s", email_id, e)
     html = body.get("html")
+    listed = [a for a in (body.get("attachments") or data.get("attachments") or []) if isinstance(a, dict)]
     return Incoming(
         provider_id=f"resend:{email_id}",
         from_raw=body.get("from") or data.get("from") or "",
@@ -219,8 +261,61 @@ async def incoming_from_resend(event: dict) -> Incoming | None:
         subject=body.get("subject") or data.get("subject") or "",
         text=body.get("text") or (html_to_text(html) if html else ""),
         html=html,
-        attachments=[a.get("filename", "") for a in (data.get("attachments") or []) if isinstance(a, dict)],
+        attachments=await resend_attachments(email_id, listed) if listed else [],
     )
+
+
+def _piece_from_dict(a: dict) -> Piece:
+    """{filename, content_type, size, content (base64)?} → pièce, contenu décodé s'il est là."""
+    content = None
+    if a.get("content"):
+        try:
+            content = base64.b64decode(a["content"])
+        except (ValueError, TypeError):
+            content = None
+    return Piece(
+        filename=str(a.get("filename") or a.get("name") or "piece-jointe")[:300],
+        mime=str(a.get("content_type") or a.get("contentType") or a.get("type") or "application/octet-stream")[:150],
+        content=content,
+        size=len(content) if content is not None else int(a.get("size") or 0),
+    )
+
+
+async def resend_attachments(email_id: str, listed: list[dict]) -> list[Piece]:
+    """
+    Les pièces d'un e-mail reçu chez Resend. Le webhook n'en donne que la liste :
+    le contenu se télécharge à part (lien temporaire), dans la limite des plafonds.
+    """
+    pieces = [_piece_from_dict(a) for a in listed]
+    if all(p.content is not None for p in pieces):
+        return cap_attachments(pieces)
+    links: dict[str, str] = {}
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(
+                f"https://api.resend.com/emails/receiving/{email_id}/attachments",
+                headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+            )
+            response.raise_for_status()
+            for a in (response.json() or {}).get("data") or []:
+                if isinstance(a, dict) and a.get("download_url"):
+                    links[str(a.get("id") or a.get("filename"))] = a["download_url"]
+                    links.setdefault(str(a.get("filename")), a["download_url"])
+            total = 0
+            for a, p in zip(listed, pieces):
+                url = links.get(str(a.get("id"))) or links.get(p.filename)
+                if p.content is not None or not url:
+                    continue
+                if p.size > MAX_ATTACHMENT or total + p.size > MAX_ATTACHMENTS_TOTAL:
+                    continue  # inutile de télécharger ce qu'on ne gardera pas
+                got = await client.get(url)
+                if got.status_code < 400:
+                    p.content = got.content
+                    p.size = len(got.content)
+                    total += p.size
+    except Exception as e:  # noqa: BLE001 — les noms au moins restent
+        logger.warning("Pièces jointes de l'e-mail %s introuvables chez Resend : %s", email_id, e)
+    return cap_attachments(pieces)
 
 
 def parse_mime(raw: bytes) -> dict:
@@ -237,6 +332,21 @@ def parse_mime(raw: bytes) -> dict:
             payload = part.get_payload(decode=True) or b""
             return payload.decode("utf-8", "replace")
 
+    def piece(part) -> Piece | None:
+        maintype = part.get_content_maintype()
+        # Logos et images de signature : pas des pièces jointes.
+        if part.get_content_disposition() != "attachment" and maintype == "image" and part.get("Content-ID"):
+            return None
+        try:
+            data = part.get_payload(decode=True)
+        except Exception:  # noqa: BLE001
+            data = None
+        if data is None and maintype == "message":
+            data = part.as_bytes()
+        return Piece(filename=(part.get_filename() or "piece-jointe")[:300],
+                     mime=part.get_content_type()[:150], content=data,
+                     size=len(data) if data is not None else 0)
+
     plain = content(msg.get_body(preferencelist=("plain",)))
     html = content(msg.get_body(preferencelist=("html",))) or None
     return {
@@ -246,7 +356,7 @@ def parse_mime(raw: bytes) -> dict:
         "message_id": str(msg.get("Message-ID") or "").strip() or None,
         "text": plain.strip(),
         "html": html,
-        "attachments": [p.get_filename() or "" for p in msg.iter_attachments()],
+        "attachments": cap_attachments([p for p in map(piece, msg.iter_attachments()) if p]),
     }
 
 
@@ -280,7 +390,11 @@ def incoming_from_generic(payload: dict) -> Incoming | None:
     ).hexdigest()
     return Incoming(provider_id=f"relay:{pid}"[:300], from_raw=sender, to=to,
                     subject=payload.get("subject") or "", text=text, html=html,
-                    attachments=[a for a in payload.get("attachments") or [] if a])
+                    attachments=cap_attachments([
+                        a if isinstance(a, Piece) else _piece_from_dict(a) if isinstance(a, dict)
+                        else Piece(filename=str(a)[:300])
+                        for a in payload.get("attachments") or [] if a
+                    ]))
 
 
 # ── Rattacher à une candidature ────────────────────────────────────────────
@@ -312,47 +426,85 @@ class Candidacy:
     domain: str
     title: str
     status: ApplicationStatus
+    #: L'adresse à laquelle la candidature est partie, si on la connaît.
+    contact: str = ""
+
+
+def _domain_score(c: Candidacy, sender_domain: str) -> int:
+    """10 : domaine de l'entreprise ; 8 : même racine (doctolib.fr / doctolib.com) ; 0 sinon."""
+    company_domain = (c.domain or "").lower().removeprefix("www.")
+    if not company_domain or sender_domain in _FREE_MAIL or any(a in sender_domain for a in _ATS_MAIL):
+        return 0
+    if sender_domain == company_domain or sender_domain.endswith("." + company_domain):
+        return 10
+    root = sender_domain.split(".")[-2] if sender_domain.count(".") >= 1 else sender_domain
+    if root and root == company_domain.split(".")[0]:
+        return 8
+    return 0
+
+
+def _haystack(from_name: str, subject: str, text: str) -> str:
+    return f" {_norm(from_name)} {_norm(subject)} {_norm(text[:4000])} "
+
+
+def _title_score(c: Candidacy, haystack: str) -> int:
+    title_words = [w for w in _norm(c.title).split() if len(w) > 3]
+    if not title_words:
+        return 0
+    hits = sum(1 for w in title_words if f" {w} " in haystack)
+    return round(4 * hits / len(title_words))
 
 
 def score_match(c: Candidacy, from_email: str, from_name: str, subject: str, text: str) -> int:
     """Plus c'est haut, plus le message parle de cette candidature."""
-    score = 0
-    sender_domain = from_email.rpartition("@")[2]
-    root = sender_domain.split(".")[-2] if sender_domain.count(".") >= 1 else sender_domain
-    company_domain = (c.domain or "").lower().removeprefix("www.")
-    if company_domain and sender_domain not in _FREE_MAIL and not any(a in sender_domain for a in _ATS_MAIL):
-        if sender_domain == company_domain or sender_domain.endswith("." + company_domain):
-            score += 10
-        elif root and root == company_domain.split(".")[0]:
-            score += 8
-    haystack = f" {_norm(from_name)} {_norm(subject)} {_norm(text[:4000])} "
+    score = _domain_score(c, from_email.rpartition("@")[2])
+    haystack = _haystack(from_name, subject, text)
     words = _company_words(c.company)
     if words and all(f" {w} " in haystack for w in words):
         score += 6
     elif words and any(f" {w} " in haystack for w in words if len(w) > 4):
         score += 2
-    title_words = [w for w in _norm(c.title).split() if len(w) > 3]
-    if title_words:
-        hits = sum(1 for w in title_words if f" {w} " in haystack)
-        score += round(4 * hits / len(title_words))
+    score += _title_score(c, haystack)
     if c.status in (ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW):
         score += 1
     return score
 
 
 def best_match(candidacies: list[Candidacy], msg: Incoming) -> tuple[Candidacy | None, bool]:
-    """(candidature, sûr ?) — sûr quand le meilleur score est net et sans ex æquo."""
+    """
+    (candidature, sûr ?). Seul un rattachement sûr change un statut tout seul.
+
+    Sûr, c'est :
+      - l'expéditeur est l'adresse même à laquelle la candidature est partie,
+        et une seule candidature est partie là ;
+      - ou il écrit depuis le domaine de l'entreprise (ni messagerie grand
+        public, ni ATS) et c'est la seule candidature chez elle — s'il y en a
+        plusieurs, l'intitulé du poste doit les départager nettement.
+
+    Le reste (nom de l'entreprise dans le texte, message d'un ATS…) n'est
+    qu'une suggestion : le candidat confirme.
+    """
     if not candidacies:
         return None, False
+    sender = msg.from_email
+    sender_domain = sender.rpartition("@")[2]
+    haystack = _haystack(msg.from_name or "", msg.subject, msg.text)
+
+    exact = [c for c in candidacies if c.contact and c.contact.strip().lower() == sender]
+    pool = exact or [c for c in candidacies if _domain_score(c, sender_domain) >= 8]
+    if len(pool) == 1:
+        return pool[0], True
+    if len(pool) > 1:
+        ranked = sorted(pool, key=lambda c: _title_score(c, haystack), reverse=True)
+        first, second = _title_score(ranked[0], haystack), _title_score(ranked[1], haystack)
+        return ranked[0], first > 0 and first > second
+
     scored = sorted(
-        ((score_match(c, msg.from_email, msg.from_name or "", msg.subject, msg.text), c) for c in candidacies),
+        ((score_match(c, sender, msg.from_name or "", msg.subject, msg.text), c) for c in candidacies),
         key=lambda x: x[0], reverse=True,
     )
     top, best = scored[0]
-    runner = scored[1][0] if len(scored) > 1 else -1
-    if top < 5:
-        return None, False
-    return best, top >= 8 and top > runner
+    return (best, False) if top >= 5 else (None, False)
 
 
 # ── Lire le message ────────────────────────────────────────────────────────
@@ -380,6 +532,12 @@ class Reading(BaseModel):
     next_step: str | None = None
     #: Index de la candidature concernée dans la liste fournie, -1 si aucune.
     application_index: int = -1
+    #: Lu par les règles de repli (sans IA) : trop grossier pour toucher au suivi.
+    _by_rules: bool = PrivateAttr(default=False)
+
+    @property
+    def by_rules(self) -> bool:
+        return self._by_rules
 
 
 READ_PROMPT = """Tu lis, pour un candidat, un e-mail reçu en réponse à ses candidatures.
@@ -425,6 +583,7 @@ async def read_message(msg: Incoming, candidacies: list[Candidacy],
         reading = Reading.model_validate_json(await generate(prompt, schema=Reading))
         if reading.kind not in KINDS:
             reading.kind = classify_by_rules(msg.subject, msg.text)
+            reading._by_rules = True
         return reading
     except Exception as e:  # noqa: BLE001
         logger.warning("Lecture d'un e-mail reçu par le modèle impossible : %s", e)
@@ -433,8 +592,10 @@ async def read_message(msg: Incoming, candidacies: list[Candidacy],
         kind = classify_by_rules(msg.subject, msg.text)
         who = (display_company(likely.company) if likely else None) or msg.from_name or msg.from_email
         about = f" pour « {likely.title} »" if likely else f" : « {msg.subject[:120]} »"
-        return Reading(kind=kind, summary=f"{KIND_LABELS[kind].capitalize()} de {who}{about}.",
-                       next_step=_FALLBACK_STEP.get(kind))
+        reading = Reading(kind=kind, summary=f"{KIND_LABELS[kind].capitalize()} de {who}{about}.",
+                          next_step=_FALLBACK_STEP.get(kind))
+        reading._by_rules = True
+        return reading
 
 
 # ── Le suivi ───────────────────────────────────────────────────────────────
@@ -454,6 +615,18 @@ def next_status(current: ApplicationStatus, kind: str) -> ApplicationStatus | No
     if _RANK.get(current, 0) >= _RANK[target]:
         return None
     return target
+
+
+def auto_status(current: ApplicationStatus, reading: Reading, sure: bool) -> ApplicationStatus | None:
+    """
+    Le statut qu'Alice pose seule. Rien si le rattachement est incertain (un
+    refus pour un poste ne doit pas en clore un autre) ni si le message n'a
+    été lu que par les règles de repli (« malheureusement pas dispo jeudi »
+    n'est pas un refus).
+    """
+    if not sure or reading.by_rules:
+        return None
+    return next_status(current, reading.kind)
 
 
 # ── Désinscription par réponse ─────────────────────────────────────────────
@@ -488,7 +661,8 @@ async def _optout_company(session: AsyncSession, application: Application) -> No
 
 async def _candidacies(session: AsyncSession, candidate_id: UUID) -> list[Candidacy]:
     rows = (await session.execute(
-        select(Application.id, Company.name, Company.domain, JobPosting.title, Application.status)
+        select(Application.id, Company.name, Company.domain, JobPosting.title, Application.status,
+               JobPosting.contact_json)
         .join(JobPosting, Application.job_posting_id == JobPosting.id)
         .join(Company, JobPosting.company_id == Company.id)
         .where(Application.candidate_id == candidate_id)
@@ -499,7 +673,8 @@ async def _candidacies(session: AsyncSession, candidate_id: UUID) -> list[Candid
         .order_by(Application.applied_at.desc().nullslast())
         .limit(200)
     )).all()
-    return [Candidacy(r[0], r[1] or "", r[2] or "", r[3] or "", r[4]) for r in rows]
+    return [Candidacy(r[0], r[1] or "", r[2] or "", r[3] or "", r[4], str((r[5] or {}).get("email") or ""))
+            for r in rows]
 
 
 async def process_incoming(msg: Incoming) -> InboundEmail | None:
@@ -529,13 +704,33 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
 
         candidacies = await _candidacies(session, candidate.id)
         match, sure = best_match(candidacies, msg)
-        reading = await read_message(msg, candidacies, match)
-        if not sure and 0 <= reading.application_index < len(candidacies):
-            match = candidacies[reading.application_index]
+        # Pour une lecture sans IA, ne nommer l'entreprise que si on en est sûr.
+        reading = await read_message(msg, candidacies, match if sure else None)
+        linked = match if sure else None
+        suggested = None
+        if not sure:
+            # La lecture d'Alice départage mieux que les mots-clés, mais reste une suggestion.
+            if 0 <= reading.application_index < len(candidacies):
+                suggested = candidacies[reading.application_index]
+            else:
+                suggested = match
+        to_link = not sure and bool(candidacies)
+
+        meta: dict = {"read_by": "rules" if reading.by_rules else "ai"}
+        if msg.attachments:
+            meta["attachments"] = [p.filename for p in msg.kept]
+        if msg.skipped:
+            meta["skipped_attachments"] = [{"filename": p.filename, "size": p.size} for p in msg.skipped]
+        if to_link:
+            meta["to_link"] = True
+            if suggested:
+                meta["suggested_application_id"] = str(suggested.application_id)
+        elif linked:
+            meta["linked_by"] = "auto"
 
         record = InboundEmail(
             candidate_id=candidate.id,
-            application_id=match.application_id if match else None,
+            application_id=linked.application_id if linked else None,
             provider_id=msg.provider_id,
             from_email=msg.from_email[:320] or "inconnu",
             from_name=(msg.from_name or "")[:300] or None,
@@ -546,15 +741,18 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
             kind=reading.kind,
             summary=reading.summary[:1000],
             next_step=(reading.next_step or "")[:1000] or None,
-            meta={"attachments": msg.attachments[:20]} if msg.attachments else None,
+            meta=meta,
         )
         session.add(record)
         await session.flush()
+        for p in msg.kept:
+            session.add(InboundAttachment(inbound_email_id=record.id, filename=p.filename[:300],
+                                          mime=p.mime[:150], size=len(p.content or b""), content=p.content))
 
-        company = display_company(match.company) if match else None
-        if match:
-            application = await session.get(Application, match.application_id)
-            target = next_status(application.status, reading.kind) if application else None
+        company = display_company(linked.company) if linked else None
+        if linked:
+            application = await session.get(Application, linked.application_id)
+            target = auto_status(application.status, reading, sure) if application else None
             if target:
                 record_status(application, target, f"réponse reçue : {KIND_LABELS[reading.kind]}")
             # « STOP » en réponse à une candidature spontanée : l'entreprise
@@ -565,7 +763,7 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
             session, candidate.id, MissionEventKind.REPLY,
             reading.summary or f"Réponse reçue de {msg.from_name or msg.from_email}.",
             {"inbound_id": str(record.id), "kind": reading.kind,
-             "job_title": match.title if match else None, "company": company},
+             "job_title": linked.title if linked else None, "company": company},
         )
         try:
             await session.commit()
@@ -576,7 +774,9 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
         recipient = candidate.email
         candidate_name = candidate.full_name
 
-    record.forwarded = await forward(record, recipient, candidate_name, company, match.title if match else None)
+    record.forwarded = await forward(record, recipient, candidate_name, company,
+                                     linked.title if linked else None,
+                                     pieces=msg.attachments, to_link=to_link)
     async with async_session() as session:
         stored = await session.get(InboundEmail, record.id)
         if stored:
@@ -585,41 +785,72 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
     return record
 
 
+def _size(n: int) -> str:
+    return f"{n / 1024 / 1024:.1f} Mo".replace(".", ",") if n >= 1024 * 1024 else f"{max(1, n // 1024)} Ko"
+
+
 async def forward(record: InboundEmail, recipient: str | None, name: str | None,
-                  company: str | None, job_title: str | None) -> bool:
+                  company: str | None, job_title: str | None,
+                  pieces: list[Piece] | None = None, to_link: bool = False) -> bool:
     """Transfère au candidat, avec la lecture d'Alice en tête. Répondre écrit au recruteur."""
     from app.agents.notifications import link
-    from app.agents.notifications.mailer import Mail, send_mail
+    from app.agents.notifications.mailer import Attachment, Mail, send_mail
     from app.agents.notifications.templates import Email, render_html, render_text
 
     if not recipient or recipient.endswith("@" + (settings.inbound_domain or "-")):
         return False
+    pieces = pieces or []
+    kept = [p for p in pieces if p.content is not None]
+    skipped = [p for p in pieces if p.content is None]
     who = company or record.from_name or record.from_email
     label = KIND_LABELS.get(record.kind, "message")
     about = f" pour « {job_title} »" if job_title else ""
-    email = Email(
-        subject=f"{who} t'a répondu : {label}",
-        preheader=record.summary[:140],
-        heading=f"{who} t'a répondu{about}.",
-        paragraphs=[p for p in [
-            record.summary,
-            f"À faire : {record.next_step}" if record.next_step else "",
-            "Réponds directement à cet e-mail : ta réponse partira au recruteur.",
-            f"— Message de {record.from_name or ''} <{record.from_email}> —".replace("  ", " "),
-            f"Objet : {record.subject}",
-            *[p for p in re.split(r"\n{2,}", record.text[:8000]) if p.strip()],
-        ] if p],
-        cta_label="Voir dans Alice",
-        cta_url=link("messages"),
-        footer="Alice lit les réponses arrivées sur ton adresse de candidature et te les transfère.",
-    )
-    result = await send_mail(Mail(
-        to=recipient,
-        subject=email.subject,
-        text=render_text(email),
-        html=render_html(email),
-        reply_to=record.from_email,
-    ))
+
+    def build(with_files: bool) -> Mail:
+        notes = []
+        if kept:
+            where = "jointes à cet e-mail et dans Alice" if with_files else "à télécharger dans Alice"
+            notes.append(f"Pièces jointes ({where}) : "
+                         + ", ".join(f"{p.filename} ({_size(len(p.content or b''))})" for p in kept) + ".")
+        if skipped:
+            notes.append("Trop lourdes pour être gardées, demande-les au recruteur : "
+                         + ", ".join(f"{p.filename}" + (f" ({_size(p.size)})" if p.size else "") for p in skipped)
+                         + ".")
+        email = Email(
+            subject=f"{who} t'a répondu : {label}",
+            preheader=record.summary[:140],
+            heading=f"{who} t'a répondu{about}.",
+            paragraphs=[p for p in [
+                record.summary,
+                f"À faire : {record.next_step}" if record.next_step else "",
+                ("Je ne sais pas à quelle candidature ce message répond : dis-le-moi dans Alice, "
+                 "je mettrai ton suivi à jour.") if to_link else "",
+                *notes,
+                "Réponds directement à cet e-mail : ta réponse partira au recruteur.",
+                f"— Message de {record.from_name or ''} <{record.from_email}> —".replace("  ", " "),
+                f"Objet : {record.subject}",
+                *[p for p in re.split(r"\n{2,}", record.text[:8000]) if p.strip()],
+            ] if p],
+            cta_label="Voir dans Alice",
+            cta_url=link("messages"),
+            footer="Alice lit les réponses arrivées sur ton adresse de candidature et te les transfère.",
+        )
+        return Mail(
+            to=recipient,
+            subject=email.subject,
+            text=render_text(email),
+            html=render_html(email),
+            reply_to=record.from_email,
+            attachments=[Attachment(p.filename, p.content, p.mime) for p in kept] if with_files else [],
+        )
+
+    result = await send_mail(build(with_files=bool(kept)))
+    if kept and not result.get("ok"):
+        # Pièce refusée par le service d'envoi (type, taille) : le message
+        # part sans elle, elle reste téléchargeable dans Alice.
+        logger.warning("Transfert de %s avec pièces jointes refusé (%s) : nouvel essai sans.",
+                       record.id, result.get("error"))
+        result = await send_mail(build(with_files=False))
     if not result.get("ok") or not result.get("real"):
         logger.warning("Transfert de la réponse %s à %s impossible : %s", record.id, name, result.get("error"))
         if not result.get("ok"):  # un vrai échec, pas l'absence de service d'envoi
@@ -631,3 +862,28 @@ async def forward(record: InboundEmail, recipient: str | None, name: str | None,
             )
         return False
     return True
+
+
+# ── Le candidat rattache lui-même ──────────────────────────────────────────
+
+
+async def link_reply(session: AsyncSession, record: InboundEmail,
+                     application: Application | None) -> ApplicationStatus | None:
+    """
+    Le candidat dit à quelle candidature répond le message (ou à aucune).
+    Le statut suit alors la lecture d'Alice — sauf lecture sans IA : il le
+    corrige lui-même dans Candidatures. Renvoie le nouveau statut, s'il change.
+    """
+    from app.agents.application.followup import record_status
+
+    meta = dict(record.meta or {})
+    meta.pop("to_link", None)
+    meta["linked_by"] = "user"
+    record.meta = meta
+    record.application_id = application.id if application else None
+    if not application or meta.get("read_by") == "rules":
+        return None
+    target = next_status(application.status, record.kind)
+    if target:
+        record_status(application, target, f"réponse reçue : {KIND_LABELS.get(record.kind, 'message')}")
+    return target

@@ -264,7 +264,7 @@ export function AliceView({
   const [workingLabel, setWorkingLabel] = useState("Je m'en occupe…");
   const {
     messages, isThinking, emotion, hasConversation, submitQuery, candidateId,
-    openCanvas, sayAsAlice,
+    openCanvas, sayAsAlice, newConversation,
   } = useAlice();
 
   // Mission bornée en cours, s'il y en a une.
@@ -287,6 +287,13 @@ export function AliceView({
     if (!candidateId) return;
     fetchPipeline(candidateId).then(setPipeline);
   }, [candidateId, run?.status]);
+
+  // « Dashboard » cliqué alors qu'on y est déjà : retour à l'accueil, sans
+  // avoir à chercher « Nouvelle conversation ».
+  useEffect(() => {
+    window.addEventListener("untaf:alice-home", newConversation);
+    return () => window.removeEventListener("untaf:alice-home", newConversation);
+  }, [newConversation]);
 
   // Alice peut ouvrir elle-même l'assistant de mission depuis la conversation.
   useEffect(() => {
@@ -408,17 +415,6 @@ export function AliceView({
                 </motion.div>
               ))}
             </AnimatePresence>
-            {/* La mission se raconte ici, dans le fil, au fil de l'eau */}
-            {showRunCard && candidateId && run && (
-              <MissionStream
-                key={run.id}
-                candidateId={candidateId}
-                run={run}
-                onChange={handleRunChange}
-                onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
-                onDismiss={() => setFinishedRunId(null)}
-              />
-            )}
             {isThinking && (
               <div className="flex items-center gap-1 text-[#1A1918]/55 text-sm font-light py-2">
                 <span className="animate-pulse">{workingLabel}</span>
@@ -428,8 +424,22 @@ export function AliceView({
         </div>
       </div>
 
-      {/* ═══ Bloc fixe en bas : suggestions discrètes + input ═══ */}
+      {/* ═══ Bloc fixe en bas : mission en cours, suggestions discrètes + input ═══ */}
       <div className="w-full shrink-0 pt-3 pb-2 bg-[#FAFAF8]/90 backdrop-blur-sm">
+        {/* La mission reste épinglée au-dessus de la saisie, quelle que soit la
+            conversation ouverte : on ne change pas de fil pour la retrouver. */}
+        {showRunCard && candidateId && run && (
+          <div className="scroll-discreet max-h-[38vh] overflow-y-auto mb-3 rounded-2xl border border-[#1A1918]/8 bg-white px-4 py-3">
+            <MissionStream
+              key={run.id}
+              candidateId={candidateId}
+              run={run}
+              onChange={handleRunChange}
+              onOpenCandidatures={onSelectTab ? () => onSelectTab("candidatures") : undefined}
+              onDismiss={() => setFinishedRunId(null)}
+            />
+          </div>
+        )}
         {!hasConversation && (
           <div className="flex flex-wrap justify-center gap-1.5 pb-2.5">
             {SUGGESTIONS.map((m) => (

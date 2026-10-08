@@ -46,6 +46,13 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
     // Session révoquée ou expirée sans rafraîchissement possible.
     window.dispatchEvent(new CustomEvent("untaf:unauthorized"));
   }
+  if (res.status === 402 && typeof window !== "undefined") {
+    // Limite de la formule : la fenêtre d'abonnement s'ouvre, où que ce soit.
+    res.clone().json().then(
+      (body) => window.dispatchEvent(new CustomEvent("untaf:plan-limit", { detail: body?.detail })),
+      () => window.dispatchEvent(new CustomEvent("untaf:plan-limit")),
+    );
+  }
   return res;
 }
 

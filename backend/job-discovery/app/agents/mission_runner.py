@@ -18,6 +18,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.agents.company_name import chez, display_company
+from app.billing import LimitReached
 from app.config import settings
 from app.database import async_session
 from app.models.job_posting import JobPosting, PostingStatus
@@ -189,22 +190,36 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         if spontaneous:
             if not await _heartbeat(run_id, RunStep.MATCH):
                 return
+            from app import billing
             from app.agents.spontaneous import prepare_spontaneous
+            async with async_session() as session:
+                limits, paid = await billing.limits_for(session, candidate_id)
+                done = await billing.used(session, candidate_id, "spontaneous")
+            allowed = min(spontaneous, max(0, limits.spontaneous_per_week - done))
             try:
-                extra = await prepare_spontaneous(candidate_id, spontaneous)
+                extra = await prepare_spontaneous(candidate_id, allowed) if allowed else []
             except Exception as e:  # noqa: BLE001 — les offres continuent
                 logger.warning("Candidatures spontanées impossibles : %s", e)
                 extra = []
-            await _say(
-                run_id, candidate_id, MissionEventKind.SHORTLIST,
-                (f"J'ai trouvé {len(extra)} entreprise{'s' if len(extra) > 1 else ''} qui publie"
-                 f"{'nt' if len(extra) > 1 else ''} une adresse de recrutement : "
-                 + ", ".join(display_company(c) or c for _, _, c in extra) + "."
-                 if extra else
-                 "Je n'ai pas trouvé d'entreprise de ton métier publiant une adresse de "
-                 "recrutement près de chez toi cette fois-ci."),
-                {"spontaneous": len(extra)},
-            )
+            if extra:
+                async with async_session() as session:
+                    await billing.record(session, candidate_id, "spontaneous", len(extra))
+                    await session.commit()
+            if not allowed:
+                limit = billing.LimitReached("spontaneous", done, limits.spontaneous_per_week, paid)
+                await _say(run_id, candidate_id, MissionEventKind.ERROR, str(limit),
+                           {"plan_limit": limit.detail()})
+            else:
+                await _say(
+                    run_id, candidate_id, MissionEventKind.SHORTLIST,
+                    (f"J'ai trouvé {len(extra)} entreprise{'s' if len(extra) > 1 else ''} qui publie"
+                     f"{'nt' if len(extra) > 1 else ''} une adresse de recrutement : "
+                     + ", ".join(display_company(c) or c for _, _, c in extra) + "."
+                     if extra else
+                     "Je n'ai pas trouvé d'entreprise de ton métier publiant une adresse de "
+                     "recrutement près de chez toi cette fois-ci."),
+                    {"spontaneous": len(extra)},
+                )
             targets = list(targets) + list(extra)
 
         await _say(
@@ -229,6 +244,12 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
             if not is_pack_ready(app):
                 try:
                     pack = await build_pack(candidate_id, app.id)
+                except LimitReached as e:
+                    # Plus de dossiers dans la formule : on s'arrête là et on
+                    # le dit, les dossiers déjà prêts continuent leur chemin.
+                    await _say(run_id, candidate_id, MissionEventKind.ERROR, str(e),
+                               {"plan_limit": e.detail()})
+                    break
                 except Exception as e:  # noqa: BLE001
                     logger.error("Pack impossible pour %s : %s", app.id, e)
                     pack = None

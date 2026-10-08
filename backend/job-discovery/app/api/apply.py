@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.application.outcome import build_outcome
 from app.agents.application.pack import is_pack_ready
 from app.agents.application.requirements import detect_requirements
+from app.billing import LimitReached
 from app.database import async_session, get_db
 from app.models.application import Application
 from app.models.candidate import Candidate
@@ -498,7 +499,11 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
                     "label": "J'adapte ton CV et je rédige ta lettre pour cette offre",
                     "status": "running",
                 })
-                pack = await build_pack(candidate_id, app_id)
+                try:
+                    pack = await build_pack(candidate_id, app_id)
+                except LimitReached as e:
+                    yield _sse("error", {"message": str(e), "plan_limit": e.detail()})
+                    return
                 if pack:
                     letter = pack.letter.model_dump()
                     async with async_session() as session:

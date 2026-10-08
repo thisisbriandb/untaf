@@ -499,6 +499,38 @@ automatique est impossible (portails, formulaires à questions), et chaque offre
 ajoutée enrichit la liste. Côté API : `GET/POST /api/candidates/{id}/extension/…`
 (`match`, `profile`, `answers`). Installation et détails : `extension/README.md`.
 
+## Abonnement (Lemon Squeezy)
+
+Deux formules. **Gratuite** : 3 dossiers adaptés et 1 mission par semaine,
+30 messages à Alice par jour, pas de candidatures spontanées. **Alice — semaine**
+(abonnement hebdomadaire sans engagement) : 40 dossiers et 14 missions par
+semaine, 15 spontanées, 200 messages par jour. Ces plafonds protègent le
+service contre les abus ; tout se règle par variables d'environnement.
+
+Ce qui coûte est compté dans `usage_events` (fenêtres glissantes : 7 jours,
+24 h pour les messages). Une limite atteinte renvoie un **402** avec
+`{"detail": {"code": "plan_limit", …}}` ; le frontend ouvre alors la fenêtre
+d'abonnement, où qu'on soit. En mission, Alice s'arrête proprement et le dit.
+
+Mise en place :
+
+1. Lemon Squeezy → Products : produit « Alice — semaine », prix en
+   abonnement, intervalle **semaine**. Noter l'ID de la **variante**.
+2. Settings → API : clé → `LEMONSQUEEZY_API_KEY` ; Settings → Stores : ID →
+   `LEMONSQUEEZY_STORE_ID` ; variante → `LEMONSQUEEZY_VARIANT_ID`.
+3. Settings → Webhooks : URL `https://<api>/api/billing/lemonsqueezy`,
+   événements `subscription_created`, `subscription_updated`,
+   `subscription_cancelled`, `subscription_resumed`, `subscription_expired`,
+   `subscription_paused`, `subscription_unpaused` ; secret de signature →
+   `LEMONSQUEEZY_WEBHOOK_SECRET`.
+4. Tester en mode test (carte 4242 4242 4242 4242), puis passer la boutique en
+   production.
+
+Tant que ces variables sont vides, la facturation est éteinte : rien n'est
+limité. Le paiement, la carte, les factures et la résiliation se font chez
+Lemon Squeezy (lien d'espace client depuis Paramètres) ; Lemon Squeezy est
+revendeur officiel et gère la TVA.
+
 ## État actuel
 
 **Fonctionne** : onboarding, collecte multi-sources, matching explicable,

@@ -65,6 +65,9 @@ async def ensure_cv_content(candidate_id: UUID) -> list[str]:
     except Exception as e:  # noqa: BLE001 — le CV reste utilisable tel quel
         logger.warning("Relecture du CV déposé impossible : %s", e)
         return missing
+    if not parsed.text_detected:
+        # CV scanné : rien à reprendre.
+        return missing
 
     async with async_session() as session:
         candidate = await session.get(Candidate, candidate_id)

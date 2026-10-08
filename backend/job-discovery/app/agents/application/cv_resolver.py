@@ -12,6 +12,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from app.agents.application.identity import real_name
 from app.models.candidate import Candidate
 
 logger = logging.getLogger(__name__)
@@ -242,7 +243,8 @@ def resolve_cv(
 
     color = design.get("color_hex") or "#234C6A"
     data = {
-        "name": candidate.full_name or "Candidat",
+        # Jamais « Candidat » en tête du CV : sans nom, la ligne reste vide.
+        "name": real_name(candidate) or "",
         "headline": headline or "",
         "email": candidate.email or "",
         "phone": candidate.phone or "",
