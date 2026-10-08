@@ -3,3 +3,5 @@ report-*.json
 result-*.png
 cv-test.pdf
 .env
+probe-*.json
+probe-*.png

@@ -27,6 +27,29 @@ c'est lui qui dira si ça vaut une intégration.
 
 Autre modèle : `MODEL_API_BASE` et `MODEL` (API au format « Responses »).
 
+## La sonde : rejouable, navigateur ou extension ? (sans IA)
+
+```bash
+node probe.mjs <url> [<url> …]          # ou : node probe.mjs --file liens.txt
+```
+
+Pour chaque lien « Postuler » : elle rend la page, lit les champs (noms, types,
+obligatoires, champs cachés, part déjà présente dans le HTML brut), remplit
+avec le candidat fictif, clique sur « Envoyer » et **coupe la requête** — rien
+ne part, mais elle note ce qui serait parti (adresse, format JSON / multipart /
+urlencoded, noms des champs, en-têtes comme `next-action` ou un jeton CSRF).
+Verdict :
+
+- **rejouable** : la requête d'envoi est connue et sans captcha → Alice peut
+  l'envoyer sans navigateur ;
+- **navigateur** : formulaire présent mais pas de requête observée (champs
+  obligatoires non reconnus, envoi en plusieurs étapes) ;
+- **extension** : captcha ou connexion demandée → seulement dans le navigateur
+  du candidat, avec son clic ;
+- **introuvable** : pas de formulaire sur la page.
+
+Rapport : `probe-<date>.json` et une capture par site.
+
 ## À savoir
 
 - Le format exact de l'outil `computer` de Meta n'a pas pu être vérifié depuis
