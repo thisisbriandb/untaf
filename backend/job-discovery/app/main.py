@@ -5,7 +5,8 @@ FastAPI application — job-discovery API server.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -27,6 +28,8 @@ from app.api.auth_routes import router as auth_router
 from app.api.extension import router as extension_router
 from app.api.inbox import router as inbox_router
 from app.api.optout import router as optout_router
+from app.api.billing import router as billing_router
+from app.billing import LimitReached
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -133,6 +136,13 @@ app.add_middleware(
     expose_headers=["Content-Disposition", "Content-Length", "Content-Type"],
 )
 
+# Limite de la formule atteinte, où qu'elle soit levée : 402 et de quoi
+# proposer l'abonnement, plutôt qu'une erreur 500.
+@app.exception_handler(LimitReached)
+async def _plan_limit(_: Request, exc: LimitReached):
+    return JSONResponse(status_code=402, content={"detail": exc.detail()})
+
+
 # Register API routers
 app.include_router(companies_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
@@ -149,6 +159,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(extension_router, prefix="/api")
 app.include_router(inbox_router, prefix="/api")
 app.include_router(optout_router, prefix="/api")
+app.include_router(billing_router, prefix="/api")
 
 
 @app.get("/health")

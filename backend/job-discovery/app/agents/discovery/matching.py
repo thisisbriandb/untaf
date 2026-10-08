@@ -31,6 +31,7 @@ from app.agents.discovery.signals import (
     detect_seniority,
     seniority_distance,
     seniority_from_experience,
+    seniority_gap,
 )
 from app.agents.discovery.skills import canonical_set, skill_coverage
 from app.models.candidate import Candidate
@@ -166,7 +167,24 @@ def evaluate_match(
         job_contract = titled
     years_required = parsed.get("experience_years_required")
     job_seniority = detect_seniority(title, years_required)
-    candidate_seniority = seniority_from_experience(candidate.experience_years)
+    wanted_contracts = [normalize_contract(c) for c in (criteria.contract_types or [])]
+
+    # Qui vise une alternance ou un stage, ou change de métier, repart du
+    # début : ses années passées ne font pas de lui un « lead » dans le
+    # nouveau métier.
+    past_family = detect_job_family(candidate.headline, list(candidate.skills or []))
+    in_training = any(c in ("alternance", "stage") for c in wanted_contracts)
+    reconversion = bool(
+        criteria.job_families and not criteria.job_families_inferred
+        and past_family != "unknown" and past_family not in criteria.job_families
+    )
+    if in_training:
+        candidate_seniority = "intern"
+    elif reconversion:
+        candidate_seniority = "junior"
+    else:
+        candidate_seniority = seniority_from_experience(candidate.experience_years)
+    fresh_start = in_training or reconversion
     is_remote = job_remote == "remote"
 
     signals: dict[str, Any] = {
@@ -178,6 +196,8 @@ def evaluate_match(
         "job_seniority": job_seniority,
         "candidate_seniority": candidate_seniority,
         "experience_years_required": years_required,
+        "reconversion": reconversion,
+        "in_training": in_training,
     }
 
     # ── 1. Filtres durs ────────────────────────────────────
@@ -195,11 +215,12 @@ def evaluate_match(
         rejections.append("annonce générique (candidature spontanée, vivier) : pas un poste")
 
     family_known = job_family != "unknown"
-    if criteria.job_families and family_known:
+    # Seule une famille choisie écarte une offre ; déduite de l'ancien poste,
+    # elle ne fait que noter (dimension « family » plus bas).
+    if criteria.job_families and family_known and not criteria.job_families_inferred:
         if job_family not in criteria.job_families:
             rejections.append(f"métier '{job_family}' hors du mandat")
 
-    wanted_contracts = [normalize_contract(c) for c in (criteria.contract_types or [])]
     contract_known = job_contract not in ("unknown", "other", "")
     if wanted_contracts and contract_known and job_contract not in wanted_contracts:
         rejections.append(f"contrat '{job_contract}' hors du mandat")
@@ -233,9 +254,12 @@ def evaluate_match(
                 f"(écart {gap:.0f} > {criteria.max_experience_gap:.0f})"
             )
 
-    if seniority_distance(job_seniority, candidate_seniority) > criteria.max_seniority_gap:
+    # Seul un poste trop senior est écarté. Un poste plus junior que le profil
+    # est pénalisé dans le score (dimension « seniority »), jamais rejeté :
+    # c'est souvent exactement ce que vise une reconversion.
+    if not fresh_start and seniority_gap(job_seniority, candidate_seniority) > criteria.max_seniority_gap:
         rejections.append(
-            f"séniorité '{job_seniority}' trop éloignée de '{candidate_seniority}'"
+            f"poste '{job_seniority}' trop senior pour un profil '{candidate_seniority}'"
         )
 
     if criteria.strict_location and criteria.locations and not is_remote:

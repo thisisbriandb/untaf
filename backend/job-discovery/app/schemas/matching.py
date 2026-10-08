@@ -5,6 +5,8 @@ Split in two on purpose:
   - hard filters : a posting that fails one is *discarded*, not penalised.
     Language, country and job family belong here — a French developer has no
     use for a German-language sales role, however many other boxes it ticks.
+    Une famille de métier seulement déduite de l'ancien poste n'en fait pas
+    partie : elle est notée, pas imposée (reconversion).
   - soft weights : award points on positive evidence only.
 
 `MatchingCriteria.derive` builds a sane mandate from an existing profile so
@@ -49,6 +51,11 @@ class MatchingCriteria(BaseModel):
         description="Familles de métier acceptées (software, data, sales…). "
                     "Vide = aucune contrainte.",
     )
+    job_families_inferred: bool = Field(
+        default=False,
+        description="Vrai quand la famille est déduite de l'ancien poste et non "
+                    "choisie : elle compte dans le score, sans écarter d'offre.",
+    )
     contract_types: list[str] = Field(
         default_factory=list,
         description="Types de contrat acceptés. Vide = aucune contrainte.",
@@ -69,7 +76,9 @@ class MatchingCriteria(BaseModel):
                     "du candidat, en années.",
     )
     max_seniority_gap: int = Field(
-        default=2, description="Écart maximum de séniorité (0 = strict)."
+        default=2,
+        description="Écart maximum de séniorité vers le haut (poste plus senior "
+                    "que le profil). Un poste plus junior est pénalisé, jamais écarté.",
     )
 
     # ── Réglages ──────────────────────────────────────────
@@ -110,6 +119,7 @@ class MatchingCriteria(BaseModel):
         return cls(
             countries=countries,
             job_families=[family] if family != "unknown" else [],
+            job_families_inferred=family != "unknown",
             contract_types=list(candidate.preferred_contract_types or []),
             remote_policies=list(candidate.preferred_remote_policies or []),
             locations=list(candidate.preferred_locations or []),
@@ -136,6 +146,11 @@ class MatchingCriteria(BaseModel):
         try:
             merged = derived.model_dump()
             merged.update({k: v for k, v in stored.items() if v is not None})
+            # Une famille choisie filtre ; une famille déduite ne fait que noter.
+            if stored.get("job_families") is None:
+                merged["job_families_inferred"] = derived.job_families_inferred
+            else:
+                merged["job_families_inferred"] = bool(stored.get("job_families_inferred"))
             return cls.model_validate(merged)
         except Exception:  # noqa: BLE001 — a corrupt mandate must not stop matching
             return derived

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "@/lib/config";
@@ -14,6 +14,7 @@ import { MessagesView } from "./components/MessagesView";
 import { ParametresView } from "./components/ParametresView";
 import { CanvasPanel } from "./components/CanvasPanel";
 import { ToastProvider } from "./components/Toaster";
+import { UpgradeDialog } from "./components/Subscription";
 import { ConversationSidebar } from "./components/ConversationSidebar";
 import { AliceProvider, useAlice } from "./alice-context";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
@@ -56,6 +57,7 @@ export default function DashboardPage() {
 
   // Navigation Tab State
   const [activeTab, setActiveTab] = useState<TabType>("alice");
+  const activeTabRef = useRef<TabType>("alice");
 
   // Data States
   const [candidateId, setCandidateId] = useState<string | null>(null);
@@ -73,7 +75,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") as TabType | null;
-    if (tab && TABS.includes(tab)) setActiveTab(tab);
+    if (tab && TABS.includes(tab)) {
+      activeTabRef.current = tab;
+      setActiveTab(tab);
+    }
 
     let alive = true;
     const here = window.location.pathname + window.location.search;
@@ -112,6 +117,11 @@ export default function DashboardPage() {
 
   /** L'onglet suit l'URL : un rechargement ou un lien partagé y ramène. */
   const selectTab = useCallback((tab: TabType) => {
+    // Déjà sur Alice : le clic ramène à l'accueil de la conversation.
+    if (tab === "alice" && activeTabRef.current === "alice") {
+      window.dispatchEvent(new CustomEvent("untaf:alice-home"));
+    }
+    activeTabRef.current = tab;
     setActiveTab(tab);
     const url = new URL(window.location.href);
     if (tab === "alice") url.searchParams.delete("tab");
@@ -242,6 +252,7 @@ export default function DashboardPage() {
 
           {/* ═══ Colonne canvas (CV / Lettre) ═══ */}
           <CanvasPanel candidateId={candidateId} />
+          <UpgradeDialog candidateId={candidateId} />
         </main>
         </div>
       </div>

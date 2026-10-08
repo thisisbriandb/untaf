@@ -51,7 +51,7 @@ FAMILY_LABELS = {
     "design": "Design", "marketing": "Marketing", "sales": "Commercial",
     "support": "Support", "hr": "Ressources humaines", "finance": "Finance et comptabilité",
     "legal": "Juridique", "ops": "Opérations et logistique", "engineering": "Ingénierie",
-    "health": "Santé",
+    "health": "Santé", "construction": "BTP", "education": "Enseignement et formation",
 }
 
 

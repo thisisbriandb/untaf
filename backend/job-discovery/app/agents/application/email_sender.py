@@ -13,9 +13,18 @@ quelqu'un.
 
 import logging
 
+from app.agents.application.identity import PLACEHOLDER_NAMES, real_name
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _signature(letter: dict | None, candidate) -> str:
+    """Le nom qui signe : jamais « Candidat » ni aucun nom de remplacement."""
+    signed = " ".join(((letter or {}).get("signature_name") or "").split())
+    if signed and signed.lower() not in PLACEHOLDER_NAMES:
+        return signed
+    return real_name(candidate) or ""
 
 
 def _plain_text(letter: dict | None, candidate, job_title: str, company: str) -> str:
@@ -26,7 +35,7 @@ def _plain_text(letter: dict | None, candidate, job_title: str, company: str) ->
             f"Je vous adresse ma candidature pour le poste de {job_title} "
             f"au sein de {company}.\n\n"
             f"Vous trouverez mon CV en pièce jointe.\n\n"
-            f"Cordialement,\n{candidate.full_name or ''}"
+            f"Cordialement,\n{_signature(None, candidate)}"
         )
 
     # Le corps est en Markdown : on retire le balisage plutôt que de l'envoyer
@@ -38,7 +47,7 @@ def _plain_text(letter: dict | None, candidate, job_title: str, company: str) ->
         letter.get("salutation") or "Madame, Monsieur,",
         body,
         letter.get("closing") or "",
-        letter.get("signature_name") or candidate.full_name or "",
+        _signature(letter, candidate),
     ]))
 
 
@@ -109,11 +118,13 @@ async def send_application_email(
     from app.agents.inbox import contact_of
     from app.agents.notifications.mailer import Attachment, Mail, send_mail
 
+    # Sans nom, le dispatcher retient l'envoi ; à défaut, « Alice » seule.
+    name = real_name(candidate)
     result = await send_mail(Mail(
         to=to_email,
         subject=subject,
         text=body,
-        sender=(f"{candidate.full_name or 'Candidat'} via Alice",
+        sender=(f"{name} via Alice" if name else "Alice",
                 (spontaneous and settings.spontaneous_from_email) or settings.application_sender),
         reply_to=contact_of(candidate) or None,
         attachments=[Attachment(cv_name, cv_bytes)] if cv_bytes else [],

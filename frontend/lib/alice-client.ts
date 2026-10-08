@@ -108,6 +108,15 @@ export async function sendMessageToAlice(
     }),
   });
 
+  if (res.status === 402) {
+    // Limite de la formule : la fenêtre d'abonnement s'ouvre (apiFetch), Alice le dit.
+    const body = await res.json().catch(() => null);
+    return {
+      reply: body?.detail?.message ?? "Tu as atteint la limite de ta formule pour aujourd'hui.",
+      ui_blocks: [],
+    };
+  }
+
   if (!res.ok) {
     const errorText = await res.text().catch(() => "Unknown error");
     console.error("Alice API error:", res.status, errorText);

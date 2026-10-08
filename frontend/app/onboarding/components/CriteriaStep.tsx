@@ -63,6 +63,11 @@ const FAMILIES = [
   { value: "hr", label: "RH" },
   { value: "finance", label: "Finance" },
   { value: "ops", label: "Ops / Logistique" },
+  { value: "health", label: "Santé" },
+  { value: "legal", label: "Juridique" },
+  { value: "engineering", label: "Ingénierie" },
+  { value: "construction", label: "BTP" },
+  { value: "education", label: "Enseignement" },
 ];
 
 export interface CriteriaDraft {
@@ -286,7 +291,7 @@ export function CriteriaStep({
         </div>
       </Field>
 
-      <Field label="Métier" hint="laisse vide, je le déduis de ton CV">
+      <Field label="Métier" hint="facultatif : sans choix, je pars de ton parcours sans m'y limiter">
         <div className="flex flex-wrap gap-2">
           {FAMILIES.map((f) => (
             <Chip

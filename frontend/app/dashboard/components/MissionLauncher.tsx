@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,12 @@ export function MissionLauncher({
   const [allowSend, setAllowSend] = useState(rememberedSend);
   const [isLaunching, setIsLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Limite de la formule : la fenêtre d'abonnement prend le relais.
+  useEffect(() => {
+    window.addEventListener("untaf:plan-limit", onClose);
+    return () => window.removeEventListener("untaf:plan-limit", onClose);
+  }, [onClose]);
 
   const launch = async () => {
     setIsLaunching(true);

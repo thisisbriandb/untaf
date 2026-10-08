@@ -20,6 +20,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.agents.application.identity import real_name
 from app.database import async_session
 from app.models.application import Application, ApplicationStatus
 from app.models.candidate import Candidate
@@ -45,7 +46,8 @@ def candidate_profile(candidate: Candidate) -> dict:
     """Le parcours du candidat, tel que les rédacteurs l'attendent."""
     cv = candidate.cv_content or {}
     return {
-        "full_name": candidate.full_name or "",
+        # « Candidat » n'est pas un nom : la lettre ne le signe pas.
+        "full_name": real_name(candidate) or "",
         "email": candidate.email or "",
         "phone": candidate.phone or "",
         "linkedin_url": candidate.linkedin_url or "",
@@ -68,10 +70,16 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
     """
     Rédige l'accroche, la synthèse et la lettre, puis les range sur la
     candidature. None si la candidature ou le candidat est introuvable.
+    Lève `billing.LimitReached` quand la formule n'en permet plus cette semaine.
     """
+    from app import billing
     from app.agents.application.cv_completeness import ensure_cv_content, order_skills_for_job
     from app.agents.discovery.cover_letter import write_cover_letter
     from app.agents.discovery.cv_writer import write_cv_content
+
+    # Avant tout appel au modèle : c'est la rédaction qui coûte.
+    async with async_session() as session:
+        await billing.check(session, candidate_id, "pack")
 
     # Le parcours complet d'abord : sans lui, le CV adapté sortait à moitié vide.
     missing = await ensure_cv_content(candidate_id)
@@ -154,6 +162,7 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
         # n'apparaissait nulle part dans Candidatures.
         if stored.status == ApplicationStatus.PENDING:
             stored.status = ApplicationStatus.MATCHED
+        await billing.record(session, candidate_id, "pack")
         await session.commit()
 
     return Pack(

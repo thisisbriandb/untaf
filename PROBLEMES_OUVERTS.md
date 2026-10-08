@@ -63,21 +63,6 @@ dans l'ordre :
 
 Inscription et profil.
 
-- 🔴 **CV scanné ou illisible** : Alice affiche des compétences inventées
-  (« React, TypeScript, Python, Docker ») et appelle la personne « Candidat ».
-  Le titre « Document PDF : scan.pdf (aucun texte détecté) » est enregistré
-  comme titre du profil. Le glisser-déposer accepte un .docx que le serveur
-  refuse ensuite. `AliceExperience.tsx` (≈ l. 199, 215-228, 591-600),
-  `resume_parser.py` l. 174-176, `cv_completeness.py` l. 81-82.
-- 🔴 **Sans CV, le nom n'est jamais demandé** : candidatures signées « Candidat
-  via Alice », bouton « Ajuster » absent si pas de titre. `AliceExperience.tsx`
-  (≈ l. 270-299, 678-692), `cv_resolver.py`, `email_sender.py`.
-- 🔴 **Reconversion / alternance** : à partir de 8 ans d'expérience, le profil
-  est « lead » et toutes les offres junior / alternance sont rejetées en dur.
-  `signals.py`, `matching.py` l. 236, `schemas/matching.py` l. 71-73.
-- 🔴 **Métier déduit de l'ancien poste et appliqué comme filtre dur** ; pastilles
-  sans Santé, Juridique, Ingénierie, BTP, Enseignement… `CriteriaStep.tsx`,
-  `matching.py` l. 198.
 - 🟠 **Les villes ne filtrent pas** : recherche France Travail nationale (aucun
   département transmis), villes = 12 points sur 100, au-delà de 3 villes
   ignorées chez La bonne alternance. `france_travail_task.py` l. 229-262,
@@ -110,13 +95,6 @@ Inscription et profil.
 
 Suivi, réponses, extension.
 
-- 🔴 **Rattachement incertain d'une réponse = statut modifié quand même** : un
-  refus pour le poste A peut clore le poste B ; impossible de corriger un
-  statut « Refusée » / « Offre ». `inbox.py` (`best_match`, `process_incoming`),
-  `CandidaturesView.tsx`.
-- 🔴 **Pièces jointes des recruteurs perdues** (offre en PDF, test technique) :
-  ni stockées, ni transférées, ni téléchargeables. `inbox.py`, `api/inbox.py`,
-  `MessagesView.tsx`.
 - 🟠 **Réponse via un ATS : on répond au no-reply** (le Reply-To d'origine n'est
   pas lu). `inbox.py`, `inbox-client.ts`.
 - 🟠 **Après le premier échange, le fil sort d'Alice** : mettre l'adresse de
@@ -139,8 +117,6 @@ Suivi, réponses, extension.
 - 🟡 Corps de l'e-mail introuvable chez Resend : message vide pour toujours
   (ne pas enregistrer, laisser Resend réessayer).
 - 🟡 Un même e-mail adressé à deux candidats n'est livré qu'au premier.
-- 🟡 Sans IA, le classement de repli est trop large (« malheureusement je ne
-  suis pas dispo jeudi » = refus) : ne changer aucun statut sans IA.
 - 🟡 Une erreur de chargement de la boîte s'affiche comme « réception pas encore
   active ».
 - 🟡 Alice sous-compte les candidatures envoyées (APPLIED seulement) et ne sait
@@ -172,7 +148,14 @@ Suivi, réponses, extension.
 ## 5. Configuration et mise en production (de ton côté)
 
 - 🔴 **Fusionner et redéployer** la branche `claude/eloquent-franklin-ls77hs`
-  (migrations Alembic jusqu'à `e1b7c3d9f4a2`).
+  (migrations Alembic jusqu'à `a3d7e9f1c2b5`).
+- 🟠 **Abonnement Lemon Squeezy** : produit hebdomadaire, variables
+  `LEMONSQUEEZY_*`, webhook `/api/billing/lemonsqueezy` (voir README,
+  « Abonnement »), test en mode test avant la mise en production.
+- 🟡 Pas de limite de taille sur `/api/inbound/email` (pièces jointes jusqu'à
+  ~25 Mo) ; l'API Resend des pièces jointes reçues est supposée, non vérifiée.
+- 🟡 Les codes ROME BTP / Enseignement ajoutés (`france_travail.py`) sont à
+  vérifier.
 - 🔴 `FRONTEND_URL` sur Railway (sinon les liens des e-mails mènent à localhost).
 - 🟠 **Envoi des e-mails** : Scaleway Transactional Email (domaine vérifié SPF /
   DKIM / DMARC, `SCALEWAY_TEM_SECRET_KEY`, `SCALEWAY_PROJECT_ID`). Railway

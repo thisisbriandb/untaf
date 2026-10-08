@@ -53,6 +53,8 @@ ROME_BY_FAMILY: dict[str, list[str]] = {
     "hr": ["M1502", "M1501"],
     "finance": ["M1203", "M1201"],
     "ops": ["N1303", "M1607"],
+    "construction": ["F1201", "F1106", "F1703", "F1602"],
+    "education": ["K2107", "K2106", "K2111"],
 }
 
 #: Correspondance des types de contrat France Travail vers les nôtres.

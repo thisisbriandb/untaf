@@ -105,6 +105,11 @@ class ParsedCandidateProfile(BaseModel):
     preferred_locations: list[str] = Field(default_factory=list, description="Preferred locations mentioned or inferred")
     preferred_contract_types: list[str] = Field(default_factory=list, description="Contract types inferred (e.g. cdi, freelance)")
     extracted_text_preview: str | None = Field(default=None, description="Preview of raw extracted text")
+    text_detected: bool = Field(
+        default=True,
+        description="Faux quand le PDF ne contient aucun texte lisible (scan) : "
+                    "rien n'a pu être extrait, rien n'est deviné.",
+    )
 
     # ── Parcours ──────────────────────────────────────────
     # Absents jusqu'ici : la section Expériences de l'éditeur restait donc vide

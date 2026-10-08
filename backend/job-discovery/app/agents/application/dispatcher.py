@@ -385,6 +385,11 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
     )):
         return Hold(DispatchStatus.REJECTED, "candidature déjà envoyée : rien n'est reparti")
 
+    # Pas de candidature signée « Candidat » : sans nom, rien ne part.
+    from app.agents.application.identity import MISSING_NAME_REASON, real_name
+    if not real_name(await session.get(Candidate, dispatch.candidate_id)):
+        return Hold(DispatchStatus.AWAITING_APPROVAL, MISSING_NAME_REASON)
+
     if application:
         row = (await session.execute(
             select(JobPosting, Company.domain)

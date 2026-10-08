@@ -23,7 +23,8 @@ import Link from "next/link";
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface CandidateProfile {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   headline: string;
   email: string;
   phone: string;
@@ -36,6 +37,16 @@ interface CandidateProfile {
 }
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** « Camille Martin Durand » → prénom « Camille », nom « Martin Durand ». */
+function splitName(full: string | null | undefined): { first: string; last: string } {
+  const parts = (full || "").trim().split(/\s+/).filter(Boolean);
+  return { first: parts[0] ?? "", last: parts.slice(1).join(" ") };
+}
+
+/** Le serveur ne lit que le PDF : on le dit avant l'envoi, pas après. */
+const isPdf = (file: File) =>
+  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
 /** Une question appelle une réponse : elle s'affiche plus discrètement. */
 const isPrompt = (line: string) => line.trim().endsWith("?");
@@ -62,7 +73,8 @@ export function AliceExperience() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [profile, setProfile] = useState<CandidateProfile>({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     headline: "",
     email: "",
     phone: "",
@@ -86,6 +98,9 @@ export function AliceExperience() {
 
   const [detectedSkills, setDetectedSkills] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  /** Prénom ou nom inconnus à l'arrivée sur le profil : on les demande. */
+  const [askName, setAskName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -145,9 +160,11 @@ export function AliceExperience() {
 
   /** Remplissage du profil, partagé par l'import CV et l'import LinkedIn. */
   const applyParsedProfile = useCallback((parsed: any) => {
+    const name = splitName(parsed.full_name || parsed.name);
     setProfile((prev) => ({
       ...prev,
-      fullName: parsed.full_name || parsed.name || prev.fullName,
+      firstName: name.first || prev.firstName,
+      lastName: name.last || prev.lastName,
       headline: parsed.headline || parsed.title || prev.headline,
       email: parsed.email || prev.email,
       phone: parsed.phone || prev.phone,
@@ -178,6 +195,11 @@ export function AliceExperience() {
   }, [say, think]);
 
   const handleFileUpload = useCallback(async (file: File) => {
+    if (!isPdf(file)) {
+      await say("Je ne lis que les CV en PDF.", "thinking", 900);
+      await say("Enregistre-le en PDF, puis dépose-le ici.", "listening", 400);
+      return;
+    }
     setCvFile(file);
     setShowComponent(false);
     setPhase(3);
@@ -209,23 +231,40 @@ export function AliceExperience() {
       }
     }
 
+    if (!parsedData) {
+      // Lecture refusée ou échouée : ne rien montrer d'inventé.
+      setCvFile(null);
+      await say("Je n'ai pas réussi à lire ce fichier.", "thinking", 900);
+      await say("Essaie un autre PDF, ou continue sans CV.", "listening", 400);
+      setPhase(2);
+      return;
+    }
+
+    const name = splitName(parsedData.full_name || parsedData.name);
+    setAskName(!name.first || !name.last);
+
+    if (parsedData.text_detected === false) {
+      // CV scanné : aucun texte à lire. Le dire, et demander l'essentiel.
+      await say("Ton CV ressemble à un scan : je n'y trouve aucun texte à lire.", "thinking", 1300);
+      await say("Remplis l'essentiel ici, ou dépose un PDF avec du texte.", "listening", 500);
+      setIsEditingProfile(true);
+      setPhase(4);
+      return;
+    }
+
     await read("Je rassemble ce qui compte...", 650);
 
-    // Reveal detected skills
-    const skills = parsedData?.skills?.length > 0
-      ? parsedData.skills.slice(0, 8)
-      : ["React", "TypeScript", "Python", "Docker"];
-
+    // Seules les compétences réellement lues s'affichent.
+    const skills: string[] = (parsedData.skills || []).slice(0, 8);
     for (let i = 0; i < skills.length; i++) {
       await delay(200);
       setDetectedSkills((prev) => [...prev, skills[i]]);
     }
 
-    if (parsedData) applyParsedProfile(parsedData);
+    applyParsedProfile(parsedData);
 
     await delay(600);
-    const firstName = (parsedData?.full_name || parsedData?.name || "").split(" ")[0] || "Candidat";
-    await say(firstName + ", voici ton profil.", "happy", 400);
+    await say(name.first ? `${name.first}, voici ton profil.` : "Voici ton profil.", "happy", 400);
     setPhase(4);
   }, [read, say, applyParsedProfile]);
 
@@ -256,6 +295,8 @@ export function AliceExperience() {
     const isUsable = Boolean(parsedData?.headline || parsedData?.skills?.length);
 
     if (parsedData) applyParsedProfile(parsedData);
+    const name = splitName(parsedData?.full_name);
+    setAskName(!name.first || !name.last);
 
     if (isUsable) {
       const skills = (parsedData.skills || []).slice(0, 8);
@@ -282,6 +323,11 @@ export function AliceExperience() {
    * styles » promettait une étape qui n'existe pas à ce moment du parcours.
    */
   const handleProfileValidated = useCallback(async () => {
+    if (!profile.firstName.trim() || !profile.lastName.trim()) {
+      setNameError("Ton prénom et ton nom signent tes candidatures : j'en ai besoin.");
+      return;
+    }
+    setNameError(null);
     setShowComponent(false);
     await say("Ton CV est prêt.", "happy", 950);
     await say("Tu pourras le modifier avec moi à tout moment.", "listening", 1250);
@@ -289,11 +335,13 @@ export function AliceExperience() {
     setEmotion("listening");
     setShowComponent(true);
     setPhase(5);
-  }, [say, think]);
+  }, [profile.firstName, profile.lastName, say, think]);
 
   const handleBypassCv = useCallback(async () => {
     setShowComponent(false);
     await say("Pas de souci, on part de zéro.", "listening", 800);
+    await say("Comment tu t'appelles ?", "listening", 300);
+    setAskName(true);
     setShowComponent(true);
     setPhase(4);
   }, [say]);
@@ -307,6 +355,11 @@ export function AliceExperience() {
    */
   const handleActivateAlice = useCallback(async () => {
     const email = (profile.email || emailInput).trim();
+    const fullName = `${profile.firstName.trim()} ${profile.lastName.trim()}`.trim();
+    if (!profile.firstName.trim() || !profile.lastName.trim()) {
+      setActivationError("Il me manque ton prénom et ton nom : reviens à ton profil pour les ajouter.");
+      return;
+    }
     if (!email) {
       setActivationError("J'ai besoin de ton email pour te suivre.");
       return;
@@ -334,7 +387,7 @@ export function AliceExperience() {
     };
 
     const payload = {
-      full_name: profile.fullName || "Candidat",
+      full_name: fullName,
       email,
       phone: profile.phone || null,
       linkedin_url: linkedinUrl || null,
@@ -597,7 +650,7 @@ export function AliceExperience() {
                   >
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,application/pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
@@ -675,18 +728,53 @@ export function AliceExperience() {
                 <div className="space-y-6">
                   {!isEditingProfile ? (
                     <>
+                      {/* « Ajuster » reste accessible même sans titre ni nom lus. */}
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Ton profil</p>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingProfile(true)}
+                          className="text-xs text-[#006045] hover:underline font-medium cursor-pointer"
+                        >
+                          Ajuster
+                        </button>
+                      </div>
+
+                      {askName ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-[#1A1918]/50">
+                            Ton prénom et ton nom : ils signent tes candidatures.
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              autoComplete="given-name"
+                              placeholder="Prénom"
+                              aria-label="Prénom"
+                              value={profile.firstName}
+                              onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 focus:outline-none focus:border-[#006045]"
+                            />
+                            <input
+                              type="text"
+                              autoComplete="family-name"
+                              placeholder="Nom"
+                              aria-label="Nom"
+                              value={profile.lastName}
+                              onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 focus:outline-none focus:border-[#006045]"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-[#1A1918]">
+                          {profile.firstName} {profile.lastName}
+                        </p>
+                      )}
+
                       {profile.headline && (
                         <div className="space-y-1">
-                          <div className="flex justify-between items-center">
-                            <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Titre professionnel</p>
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingProfile(true)}
-                              className="text-xs text-[#006045] hover:underline font-medium cursor-pointer"
-                            >
-                              Ajuster
-                            </button>
-                          </div>
+                          <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Titre professionnel</p>
                           <p className="text-sm font-semibold text-[#1A1918]">{profile.headline}</p>
                         </div>
                       )}
@@ -711,6 +799,8 @@ export function AliceExperience() {
                         </div>
                       )}
 
+                      {nameError && <p className="text-center text-xs text-red-600/80">{nameError}</p>}
+
                       {/* Sortie unique : le style du CV se choisira plus tard,
                           avec Alice, dans le Canvas. */}
                       <div className="pt-4 border-t border-[#1A1918]/8">
@@ -727,6 +817,28 @@ export function AliceExperience() {
                   ) : (
                     /* Inline Editor */
                     <div className="space-y-4 text-left">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-medium text-[#1A1918]/50">Prénom</label>
+                          <input
+                            type="text"
+                            autoComplete="given-name"
+                            value={profile.firstName}
+                            onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+                            className="w-full mt-1 px-3 py-2 border border-[#EDECEA] rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[#1A1918]/50">Nom</label>
+                          <input
+                            type="text"
+                            autoComplete="family-name"
+                            value={profile.lastName}
+                            onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+                            className="w-full mt-1 px-3 py-2 border border-[#EDECEA] rounded-lg text-sm"
+                          />
+                        </div>
+                      </div>
                       <div>
                         <label className="text-xs font-medium text-[#1A1918]/50">Titre professionnel</label>
                         <input
@@ -747,13 +859,29 @@ export function AliceExperience() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setIsEditingProfile(false)}
+                        onClick={() => {
+                          // Nom encore incomplet : les champs restent affichés.
+                          setAskName(!profile.firstName.trim() || !profile.lastName.trim());
+                          setIsEditingProfile(false);
+                        }}
                         className="w-full py-2.5 bg-[#006045] hover:bg-[#004d37] text-white text-xs font-medium rounded-lg"
                       >
                         Enregistrer
                       </button>
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCvFile(null);
+                      setIsEditingProfile(false);
+                      setPhase(2);
+                    }}
+                    className="block mx-auto text-xs text-[#1A1918]/45 hover:text-[#006045] transition-colors cursor-pointer"
+                  >
+                    déposer un autre CV
+                  </button>
                 </div>
               )}
 

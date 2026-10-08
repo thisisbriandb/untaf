@@ -40,7 +40,7 @@ const FAMILY_LABELS: Record<string, string> = {
   design: "Design", sales: "Commercial", marketing: "Marketing",
   support: "Support client", hr: "RH", finance: "Finance",
   ops: "Ops / Logistique", legal: "Juridique", health: "Santé",
-  engineering: "Ingénierie",
+  engineering: "Ingénierie", construction: "BTP", education: "Enseignement",
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {

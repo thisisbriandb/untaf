@@ -189,6 +189,10 @@ async def start_run(
     if active:
         raise HTTPException(409, "Une mission est déjà en cours.")
 
+    from app import billing
+    await billing.check(db, candidate_id, "mission")
+    await billing.record(db, candidate_id, "mission")
+
     run = MissionRun(
         mission_id=mission.id,
         title=data.title,

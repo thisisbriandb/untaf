@@ -5,19 +5,27 @@
  *
  * Les réponses arrivent sur ton adresse de candidature : Alice les lit
  * (entretien, refus, demande…), met ton suivi à jour et te les transfère.
+ * Quand elle ne sait pas à quelle candidature un message répond, elle ne
+ * touche à rien et te demande ; les pièces jointes se téléchargent ici.
  * Celles que tu as notées toi-même depuis Candidatures restent listées à part.
  */
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Inbox as InboxIcon, Loader2, Mail, MessageCircleReply, Reply as ReplyIcon } from "lucide-react";
+import {
+  Check, Copy, Download, Inbox as InboxIcon, Link2, Loader2, Mail, MessageCircleReply, Paperclip,
+  Reply as ReplyIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchJournal, type MissionEvent } from "@/lib/mission-client";
 import { fetchNotificationHistory, type NotificationRecord } from "@/lib/pipeline-client";
 import {
-  fetchInbox, fetchReply, KIND_LABEL, replyMailto,
-  type Inbox, type Reply, type ReplyDetail, type ReplyKind,
+  attachmentUrl, fetchInbox, fetchReply, fileSize, KIND_LABEL, linkReply, replyMailto,
+  type Inbox, type LinkChoice, type Reply, type ReplyDetail, type ReplyKind,
 } from "@/lib/inbox-client";
+import { invalidateApplication } from "@/lib/application-state";
+import { DownloadLink } from "./ProtectedFile";
+import { useToast } from "./Toaster";
 
 const KIND_TONE: Record<ReplyKind, string> = {
   interview: "bg-[#006045] text-white",
@@ -28,7 +36,122 @@ const KIND_TONE: Record<ReplyKind, string> = {
   other: "ring-1 ring-[#1A1918]/12 text-[#1A1918]/60",
 };
 
-function ReplyRow({ reply, candidateId, index, onRead }: { reply: Reply; candidateId: string; index: number; onRead: () => void }) {
+const STATUS_LABEL_FR: Record<string, string> = {
+  matched: "retenue",
+  applied: "envoyée",
+  interview: "entretien",
+  offer: "offre",
+  rejected: "refusée",
+  closed: "close",
+};
+
+/** Rattachement incertain : le candidat choisit, puis le suivi suit. */
+function LinkPicker({
+  reply, choices, candidateId, onLinked,
+}: {
+  reply: Reply;
+  choices: LinkChoice[];
+  candidateId: string;
+  onLinked: (r: Reply) => void;
+}) {
+  const toast = useToast();
+  const [choice, setChoice] = useState(reply.suggested_application_id ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const save = async (applicationId: string | null) => {
+    setBusy(true);
+    const r = await linkReply(candidateId, reply.id, applicationId);
+    setBusy(false);
+    if (!r) return toast("Je n'ai pas pu enregistrer ton choix.", "warning");
+    if (r.status) {
+      invalidateApplication();
+      toast(`Suivi mis à jour : ${STATUS_LABEL_FR[r.status] ?? r.status}.`, "success");
+    } else {
+      toast(applicationId ? "Message rattaché." : "C'est noté : il ne concerne aucune candidature.", "info");
+    }
+    onLinked(r.reply);
+  };
+
+  return (
+    <div className="mt-2 rounded-xl bg-[#1A1918]/[0.04] px-3 py-2 space-y-1.5">
+      <p className="flex items-center gap-1.5 text-[12px] text-[#1A1918]/80 tracking-tight">
+        <Link2 className="h-3 w-3 text-[#006045]" />
+        C&apos;est pour quelle candidature ? Je n&apos;en suis pas sûre, je n&apos;ai rien changé à ton suivi.
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <select
+          value={choice}
+          onChange={(e) => setChoice(e.target.value)}
+          aria-label="Candidature concernée"
+          className="min-w-0 max-w-full flex-1 rounded-full border border-[#1A1918]/12 bg-white px-2.5 py-1 text-[12px] text-[#161615] outline-none focus:border-[#006045]/50"
+        >
+          <option value="">Choisir…</option>
+          {choices.map((c) => (
+            <option key={c.application_id} value={c.application_id}>
+              {[c.company_name, c.job_title].filter(Boolean).join(" — ")}
+              {STATUS_LABEL_FR[c.status] ? ` (${STATUS_LABEL_FR[c.status]})` : ""}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={!choice || busy}
+          onClick={() => void save(choice)}
+          className="inline-flex items-center gap-1 rounded-full bg-[#006045] px-3 py-1 text-[11px] text-white hover:bg-[#004d37] cursor-pointer disabled:opacity-50 disabled:cursor-default"
+        >
+          {busy && <Loader2 className="h-3 w-3 animate-spin" />} Confirmer
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void save(null)}
+          className="rounded-full px-2.5 py-1 text-[11px] text-[#1A1918]/60 hover:text-[#1A1918] cursor-pointer disabled:opacity-50"
+        >
+          Aucune
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Attachments({ candidateId, detail }: { candidateId: string; detail: ReplyDetail }) {
+  if (detail.attachments.length === 0 && detail.skipped_attachments.length === 0) return null;
+  return (
+    <ul className="space-y-1">
+      {detail.attachments.map((a) => (
+        <li key={a.id}>
+          <DownloadLink
+            url={attachmentUrl(candidateId, detail.id, a.id)}
+            filename={a.filename}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#1A1918]/10 px-3 py-1 text-[11px] text-[#1A1918]/75 hover:border-[#006045]/40 hover:text-[#006045] transition-colors"
+          >
+            <Download className="h-3 w-3 shrink-0" />
+            <span className="truncate">{a.filename}</span>
+            <span className="shrink-0 text-[#1A1918]/45">{fileSize(a.size)}</span>
+          </DownloadLink>
+        </li>
+      ))}
+      {detail.skipped_attachments.map((a, i) => (
+        <li key={`${a.filename}-${i}`} className="flex items-center gap-1.5 text-[11px] text-[#1A1918]/50 tracking-tight">
+          <Paperclip className="h-3 w-3 shrink-0" />
+          <span className="truncate">{a.filename}</span>
+          <span className="shrink-0">— trop lourde pour être gardée, demande-la au recruteur</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ReplyRow({
+  reply: initial, candidateId, index, onRead, choices,
+}: {
+  reply: Reply;
+  candidateId: string;
+  index: number;
+  onRead: () => void;
+  choices: LinkChoice[];
+}) {
+  const [reply, setReply] = useState(initial);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<ReplyDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,6 +185,12 @@ function ReplyRow({ reply, candidateId, index, onRead }: { reply: Reply; candida
           </span>
           <span className={cn("text-[13px] tracking-tight", read ? "text-[#1A1918]/75" : "text-[#161615]")}>{who}</span>
           {reply.job_title && <span className="text-[12px] text-[#1A1918]/50 truncate">· {reply.job_title}</span>}
+          {reply.attachments_count > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-[#1A1918]/50" title="Pièces jointes">
+              <Paperclip className="h-3 w-3" />
+              {reply.attachments_count}
+            </span>
+          )}
           <span className="ml-auto text-[11px] text-[#1A1918]/50 shrink-0">{date(reply.received_at)}</span>
         </div>
         <p className="mt-1 text-sm font-light text-[#1A1918]/80 tracking-tight group-hover:text-[#161615]">
@@ -71,6 +200,9 @@ function ReplyRow({ reply, candidateId, index, onRead }: { reply: Reply; candida
           <p className="mt-0.5 text-[12px] text-[#006045] tracking-tight">À faire : {reply.next_step}</p>
         )}
       </button>
+      {reply.to_link && choices.length > 0 && (
+        <LinkPicker reply={reply} choices={choices} candidateId={candidateId} onLinked={setReply} />
+      )}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -91,6 +223,7 @@ function ReplyRow({ reply, candidateId, index, onRead }: { reply: Reply; candida
                   {detail?.text || "Message vide."}
                 </p>
               )}
+              {detail && <Attachments candidateId={candidateId} detail={detail} />}
               <a
                 href={replyMailto(reply)}
                 className="inline-flex items-center gap-1.5 rounded-full bg-[#006045] px-3 py-1.5 text-[11px] text-white hover:bg-[#004d37]"
@@ -176,7 +309,7 @@ export function MessagesView({
       // Celles notées à la main ; les e-mails reçus ont leur propre liste.
       setReplies(journal.filter((e) => e.kind === "reply" && !e.payload?.inbound_id));
       setEmails(history ?? []);
-      setInbox(box ?? { address: null, configured: false, unread: 0, replies: [] });
+      setInbox(box ?? { address: null, configured: false, unread: 0, replies: [], choices: [] });
     });
   }, [candidateId]);
 
@@ -213,7 +346,7 @@ export function MessagesView({
                 <ul className="border-t border-[#1A1918]/10 divide-y divide-[#1A1918]/8">
                   {inbox.replies.map((r, i) => (
                     <ReplyRow
-                      key={r.id} reply={r} candidateId={candidateId!} index={i}
+                      key={r.id} reply={r} candidateId={candidateId!} index={i} choices={inbox.choices ?? []}
                       onRead={() => setInbox((b) => (b ? { ...b, unread: Math.max(0, b.unread - 1) } : b))}
                     />
                   ))}

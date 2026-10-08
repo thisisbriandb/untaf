@@ -39,6 +39,8 @@ NAF_BY_FAMILY: dict[str, list[str]] = {
     "ops": ["52.29A", "52.29B", "52.10B", "49.41A", "82.99Z"],
     "engineering": ["71.12B", "71.12A", "72.19Z", "33.20C", "28.99B"],
     "health": ["86.10Z", "86.22C", "86.90E", "87.10A", "88.10A"],
+    "construction": ["41.20A", "41.20B", "43.21A", "43.22A", "43.99C", "71.12B"],
+    "education": ["85.59A", "85.59B", "85.32Z", "85.42Z"],
 }
 
 #: Tranches d'effectif SIRENE de 10 à 999 salariés : assez grand pour recruter,

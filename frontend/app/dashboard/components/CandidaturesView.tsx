@@ -218,6 +218,15 @@ const OUTCOMES: { status: ApplicationStatus; label: string }[] = [
   { status: "rejected", label: "Refus" },
 ];
 
+/** Corriger un statut, y compris revenir d'un refus ou d'une offre posés par erreur. */
+const CORRECTIONS: { status: ApplicationStatus; label: string }[] = [
+  { status: "applied", label: "Envoyée" },
+  { status: "interview", label: "Entretien" },
+  { status: "offer", label: "Offre" },
+  { status: "rejected", label: "Refusée" },
+  { status: "closed", label: "Close" },
+];
+
 function Row({
   candidateId, item, onRefresh,
 }: {
@@ -230,6 +239,7 @@ function Row({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [showFollowup, setShowFollowup] = useState(false);
+  const [fixing, setFixing] = useState(false);
 
   const run = async (key: string, action: () => Promise<unknown>) => {
     setBusy(key);
@@ -252,6 +262,13 @@ function Row({
     run(status, async () => {
       const ok = await updateApplicationStatus(item.application_id, status);
       toast(ok ? `${label} noté pour « ${item.title} ».` : "Changement non enregistré.", ok ? "success" : "warning");
+    });
+
+  const correct = (status: ApplicationStatus, label: string) =>
+    run(`fix-${status}`, async () => {
+      const ok = await updateApplicationStatus(item.application_id, status, "corrigé à la main");
+      toast(ok ? `Statut corrigé : ${label}.` : "Changement non enregistré.", ok ? "success" : "warning");
+      if (ok) setFixing(false);
     });
 
   const jobCard = {
@@ -401,6 +418,18 @@ function Row({
               OUTCOMES.filter((o) => o.status !== item.status).map((o) => (
                 <ActionButton key={o.status} busy={busy === o.status} onClick={() => setOutcome(o.status, o.label)}>
                   {o.label}
+                </ActionButton>
+              ))}
+
+            {["interview", "offer", "rejected", "closed"].includes(item.stage) && (
+              <ActionButton onClick={() => setFixing((v) => !v)}>
+                {fixing ? "Annuler" : "Corriger le statut"}
+              </ActionButton>
+            )}
+            {fixing &&
+              CORRECTIONS.filter((c) => c.status !== item.status).map((c) => (
+                <ActionButton key={c.status} busy={busy === `fix-${c.status}`} onClick={() => correct(c.status, c.label)}>
+                  {c.label}
                 </ActionButton>
               ))}
 

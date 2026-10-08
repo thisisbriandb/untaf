@@ -16,6 +16,7 @@ from google.genai.types import FunctionDeclaration, Tool
 from sqlalchemy import select, func as sql_func
 
 from app import llm
+from app.billing import LimitReached
 from app.config import settings
 from app.database import async_session
 from app.models.candidate import Candidate
@@ -311,7 +312,12 @@ async def _execute_prepare_application(candidate_id: UUID, args: dict) -> tuple[
         return {"found": False, "hint": "aucune offre de sa liste ne correspond ; "
                                         "propose de chercher ou de coller l'annonce"}, None
     app, job, company = found
-    pack = await build_pack(candidate_id, app.id)
+    try:
+        pack = await build_pack(candidate_id, app.id)
+    except LimitReached as e:
+        return {"found": True, "offre": f"{job.title} chez {company}",
+                "limite_de_la_formule": str(e),
+                "consigne": "dis-le simplement et propose l'abonnement (onglet Paramètres)"}, None
     if not pack:
         return {"found": False}, None
     card = _job_card(app, job, company)

@@ -226,6 +226,33 @@ class Settings(BaseSettings):
     #: Adresse publique de l'API, pour le lien de désinscription des e-mails.
     public_api_url: str = ""
 
+    # ── Abonnement (Lemon Squeezy) ───────────────────────
+    # Tant que la clé, la boutique et la variante ne sont pas renseignées, la
+    # facturation est éteinte : pas de limites, rien à payer (développement).
+    lemonsqueezy_api_key: str = ""
+    lemonsqueezy_store_id: str = ""
+    #: Variante du produit « Alice — semaine » (abonnement hebdomadaire).
+    lemonsqueezy_variant_id: str = ""
+    #: Secret de signature des webhooks (Settings → Webhooks).
+    lemonsqueezy_webhook_secret: str = ""
+    #: Prix affiché dans l'application ; le prix facturé est celui de Lemon Squeezy.
+    billing_price_label: str = "4,90 € / semaine"
+
+    #: Limites, par candidat. Gratuit : de quoi essayer pour de vrai. Abonné :
+    #: des plafonds contre les abus, qu'un usage normal n'atteint pas.
+    free_packs_per_week: int = 3
+    free_missions_per_week: int = 1
+    free_spontaneous_per_week: int = 0
+    free_messages_per_day: int = 30
+    paid_packs_per_week: int = 40
+    paid_missions_per_week: int = 14
+    paid_messages_per_day: int = 200
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.lemonsqueezy_api_key and self.lemonsqueezy_store_id
+                    and self.lemonsqueezy_variant_id)
+
     # ── Suivi des candidatures ───────────────────────────
     #: Jours sans réponse après lesquels Alice propose une relance.
     followup_after_days: int = 7
