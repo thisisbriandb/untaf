@@ -29,11 +29,26 @@ def _sign(email: str) -> str:
     return base64.urlsafe_b64encode(digest[:18]).decode().rstrip("=")
 
 
+def public_base() -> str | None:
+    """
+    L'adresse publique de l'API : PUBLIC_API_URL si elle est renseignée, sinon
+    le domaine que Railway fournit lui-même au service (RAILWAY_PUBLIC_DOMAIN).
+    Le serveur ne peut pas la deviner : à l'intérieur, il n'écoute qu'un port.
+    """
+    import os
+
+    if settings.public_api_url:
+        url = settings.public_api_url.strip().rstrip("/")
+        return url if url.startswith("http") else f"https://{url}"
+    domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    return f"https://{domain}" if domain else None
+
+
 def optout_link(email: str) -> str | None:
     """Le lien de désinscription, ou None si l'adresse publique de l'API n'est pas connue."""
-    if not settings.public_api_url:
+    base = public_base()
+    if not base:
         return None
-    base = settings.public_api_url.rstrip("/")
     return f"{base}/api/optout?e={quote(email.lower())}&t={_sign(email)}"
 
 

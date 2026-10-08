@@ -92,3 +92,16 @@ def test_optout_link_is_signed_and_stop_replies_are_understood():
 def test_user_agent_is_ascii():
     # Un accent dans un en-tête HTTP fait échouer toutes les visites de sites.
     contacts.USER_AGENT.encode("ascii")
+
+
+def test_optout_link_uses_railway_domain_when_not_configured(monkeypatch):
+    from app.api import optout
+    monkeypatch.setattr(optout.settings, "public_api_url", "")
+    monkeypatch.setenv("RAILWAY_PUBLIC_DOMAIN", "untaf-production.up.railway.app")
+    assert optout.optout_link("Jobs@Acme.fr").startswith(
+        "https://untaf-production.up.railway.app/api/optout?e=jobs%40acme.fr&t=")
+    monkeypatch.setattr(optout.settings, "public_api_url", "api.alice-agent.fr/")
+    assert optout.public_base() == "https://api.alice-agent.fr"
+    monkeypatch.setattr(optout.settings, "public_api_url", "")
+    monkeypatch.delenv("RAILWAY_PUBLIC_DOMAIN")
+    assert optout.optout_link("jobs@acme.fr") is None
