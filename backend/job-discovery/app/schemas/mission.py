@@ -37,6 +37,8 @@ class RunCreate(BaseModel):
     #: Nombre d'offres à traiter. La mission n'a plus de durée : elle fait
     #: une passe et rend compte.
     count: int = Field(default=5, ge=1, le=10)
+    #: Candidatures spontanées à préparer en plus des offres (0 = aucune).
+    spontaneous: int = Field(default=0, ge=0, le=5)
     #: Ignoré, conservé pour les anciens clients.
     duration_minutes: int | None = Field(default=None)
     allowed_actions: dict = Field(

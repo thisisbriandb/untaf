@@ -212,6 +212,20 @@ class Settings(BaseSettings):
     def can_notify(self) -> bool:
         return self.scaleway_configured or bool(self.resend_api_key) or self.smtp_configured
 
+    # ── Candidatures spontanées ──────────────────────────
+    #: Entreprises cherchées au plus par mission.
+    spontaneous_per_run_max: int = 5
+    #: Envois spontanés au plus, par candidat, par jour et par semaine : une
+    #: candidature non sollicitée doit rester rare pour être lue (et pour
+    #: protéger la réputation d'envoi du domaine).
+    spontaneous_daily_cap: int = 5
+    spontaneous_weekly_cap: int = 15
+    #: Expéditeur des spontanées (idéalement un sous-domaine dédié, ex.
+    #: candidatures@spontanee.alice-agent.fr). Vide : l'expéditeur habituel.
+    spontaneous_from_email: str = ""
+    #: Adresse publique de l'API, pour le lien de désinscription des e-mails.
+    public_api_url: str = ""
+
     # ── Suivi des candidatures ───────────────────────────
     #: Jours sans réponse après lesquels Alice propose une relance.
     followup_after_days: int = 7

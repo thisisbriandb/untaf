@@ -51,6 +51,7 @@ async def send_application_email(
     company_name: str,
     resume: bytes | None = None,
     resume_name: str | None = None,
+    spontaneous: bool = False,
 ) -> dict:
     """
     Envoie la candidature. Ne lève jamais.
@@ -64,6 +65,17 @@ async def send_application_email(
 
     subject = (letter or {}).get("subject") or f"Candidature — {job_title}"
     body = _plain_text(letter, candidate, job_title, company_name)
+    if spontaneous:
+        # Une candidature non sollicitée se refuse en un clic, et ce refus est
+        # respecté pour toute l'entreprise (voir app/api/optout.py).
+        from app.api.optout import optout_link
+        link = optout_link(to_email)
+        body += (
+            "\n\n—\nCandidature spontanée transmise par Alice (alice-agent.fr) à l'adresse "
+            "publiée sur votre site. "
+            + (f"Pour ne plus recevoir de candidature spontanée : {link}" if link
+               else "Pour ne plus en recevoir, répondez simplement « STOP ».")
+        )
 
     # Le CV joint est celui figé à la préparation de l'envoi — adapté à
     # l'offre le cas échéant. À défaut, il suit le choix de présentation du
@@ -101,7 +113,8 @@ async def send_application_email(
         to=to_email,
         subject=subject,
         text=body,
-        sender=(f"{candidate.full_name or 'Candidat'} via Alice", settings.application_sender),
+        sender=(f"{candidate.full_name or 'Candidat'} via Alice",
+                (spontaneous and settings.spontaneous_from_email) or settings.application_sender),
         reply_to=contact_of(candidate) or None,
         attachments=[Attachment(cv_name, cv_bytes)] if cv_bytes else [],
     ))

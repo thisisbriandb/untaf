@@ -8,6 +8,17 @@ import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
 import { COUNTS, startRun, type MissionRun } from "@/lib/mission-run-client";
 
 const SEND_PREF = "alice_mission_send";
+const SPONTANEOUS_PREF = "alice_mission_spontaneous";
+const SPONTANEOUS_COUNTS = [0, 3, 5];
+
+function rememberedSpontaneous(): number {
+  try {
+    const v = Number(localStorage.getItem(SPONTANEOUS_PREF));
+    return SPONTANEOUS_COUNTS.includes(v) ? v : 3;
+  } catch {
+    return 3;
+  }
+}
 
 /** Le dernier choix d'envoi : on ne repose pas la question à chaque mission. */
 function rememberedSend(): boolean {
@@ -36,6 +47,7 @@ export function MissionLauncher({
   onClose: () => void;
 }) {
   const [count, setCount] = useState(5);
+  const [spontaneous, setSpontaneous] = useState(rememberedSpontaneous);
   const [allowSend, setAllowSend] = useState(rememberedSend);
   const [isLaunching, setIsLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +57,7 @@ export function MissionLauncher({
     setError(null);
     try {
       localStorage.setItem(SEND_PREF, allowSend ? "1" : "0");
+      localStorage.setItem(SPONTANEOUS_PREF, String(spontaneous));
     } catch {
       /* préférence de confort seulement */
     }
@@ -52,6 +65,7 @@ export function MissionLauncher({
       title: "Mes candidatures",
       objective: "apply",
       count,
+      spontaneous,
       allowed_actions: { send: allowSend },
     });
     setIsLaunching(false);
@@ -94,6 +108,35 @@ export function MissionLauncher({
         </p>
       </div>
 
+      {/* Les entreprises qui recrutent sans offre publiée */}
+      <div className="space-y-2.5">
+        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+          Candidatures spontanées
+        </p>
+        <div className="flex justify-center gap-2">
+          {SPONTANEOUS_COUNTS.map((n) => (
+            <motion.button
+              key={n}
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSpontaneous(n)}
+              className={cn(
+                "px-4 py-2 rounded-full border text-sm transition-colors cursor-pointer",
+                spontaneous === n
+                  ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
+                  : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
+              )}
+            >
+              {n === 0 ? "Aucune" : n}
+            </motion.button>
+          ))}
+        </div>
+        <p className="text-center text-[11px] font-normal text-[#1A1918]/55 leading-relaxed">
+          J&apos;écris aux entreprises de ton métier près de chez toi, à l&apos;adresse de recrutement
+          qu&apos;elles publient sur leur site, avec une lettre qui parle d&apos;elles.
+        </p>
+      </div>
+
       {/* Le feu vert */}
       <div className="space-y-2.5">
         <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
@@ -128,7 +171,8 @@ export function MissionLauncher({
       {/* Le contrat, dit en clair avant de partir */}
       <p className="text-xs font-normal text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
         Pour chaque offre : CV adapté et lettre. Les offres qui se postulent sur le site de
-        l&apos;employeur restent prêtes à envoyer. Tu peux fermer l&apos;onglet, je t&apos;écris
+        l&apos;employeur restent prêtes à finir avec l&apos;extension. Les candidatures spontanées
+        partent seulement à une adresse publiée par l&apos;entreprise, quelques-unes par jour. Tu peux fermer l&apos;onglet, je t&apos;écris
         quand c&apos;est fini.
       </p>
 

@@ -92,6 +92,8 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
         languages = (candidate.cv_content or {}).get("languages") or []
         experience_years = candidate.experience_years
 
+    from app.agents.spontaneous import is_spontaneous
+
     # Un employeur anonyme ne s'écrit pas « Employeur non précisé » dans une lettre.
     from app.agents.company_name import display_company
     company_name = display_company(company_name) or ""
@@ -121,6 +123,7 @@ async def build_pack(candidate_id: UUID, application_id: UUID) -> Pack | None:
             location=job.location or "",
             tech_stack=tech_stack,
             job_excerpt=job.description_raw or "",
+            spontaneous=is_spontaneous(job),
         ),
     )
 

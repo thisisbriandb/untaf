@@ -195,7 +195,8 @@ async def start_run(
         # Préparer et postuler ne font plus qu'une mission (voir mission_runner).
         objective="apply",
         duration_minutes=0,
-        allowed_actions={**(data.allowed_actions or {}), "count": data.count},
+        allowed_actions={**(data.allowed_actions or {}), "count": data.count,
+                         "spontaneous": data.spontaneous},
         status=RunStatus.PREPARING,
     )
     db.add(run)

@@ -41,3 +41,18 @@ async def generate(
         config=config,
     )
     return response.text or ""
+
+
+async def generate_grounded(prompt: str) -> str:
+    """
+    Un appel avec la recherche Google du modèle (« grounding »). Pour les faits
+    publics récents — le site d'une entreprise, par exemple. Le résultat reste
+    à vérifier par l'appelant.
+    """
+    config = types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())])
+    response = await client().aio.models.generate_content(
+        model=settings.gemini_model,
+        contents=prompt,
+        config=config,
+    )
+    return response.text or ""
