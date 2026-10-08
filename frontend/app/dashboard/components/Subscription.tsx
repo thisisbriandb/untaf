@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import {
-  checkoutUrl, fetchBilling, portalUrl, type Billing, type PlanLimit, type UsageKind,
+  checkoutUrl, fetchBilling, portalUrl, syncBilling, type Billing, type PlanLimit, type UsageKind,
 } from "@/lib/billing-client";
 import { useToast } from "./Toaster";
 
@@ -44,10 +44,15 @@ function useGoTo(candidateId: string | null) {
 /** Bloc « Abonnement » des paramètres : formule, usage, gérer. */
 export function PlanSection({ candidateId }: { candidateId: string | null }) {
   const [billing, setBilling] = useState<Billing | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const { busy, go } = useGoTo(candidateId);
 
   useEffect(() => {
-    if (candidateId) fetchBilling(candidateId).then(setBilling);
+    if (!candidateId) return;
+    const load = () => void fetchBilling(candidateId).then(setBilling);
+    load();
+    window.addEventListener("untaf:billing-changed", load);
+    return () => window.removeEventListener("untaf:billing-changed", load);
   }, [candidateId]);
 
   if (!billing || !billing.enabled) return null;
@@ -71,6 +76,23 @@ export function PlanSection({ candidateId }: { candidateId: string | null }) {
                     : `Prochain renouvellement le ${day(billing.renews_at)}.`
                 : "De quoi essayer Alice pour de vrai, chaque semaine."}
             </p>
+            {!weekly && (
+              <button
+                type="button"
+                disabled={syncing}
+                onClick={async () => {
+                  if (!candidateId) return;
+                  setSyncing(true);
+                  const fresh = await syncBilling(candidateId);
+                  setSyncing(false);
+                  if (fresh) setBilling(fresh);
+                  if (fresh?.plan === "weekly") window.dispatchEvent(new CustomEvent("untaf:billing-changed"));
+                }}
+                className="mt-1 text-[11px] text-[#1A1918]/50 underline-offset-2 hover:underline hover:text-[#006045] cursor-pointer disabled:opacity-50"
+              >
+                {syncing ? "Vérification…" : "Déjà abonné ? Actualiser"}
+              </button>
+            )}
           </div>
           <button
             type="button"
@@ -126,15 +148,34 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
     return () => window.removeEventListener("untaf:plan-limit", onLimit);
   }, [candidateId]);
 
-  // Retour de la page de paiement.
+  // Retour de la page de paiement : on relit l'abonnement chez Lemon Squeezy
+  // sans attendre le webhook, quelques fois s'il n'y est pas encore.
   useEffect(() => {
+    if (!candidateId) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("abonnement") !== "merci") return;
-    toast("Merci ! Ton abonnement est actif d'ici quelques secondes.");
     params.delete("abonnement");
     const rest = params.toString();
     window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
-  }, [toast]);
+
+    let alive = true;
+    (async () => {
+      for (const wait of [0, 3000, 8000, 15000]) {
+        await new Promise((r) => setTimeout(r, wait));
+        if (!alive) return;
+        const fresh = await syncBilling(candidateId);
+        if (fresh?.plan === "weekly") {
+          window.dispatchEvent(new CustomEvent("untaf:billing-changed"));
+          toast("Merci ! Ton abonnement est actif.");
+          return;
+        }
+      }
+      toast("Paiement reçu : ton abonnement s'activera dans quelques minutes.", "info");
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [candidateId, toast]);
 
   const close = () => setLimit(null);
 
@@ -212,7 +253,11 @@ export function UpgradeCard({ candidateId }: { candidateId: string | null }) {
     load();
     // Une limite atteinte ou un dossier rédigé change les compteurs.
     window.addEventListener("untaf:plan-limit", load);
-    return () => window.removeEventListener("untaf:plan-limit", load);
+    window.addEventListener("untaf:billing-changed", load);
+    return () => {
+      window.removeEventListener("untaf:plan-limit", load);
+      window.removeEventListener("untaf:billing-changed", load);
+    };
   }, [candidateId]);
 
   if (!billing?.enabled || billing.plan !== "free") return null;

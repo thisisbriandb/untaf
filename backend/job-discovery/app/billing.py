@@ -324,3 +324,31 @@ async def apply_event(session, event: SubscriptionEvent) -> bool:
     sub.test_mode = event.test_mode
     sub.updated_at = datetime.now(timezone.utc)
     return True
+
+
+async def sync_from_provider(session, candidate_id: UUID, email: str | None) -> int:
+    """
+    Relit chez Lemon Squeezy les abonnements de cette adresse et les reporte.
+
+    Filet de sécurité du webhook : au retour du paiement, l'abonnement est
+    visible tout de suite, même si le webhook est en retard, mal configuré ou
+    perdu. Seuls les abonnements au produit d'Alice (sa variante) sont repris.
+    """
+    if not settings.billing_enabled or not email:
+        return 0
+    params = {"filter[store_id]": settings.lemonsqueezy_store_id,
+              "filter[user_email]": email.strip().lower()}
+    async with httpx.AsyncClient(timeout=20) as client:
+        res = await client.get(f"{API}/subscriptions", headers=_headers(), params=params)
+    if res.status_code >= 300:
+        logger.error("Abonnements illisibles chez Lemon Squeezy (%s) : %s",
+                     res.status_code, res.text[:300])
+        return 0
+    applied = 0
+    for item in res.json().get("data") or []:
+        event = parse_event({"data": item, "meta": {"custom_data": {"candidate_id": str(candidate_id)}}})
+        if not event or event.variant_id != str(settings.lemonsqueezy_variant_id):
+            continue
+        if await apply_event(session, event):
+            applied += 1
+    return applied

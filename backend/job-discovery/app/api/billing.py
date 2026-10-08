@@ -43,6 +43,21 @@ async def start_checkout(candidate_id: UUID, db: AsyncSession = Depends(get_db))
     return {"url": url}
 
 
+@router.post("/candidates/{candidate_id}/billing/sync")
+async def sync_billing(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Au retour du paiement : relit l'abonnement chez Lemon Squeezy sans attendre le webhook."""
+    candidate = await db.get(Candidate, candidate_id)
+    if not candidate:
+        raise HTTPException(404, "Candidat introuvable")
+    try:
+        await billing.sync_from_provider(db, candidate_id, candidate.email)
+        await db.commit()
+    except Exception as e:  # noqa: BLE001 — on rend l'état connu, même si la relecture échoue
+        logger.error("Relecture de l'abonnement impossible pour %s : %s", candidate_id, e)
+        await db.rollback()
+    return await billing.overview(db, candidate_id)
+
+
 @router.post("/candidates/{candidate_id}/billing/portal")
 async def open_portal(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
     """Carte bancaire, factures, résiliation : l'espace client Lemon Squeezy."""
