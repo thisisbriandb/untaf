@@ -116,6 +116,21 @@ Réponds en JSON strict, en français :
 """
 
 
+SPONTANEOUS_NOTE = """
+
+CANDIDATURE SPONTANÉE — aucune offre n'est publiée. Le « texte de l'annonce »
+ci-dessus est ce que l'entreprise dit d'elle-même sur son site. Adapte la
+structure :
+- L'accroche dit pourquoi CETTE entreprise, à partir de ce qu'elle fait
+  réellement (pas de flatterie générique).
+- Ne parle pas « du poste » ni « de l'offre » : propose ce que le candidat
+  peut apporter, avec deux ou trois preuves tirées du parcours.
+- Termine en proposant un échange, sans supposer qu'un poste est ouvert.
+- Objet : « Candidature spontanée — {métier du candidat} ».
+- 150 à 220 mots : une spontanée courte est lue, une longue ne l'est pas.
+"""
+
+
 def _clean(text: str) -> str:
     text = re.sub(r"^\s*```(?:markdown|md|json)?\s*\n", "", text or "")
     text = re.sub(r"\n\s*```\s*$", "", text)
@@ -153,6 +168,15 @@ def _fallback_body(
         f"- Pratique de {', '.join(skills[:3]) if skills else 'mes outils'}"
     )
 
+    spontaneous = poste.lower().startswith("candidature spontanée")
+    if spontaneous:
+        # Pas de « poste » dans une spontanée : on dit ce qu'on propose.
+        metier = poste.split("—", 1)[1].strip() if "—" in poste else ""
+        intro = (f"Après une expérience de {role} chez {company}, je vous adresse une "
+                 f"candidature spontanée{f' en tant que {metier}' if metier else ''}."
+                 if role and company else
+                 f"Je vous adresse une candidature spontanée{f' en tant que {metier}' if metier else ''}.")
+
     body = f"""{intro}
 
 Ce que je peux apporter à {boite} :
@@ -162,7 +186,7 @@ Ce que je peux apporter à {boite} :
 Je reste à votre disposition pour en échanger."""
 
     return (
-        f"Candidature au poste de {poste}",
+        poste if spontaneous else f"Candidature au poste de {poste}",
         body,
         "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.",
     )
@@ -185,6 +209,7 @@ async def write_cover_letter(
     tech_stack: list[str] | None = None,
     job_excerpt: str = "",
     signature_image: str | None = None,
+    spontaneous: bool = False,
 ) -> CoverLetterResult:
     """Renvoie une lettre complète et prête à l'envoi. Ne lève jamais."""
     skills = skills or []
@@ -239,7 +264,7 @@ async def write_cover_letter(
             location=location or "non précisée",
             tech_stack=", ".join(tech_stack) or "non précisées",
             job_excerpt=(job_excerpt or "non disponible")[:3000],
-        ), json=True)
+        ) + (SPONTANEOUS_NOTE if spontaneous else ""), json=True)
 
         data = json.loads(_clean(response))
         body = _clean(data.get("body") or "")

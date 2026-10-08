@@ -407,6 +407,41 @@ notification est enregistrée en `simulated`, jamais rapportée comme partie.
 
 ---
 
+## Candidatures spontanées
+
+Le seul canal 100 % automatique qui ne dépend ni d'une habilitation ni d'une
+plateforme : Alice écrit aux entreprises qui recrutent sans publier d'offre.
+Dans le lanceur de mission : « Candidatures spontanées : aucune, 3 ou 5 ».
+
+1. **Cibles** : l'annuaire public des entreprises (API Recherche d'entreprises,
+   SIRENE, sans clé) — entreprises actives de 10 à 999 salariés, dans les
+   secteurs où le métier du candidat est central (`NAF_BY_FAMILY`), dans ses
+   départements.
+2. **Site** : celui de l'entreprise, trouvé par Gemini avec recherche Google,
+   puis **vérifié** (la page d'accueil doit porter le nom de l'entreprise ;
+   annuaires et réseaux sociaux exclus).
+3. **Adresse** : uniquement celle que l'entreprise **publie sur son site**
+   (accueil, contact, recrutement, mentions légales ; robots.txt respecté),
+   sur son propre domaine. Jamais d'adresse devinée, jamais d'adresse
+   nominative, jamais DPO / no-reply / compta. Recrutement d'abord, contact
+   général sinon. Gardée 90 jours et partagée entre candidats.
+4. **Candidature** : une « offre » interne « Candidature spontanée — métier »
+   entre dans le circuit habituel : lettre centrée sur l'entreprise (plus
+   courte, sans parler d'un poste), CV adapté, relecture, contrôles avant envoi,
+   adresse de réponse, suivi, relances.
+
+**Garde-fous** (vérifiés juste avant chaque envoi) : désinscription respectée
+pour tout le domaine (lien signé en bas de chaque e-mail, ou réponse « STOP »),
+`SPONTANEOUS_DAILY_CAP` (5) et `SPONTANEOUS_WEEKLY_CAP` (15) par candidat, une
+même entreprise jamais recontactée avant 6 mois, contenu rédigé sans IA jamais
+envoyé sans relecture.
+
+**À configurer** : `PUBLIC_API_URL` (lien de désinscription ; sans lui, l'e-mail
+propose de répondre « STOP »), et de préférence `SPONTANEOUS_FROM_EMAIL` sur un
+sous-domaine d'envoi dédié (ex. `candidatures@spontanee.alice-agent.fr`, à
+vérifier chez le fournisseur d'envoi) pour protéger la réputation du domaine
+principal.
+
 ## Réponses des recruteurs
 
 Chaque candidat a une **adresse de candidature** à lui

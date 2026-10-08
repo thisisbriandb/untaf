@@ -74,6 +74,18 @@ class Company(Base):
         Enum(CompanyStatus), nullable=False, default=CompanyStatus.PENDING, index=True
     )
 
+    # ── Contact pour les candidatures spontanées ─────────
+    #: Site de l'entreprise, vérifié (la page d'accueil porte son nom).
+    website: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Adresse publiée par l'entreprise elle-même — jamais devinée.
+    careers_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    careers_email_source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: recrutement | general
+    careers_email_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    #: Ce que l'entreprise dit d'elle-même (accueil du site), pour la lettre.
+    about: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # ── Metadata ─────────────────────────────────────────
     sector: Mapped[str | None] = mapped_column(String(255), nullable=True)
     naf_code: Mapped[str | None] = mapped_column(String(10), nullable=True)

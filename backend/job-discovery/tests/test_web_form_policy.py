@@ -24,3 +24,13 @@ def test_unrecognized_page_is_not_an_outage():
     partial = {"ok": False, "proof": {"filled_fields": ["email"], "uploaded_files": [],
                                       "unhandled_fields": ["resume"]}}
     assert browser_failure(partial) == ("failed", "form_incomplete")
+
+
+def test_captcha_protected_ats_go_through_the_extension(monkeypatch):
+    # Même avec l'envoi navigateur activé : reCAPTCHA / hCaptcha bloquent le serveur.
+    monkeypatch.setattr(feasibility.settings, "browser_submit_enabled", True)
+    for channel in (ApplyChannel.GREENHOUSE_API, ApplyChannel.LEVER_API):
+        job = _job(channel)
+        verdict = feasibility.assess(job)
+        assert not verdict.automatable and "extension" in verdict.summary
+        assert feasibility.apply_mode(job) == "manual"

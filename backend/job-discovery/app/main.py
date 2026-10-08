@@ -26,6 +26,7 @@ from app.api.conversations import router as conversations_router
 from app.api.auth_routes import router as auth_router
 from app.api.extension import router as extension_router
 from app.api.inbox import router as inbox_router
+from app.api.optout import router as optout_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -147,6 +148,7 @@ app.include_router(conversations_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(extension_router, prefix="/api")
 app.include_router(inbox_router, prefix="/api")
+app.include_router(optout_router, prefix="/api")
 
 
 @app.get("/health")

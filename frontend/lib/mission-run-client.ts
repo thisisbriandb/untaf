@@ -71,6 +71,8 @@ export async function startRun(
     title: string;
     objective: RunObjective;
     count: number;
+    /** Candidatures spontanées à préparer en plus des offres (0 à 5). */
+    spontaneous?: number;
     allowed_actions: { send: boolean };
   },
 ): Promise<MissionRun | null> {

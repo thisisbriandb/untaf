@@ -456,6 +456,33 @@ def next_status(current: ApplicationStatus, kind: str) -> ApplicationStatus | No
     return target
 
 
+# ── Désinscription par réponse ─────────────────────────────────────────────
+
+_STOP = re.compile(r"^\s*stop\b|d[ée]sinscri|ne (plus|pas) (nous )?(recevoir|envoyer|contacter)|"
+                   r"retirez[- ]nous|unsubscribe|remove (us|me)", re.I)
+
+
+def wants_optout(msg: Incoming) -> bool:
+    first = (msg.text or "").strip()[:300]
+    return bool(_STOP.search(msg.subject or "") or _STOP.search(first))
+
+
+async def _optout_company(session: AsyncSession, application: Application) -> None:
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    from app.models.email_optout import EmailOptout
+
+    posting = await session.get(JobPosting, application.job_posting_id)
+    email = ((posting.contact_json or {}) if posting else {}).get("email") or ""
+    if "@" not in email:
+        return
+    await session.execute(
+        pg_insert(EmailOptout).values(value="@" + email.rsplit("@", 1)[1].lower(),
+                                      reason="réponse STOP à une candidature spontanée")
+        .on_conflict_do_nothing(index_elements=["value"])
+    )
+
+
 # ── Traitement complet ─────────────────────────────────────────────────────
 
 
@@ -530,6 +557,10 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
             target = next_status(application.status, reading.kind) if application else None
             if target:
                 record_status(application, target, f"réponse reçue : {KIND_LABELS[reading.kind]}")
+            # « STOP » en réponse à une candidature spontanée : l'entreprise
+            # entière ne reçoit plus de spontanées, de personne.
+            if application and (application.metadata_json or {}).get("spontaneous") and wants_optout(msg):
+                await _optout_company(session, application)
         await log_event(
             session, candidate.id, MissionEventKind.REPLY,
             reading.summary or f"Réponse reçue de {msg.from_name or msg.from_email}.",

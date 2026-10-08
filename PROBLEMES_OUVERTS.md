@@ -25,17 +25,16 @@ Le cœur du problème produit. État des lieux honnête :
 Conséquence : **aujourd'hui, Alice n'envoie presque rien seule.** Les pistes,
 dans l'ordre :
 
-- 🔴 **Corriger la promesse dans le code** : `feasibility.py` considère encore
-  Greenhouse, Lever, Ashby et Workable comme envoyables par le serveur quand
-  `BROWSER_SUBMIT_ENABLED` est vrai (`AUTOMATABLE_SOON`, `apply_mode`). Les
-  passer en « à finir avec l'extension ».
 - 🔴 **Mesurer** : lancer `tools/agent-bench/probe.mjs` sur 20 à 50 liens variés
   (sites d'entreprises, sites français, Welcome to the Jungle, Workday, Indeed,
   France Travail) pour savoir quelle part est rejouable, navigateur, extension.
-- 🔴 **Candidatures spontanées** (envoi 100 % automatique) : sources SIRENE / La
-  Bonne Boîte, adresses de recrutement *publiées* uniquement, sous-domaine
-  d'envoi séparé, plafond par jour, lien de désinscription. Vérifier d'abord
-  ce que l'API La Bonne Boîte fournit (coordonnées ?).
+- 🟠 **Candidatures spontanées — v1 en place**, à valider en production :
+  l'annuaire (recherche-entreprises.api.gouv.fr) et la recherche du site par
+  Gemini n'ont pu être testés qu'avec des réponses simulées. À faire : régler
+  `PUBLIC_API_URL` et un sous-domaine d'envoi dédié (`SPONTANEOUS_FROM_EMAIL`),
+  mesurer la part d'entreprises qui publient une adresse, surveiller le coût
+  des recherches Gemini, ajouter La Bonne Boîte comme source si son API donne
+  des signaux d'embauche utiles.
 - 🟠 **Trouver des adresses de recrutement** pour les offres existantes : page
   carrière / contact / mentions légales de l'employeur (jamais d'adresse
   devinée type `rh@`).

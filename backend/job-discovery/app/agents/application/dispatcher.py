@@ -410,6 +410,29 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
                         "lettre et CV rédigés sans mon assistant de rédaction (indisponible) : "
                         "relis-les avant que je les envoie")
 
+    # Candidature spontanée : désinscription et plafonds, sans exception.
+    if application and (application.metadata_json or {}).get("spontaneous"):
+        from app.agents.spontaneous import is_opted_out
+
+        if await is_opted_out(session, dispatch.destination or ""):
+            return Hold(DispatchStatus.REJECTED,
+                        "cette entreprise a demandé à ne plus recevoir de candidatures spontanées")
+        now = datetime.now(timezone.utc)
+        for days, cap, label in ((1, settings.spontaneous_daily_cap, "du jour"),
+                                 (7, settings.spontaneous_weekly_cap, "de la semaine")):
+            sent = (await session.execute(
+                select(func.count(ApplicationDispatch.id))
+                .join(Application, ApplicationDispatch.application_id == Application.id)
+                .where(ApplicationDispatch.candidate_id == dispatch.candidate_id)
+                .where(ApplicationDispatch.status == DispatchStatus.SENT)
+                .where(ApplicationDispatch.sent_at >= now - timedelta(days=days))
+                .where(Application.metadata_json["spontaneous"].as_boolean())
+            )).scalar() or 0
+            if sent >= cap:
+                return Hold(DispatchStatus.AWAITING_APPROVAL,
+                            f"plafond {label} des candidatures spontanées atteint ({sent}/{cap}) : "
+                            "je l'enverrai plus tard, valide-la à nouveau quand tu veux")
+
     mission = (await session.execute(
         select(Mission).where(Mission.candidate_id == dispatch.candidate_id)
     )).scalars().first()
@@ -468,6 +491,7 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             company_name=dispatch.company_name,
             resume=dispatch.resume_blob,
             resume_name=dispatch.resume_name,
+            spontaneous=bool(application and (application.metadata_json or {}).get("spontaneous")),
         )
     elif (dispatch.destination or "").startswith(LBA_PREFIX):
         result = await _send_via_lba(dispatch, candidate)

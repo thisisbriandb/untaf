@@ -17,7 +17,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.agents.company_name import chez
+from app.agents.company_name import chez, display_company
 from app.config import settings
 from app.database import async_session
 from app.models.job_posting import JobPosting, PostingStatus
@@ -153,6 +153,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         allowed = run.allowed_actions or {}
         count = max(1, min(MAX_TARGETS, int(allowed.get("count") or DEFAULT_TARGETS)))
         send = bool(allowed.get("send"))
+        spontaneous = max(0, int(allowed.get("spontaneous") or 0))
         await session.commit()
 
     try:
@@ -182,6 +183,30 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
             logger.warning("Re-notation impossible pendant la mission : %s", e)
             kept = 0
         targets = await _targets(candidate_id, count, sendable_first=objective == "apply")
+
+        # 1 bis. Les entreprises qui recrutent sans offre publiée : Alice
+        #        cherche leur adresse de recrutement et leur écrit.
+        if spontaneous:
+            if not await _heartbeat(run_id, RunStep.MATCH):
+                return
+            from app.agents.spontaneous import prepare_spontaneous
+            try:
+                extra = await prepare_spontaneous(candidate_id, spontaneous)
+            except Exception as e:  # noqa: BLE001 — les offres continuent
+                logger.warning("Candidatures spontanées impossibles : %s", e)
+                extra = []
+            await _say(
+                run_id, candidate_id, MissionEventKind.SHORTLIST,
+                (f"J'ai trouvé {len(extra)} entreprise{'s' if len(extra) > 1 else ''} qui publie"
+                 f"{'nt' if len(extra) > 1 else ''} une adresse de recrutement : "
+                 + ", ".join(display_company(c) or c for _, _, c in extra) + "."
+                 if extra else
+                 "Je n'ai pas trouvé d'entreprise de ton métier publiant une adresse de "
+                 "recrutement près de chez toi cette fois-ci."),
+                {"spontaneous": len(extra)},
+            )
+            targets = list(targets) + list(extra)
+
         await _say(
             run_id, candidate_id, MissionEventKind.SHORTLIST,
             (f"Je reprends tes offres retenues : je m'occupe des {len(targets)} meilleures."
