@@ -43,9 +43,14 @@ class Feasibility:
 IMPLEMENTED = {"email", "web_form", "greenhouse_api", "lever_api",
                "ashby_api", "workable_api", "lba_api", "recruitee_api"}
 
-#: Canaux dont le formulaire est public et dont l'ATS publie le schéma des
-#: champs : ce sont ceux que le remplissage guidé couvre le mieux.
+#: Plateformes dont le formulaire est public et dont les champs sont connus :
+#: l'extension les remplit très bien. Mais leur envoi est protégé (reCAPTCHA
+#: chez Greenhouse, hCaptcha et Cloudflare chez Lever — mesuré le 8 octobre
+#: 2026 avec tools/agent-bench/probe.mjs) : Alice ne les envoie pas depuis son
+#: serveur. Le candidat finit en un clic avec l'extension.
 AUTOMATABLE_SOON = {"greenhouse_api", "lever_api", "ashby_api", "workable_api"}
+ATS_NAMES = {"greenhouse_api": "Greenhouse", "lever_api": "Lever",
+             "ashby_api": "Ashby", "workable_api": "Workable"}
 
 
 def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
@@ -98,16 +103,15 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
 
     # ── ATS à formulaire public ───────────────────────────
     if channel in AUTOMATABLE_SOON:
-        ats = channel.replace("_api", "").capitalize()
-        if not settings.browser_submit_enabled:
-            blockers.append(
-                "L'envoi par navigateur est désactivé sur ce serveur : je "
-                "remplis le formulaire mais je ne le soumets pas."
-            )
+        ats = ATS_NAMES.get(channel, channel)
+        blockers.append(
+            f"{ats} protège l'envoi de ses formulaires contre les robots : je ne "
+            f"l'envoie pas à ta place depuis mon serveur."
+        )
         return Feasibility(
-            "medium", not blockers,
-            f"Cette offre passe par {ats}. Je remplis le formulaire dans un "
-            f"navigateur, en suivant les champs que l'ATS publie.",
+            "medium", False,
+            f"Cette offre passe par {ats}. Ton dossier est prêt : l'extension Alice "
+            f"remplit le formulaire dans ton navigateur, tu cliques sur Envoyer.",
             blockers, link, channel,
         )
 
@@ -155,7 +159,7 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
 # ── Qui appuie sur « envoyer » ─────────────────────────────────────────────
 
 #: Trois réponses honnêtes à « est-ce qu'Alice postule pour moi ? ».
-#:   auto     — elle envoie elle-même (e-mail avec SMTP, ATS avec envoi navigateur)
+#:   auto     — elle envoie elle-même (e-mail, Recruitee, La bonne alternance)
 #:   assisted — tout est prêt, un clic du candidat suffit (brouillon d'e-mail,
 #:              formulaire pré-rempli non soumis)
 #:   manual   — portail authentifié ou canal inconnu : il finit sur le site,
@@ -177,8 +181,7 @@ def apply_mode(job: JobPosting) -> str:
         return "auto"
     if is_valid_email(contact.get("email")):
         return "auto" if settings.can_send_email else "assisted"
-    if channel in AUTOMATABLE_SOON:
-        return "auto" if settings.browser_submit_enabled else "assisted"
+    # Greenhouse, Lever, Ashby, Workable : envoi protégé (captcha) → l'extension.
     # Formulaire propre à l'employeur, sans schéma publié : Alice ne sait pas
     # le lire de façon fiable depuis son serveur. Le candidat finit sur le
     # site (extension ou « Finir sur le site ») avec le dossier prêt.

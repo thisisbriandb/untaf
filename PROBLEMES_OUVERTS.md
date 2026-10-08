@@ -25,10 +25,6 @@ Le cœur du problème produit. État des lieux honnête :
 Conséquence : **aujourd'hui, Alice n'envoie presque rien seule.** Les pistes,
 dans l'ordre :
 
-- 🔴 **Corriger la promesse dans le code** : `feasibility.py` considère encore
-  Greenhouse, Lever, Ashby et Workable comme envoyables par le serveur quand
-  `BROWSER_SUBMIT_ENABLED` est vrai (`AUTOMATABLE_SOON`, `apply_mode`). Les
-  passer en « à finir avec l'extension ».
 - 🔴 **Mesurer** : lancer `tools/agent-bench/probe.mjs` sur 20 à 50 liens variés
   (sites d'entreprises, sites français, Welcome to the Jungle, Workday, Indeed,
   France Travail) pour savoir quelle part est rejouable, navigateur, extension.
