@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_admin
 from app.database import get_db
 from app.models.company import Company, CompanyStatus, ATSType, SeedSource
+from app.models.job_posting import JobPosting
 from app.schemas.company import CompanyCreate, CompanyOut, CompanyStats
 
 logger = logging.getLogger(__name__)
@@ -43,11 +44,16 @@ async def list_companies(
     result = await db.execute(query)
     companies = result.scalars().all()
 
-    # Add job_count to each company
+    # Nombre d'offres par entreprise : compté en base, sans charger les offres.
+    counts = dict((await db.execute(
+        select(JobPosting.company_id, func.count(JobPosting.id))
+        .where(JobPosting.company_id.in_([c.id for c in companies]))
+        .group_by(JobPosting.company_id)
+    )).all()) if companies else {}
     output = []
     for c in companies:
         data = CompanyOut.model_validate(c)
-        data.job_count = len(c.job_postings) if c.job_postings else 0
+        data.job_count = counts.get(c.id, 0)
         output.append(data)
 
     return output
@@ -122,7 +128,9 @@ async def get_company(company_id: UUID, db: AsyncSession = Depends(get_db)):
     if not company:
         raise HTTPException(404, "Company not found")
     data = CompanyOut.model_validate(company)
-    data.job_count = len(company.job_postings) if company.job_postings else 0
+    data.job_count = await db.scalar(
+        select(func.count(JobPosting.id)).where(JobPosting.company_id == company.id)
+    ) or 0
     return data
 
 

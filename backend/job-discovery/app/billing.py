@@ -166,6 +166,46 @@ async def record(session, candidate_id: UUID, kind: str, count: int = 1) -> None
         session.add(UsageEvent(candidate_id=candidate_id, kind=kind))
 
 
+async def reserve(candidate_id: UUID, kind: str) -> UUID | None:
+    """
+    Vérifie et compte d'un seul geste, avant le travail : deux demandes
+    simultanées ne passent plus toutes les deux un contrôle que seule l'une
+    aurait dû passer. Rendre la réservation (`release`) si le travail échoue.
+    """
+    from app.database import async_session
+    from app.models.billing import UsageEvent
+
+    from sqlalchemy import text
+
+    async with async_session() as session:
+        # Verrou de transaction par candidat et par usage : les réservations
+        # concurrentes passent l'une après l'autre.
+        await session.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+                              {"k": f"usage:{candidate_id}:{kind}"})
+        await check(session, candidate_id, kind)
+        event = UsageEvent(candidate_id=candidate_id, kind=kind)
+        session.add(event)
+        await session.commit()
+        return event.id
+
+
+async def release(reservation: UUID | None) -> None:
+    """Rend une réservation : le travail n'a pas eu lieu, il ne compte pas."""
+    if not reservation:
+        return
+    from sqlalchemy import delete
+
+    from app.database import async_session
+    from app.models.billing import UsageEvent
+
+    try:
+        async with async_session() as session:
+            await session.execute(delete(UsageEvent).where(UsageEvent.id == reservation))
+            await session.commit()
+    except Exception as e:  # noqa: BLE001 — au pire, un dossier compté en trop
+        logger.warning("Réservation %s non rendue : %s", reservation, e)
+
+
 async def consume(candidate_id: UUID, kind: str) -> None:
     """Vérifie puis compte, dans sa propre session : pour les appels isolés."""
     from app.database import async_session

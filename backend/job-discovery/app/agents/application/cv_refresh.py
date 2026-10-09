@@ -6,6 +6,7 @@ qu'on envoie). Si le candidat change ensuite de modèle, de couleur ou de photo,
 les envois en attente doivent partir avec ce nouveau choix, pas l'ancien.
 """
 
+import asyncio
 import logging
 from uuid import UUID
 
@@ -39,7 +40,7 @@ async def refresh_pending_resumes(candidate_id: UUID) -> int:
             )).all()
             for dispatch, application in rows:
                 tailoring = (application.metadata_json or {}).get("tailored_cv")
-                pdf, name, mode = resolve_cv(candidate, tailoring)
+                pdf, name, mode = await asyncio.to_thread(resolve_cv, candidate, tailoring)
                 if not pdf or mode == "render_failed":
                     continue  # on garde le CV déjà préparé plutôt que rien
                 dispatch.resume_blob, dispatch.resume_name = pdf, name

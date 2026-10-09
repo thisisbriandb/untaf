@@ -253,6 +253,8 @@ async def answer_questions(
     candidate = await db.get(Candidate, candidate_id)
     if not candidate:
         raise HTTPException(404, "Profil introuvable.")
+    from app import billing
+    await billing.consume(candidate_id, "message")  # un appel au modèle
 
     job_text = (data.page_text or "")[:6000]
     if data.job_id:

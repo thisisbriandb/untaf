@@ -14,6 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, or_, select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.followup import (
@@ -138,6 +139,8 @@ async def get_pipeline(
     if app_ids:
         dispatches = (await db.execute(
             select(ApplicationDispatch)
+        # Le PDF envoyé ne sert qu'au téléchargement : pas dans les listes.
+        .options(defer(ApplicationDispatch.resume_blob, raiseload=True))
             .where(ApplicationDispatch.application_id.in_(app_ids))
             .where(ApplicationDispatch.status != DispatchStatus.REJECTED)
             .order_by(ApplicationDispatch.created_at)
@@ -256,6 +259,8 @@ async def prepare_followup(
     existing = meta.get("followup") or {}
 
     if not existing.get("body") or regenerate:
+        from app import billing
+        await billing.consume(candidate_id, "message")  # un appel au modèle
         candidate = await db.get(Candidate, candidate_id)
         letter = (meta.get("cover_letter") or {}).get("body") or ""
         draft = await draft_followup(candidate, application, title, company or "", letter)

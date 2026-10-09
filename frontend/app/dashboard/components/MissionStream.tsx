@@ -15,6 +15,7 @@ import { ArrowRight, Check, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchCurrentRun, stopRun, STEP_LABELS, type MissionRun } from "@/lib/mission-run-client";
 import { invalidateApplication } from "@/lib/application-state";
+import { everyWhileVisible } from "@/lib/visible-interval";
 
 /** Assez vif pour paraître diffusé en direct. */
 const POLL_MS = 2500;
@@ -44,11 +45,10 @@ export function MissionStream({
 
   useEffect(() => {
     if (!live) return;
-    const id = setInterval(async () => {
+    return everyWhileVisible(async () => {
       const fresh = await fetchCurrentRun(candidateId);
       if (fresh) onChange(fresh);
     }, POLL_MS);
-    return () => clearInterval(id);
   }, [candidateId, live, onChange]);
 
   // Une mission terminée a rédigé des dossiers : les fiches ouvertes le savent.

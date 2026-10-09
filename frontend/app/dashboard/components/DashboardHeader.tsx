@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { fetchJournal, type MissionEvent } from "@/lib/mission-client";
 import { markJournalRead } from "@/lib/pipeline-client";
 import type { TabType } from "./DashboardSidebar";
+import { everyWhileVisible } from "@/lib/visible-interval";
 
 // Deux lieux seulement : parler à Alice, suivre ses candidatures. Le mandat
 // et les e-mails d'Alice se consultent depuis le rail des conversations.
@@ -67,8 +68,7 @@ export function DashboardHeader({
       fetchJournal(candidateId, 12).then(setEvents);
     };
     tick();
-    const id = setInterval(tick, POLL_MS);
-    return () => clearInterval(id);
+    return everyWhileVisible(tick, POLL_MS);
   }, [candidateId]);
 
   // Un clic à côté referme le panneau.

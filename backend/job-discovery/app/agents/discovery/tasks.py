@@ -6,7 +6,9 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.orm import defer
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.celery_app import celery_app
@@ -28,6 +30,9 @@ from app.agents.discovery.scrapers.base import ScrapedJob
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.qualification import qualify_job_description
 from app.agents.discovery.matching import evaluate_match
+
+#: Ce que le matching lit d'une annonce (langue, indices) : son début.
+DESCRIPTION_EXCERPT = 3000
 from app.agents.mission_log import get_or_create_mission, log_event, log_scan
 from app.models.mission import MissionEventKind
 from app.config import settings
@@ -538,15 +543,23 @@ async def _match_candidate_to_existing_jobs(candidate_id):
 
         # Company is joined explicitly: `JobPosting.company` is a lazy
         # relationship and touching it from here would raise MissingGreenlet.
+        # Tout le stock actif est relu : le texte complet des annonces en
+        # ferait des dizaines de Mo à chaque passe. Le matching n'en lit que
+        # le début (langue, indices), on ne transfère que lui.
+        excerpt = func.substr(JobPosting.description_raw, 1, DESCRIPTION_EXCERPT).label("excerpt")
         result = await session.execute(
-            select(JobPosting, Company.name)
+            select(JobPosting, Company.name, excerpt)
+            .options(defer(JobPosting.description_raw))
             .join(Company, JobPosting.company_id == Company.id)
             .where(JobPosting.status == PostingStatus.ACTIVE)
             .where(JobPosting.description_parsed.is_not(None))
             # Une offre collée par un candidat reste la sienne.
             .where(JobPosting.external_id.not_like(f"{IMPORT_PREFIX}%"))
         )
-        rows = result.all()
+        rows = []
+        for job, company_name, text in result.all():
+            set_committed_value(job, "description_raw", text)
+            rows.append((job, company_name))
 
         existing_result = await session.execute(
             select(Application).where(Application.candidate_id == candidate.id)

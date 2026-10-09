@@ -25,8 +25,9 @@ import { useAlice } from "../alice-context";
 import { STAGE_TONE } from "@/lib/stage-tone";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
 import { companyOf } from "@/lib/company";
-import { fetchInbox, onInboxChanged } from "@/lib/inbox-client";
+import { fetchUnread, onInboxChanged } from "@/lib/inbox-client";
 import { UpgradeCard } from "./Subscription";
+import { everyWhileVisible } from "@/lib/visible-interval";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -197,11 +198,11 @@ export function ConversationSidebar({
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     if (!open || !candidateId) return;
-    const load = () => void fetchInbox(candidateId).then((b) => b && setUnread(b.unread));
+    const load = () => void fetchUnread(candidateId).then((n) => n !== null && setUnread(n));
     load();
-    const timer = setInterval(load, 120_000);
+    const stop = everyWhileVisible(load, 120_000);
     const off = onInboxChanged(load);
-    return () => { clearInterval(timer); off(); };
+    return () => { stop(); off(); };
   }, [open, candidateId]);
 
   const stageByJob = useMemo(

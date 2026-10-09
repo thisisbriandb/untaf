@@ -15,8 +15,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ratelimit import limited
 from app.agents.application.outcome import build_outcome
 from app.agents.application.pack import is_pack_ready
 from app.agents.application.requirements import detect_requirements
@@ -98,7 +100,9 @@ def _guard_download(label: str):
         async def inner(*args, **kwargs):
             try:
                 return await fn(*args, **kwargs)
-            except HTTPException:
+            except (HTTPException, LimitReached):
+                # Limite de la formule : 402 et fenêtre d'abonnement, pas une
+                # « erreur » ni une alerte à l'équipe.
                 raise
             except Exception as e:  # noqa: BLE001
                 logger.error("%s : échec inattendu : %s", label, e, exc_info=True)
@@ -156,8 +160,11 @@ async def import_job(candidate_id: UUID, data: ImportIn):
     Elle y entre quel que soit son score — c'est lui qui l'a choisie — mais le
     score et ses motifs sont renvoyés, pour qu'il sache à quoi s'en tenir.
     """
+    from app import billing
     from app.agents.discovery.job_import import import_posting
 
+    # La lecture de l'annonce passe par le modèle : comptée comme un message.
+    await billing.consume(candidate_id, "message")
     url = (data.url or "").strip() or None
     result = await import_posting(candidate_id, data.text.strip(), url)
     if not result:
@@ -245,7 +252,7 @@ async def _cv_report(candidate_id: UUID, pack) -> CvReport:
     )
 
 
-@router.get("/{job_id}/cv")
+@router.get("/{job_id}/cv", dependencies=[Depends(limited("render", anonymous=0, user=240, overall=20000))])
 @_guard_download("téléchargement du CV adapté")
 async def download_tailored_cv(
     candidate_id: UUID,
@@ -278,7 +285,7 @@ async def download_tailored_cv(
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
 
-@router.get("/{job_id}/cv/preview")
+@router.get("/{job_id}/cv/preview", dependencies=[Depends(limited("render", anonymous=0, user=240, overall=20000))])
 @_guard_download("aperçu du CV adapté")
 async def preview_tailored_cv(
     candidate_id: UUID,
@@ -297,7 +304,7 @@ async def preview_tailored_cv(
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
-@router.get("/{job_id}/pack")
+@router.get("/{job_id}/pack", dependencies=[Depends(limited("render", anonymous=0, user=240, overall=20000))])
 @_guard_download("téléchargement du dossier")
 async def download_pack(
     candidate_id: UUID,
@@ -560,6 +567,16 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
 
             # ── Lettre de motivation ──────────────────────
             if "cover_letter" in plan.to_generate:
+                if not app_id:
+                    # Une offre hors de sa liste : on ne rédige rien pour rien.
+                    yield _sse("error", {"message": "Cette offre n'est pas dans ta liste."})
+                    return
+                try:
+                    from app import billing
+                    await billing.consume(candidate_id, "message")
+                except LimitReached as e:
+                    yield _sse("error", {"message": str(e), "plan_limit": e.detail()})
+                    return
                 yield _sse("step", {
                     "key": "cover_letter",
                     "label": "Je rédige ta lettre pour cette offre",
@@ -798,6 +815,8 @@ async def application_state(
 
     dispatches = (await db.execute(
         select(ApplicationDispatch)
+        # Le PDF envoyé ne sert qu'au téléchargement : pas dans les listes.
+        .options(defer(ApplicationDispatch.resume_blob, raiseload=True))
         .where(ApplicationDispatch.application_id == application.id)
         .where(ApplicationDispatch.status != DispatchStatus.REJECTED)
         .order_by(ApplicationDispatch.created_at)

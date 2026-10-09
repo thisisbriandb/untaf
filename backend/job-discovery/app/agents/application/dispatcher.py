@@ -11,6 +11,7 @@ Trois principes non négociables :
   - un envoi simulé n'est JAMAIS rapporté comme un envoi réel.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -262,8 +263,9 @@ async def prepare_dispatch(
         from app.agents.application.cv_resolver import resolve_cv
         from app.agents.application.email_sender import _plain_text
 
-        cv_bytes, cv_name, cv_mode = resolve_cv(
-            candidate, (application.metadata_json or {}).get("tailored_cv"),
+        # La mise en page (Typst) occupe le processeur : hors de la boucle.
+        cv_bytes, cv_name, cv_mode = await asyncio.to_thread(
+            resolve_cv, candidate, (application.metadata_json or {}).get("tailored_cv"),
         )
         cv_missing = cv_mode == "render_failed" or not cv_bytes
         if cv_mode == "render_failed":

@@ -124,8 +124,11 @@ class Candidate(Base):
     )
 
     # ── Relationships ────────────────────────────────────
+    # « noload » : charger un candidat ne ramène plus ses candidatures (et,
+    # par elles, les offres) — c'était l'essentiel du trafic vers la base.
+    # Les candidatures se lisent par requête explicite.
     applications = relationship(
-        "Application", back_populates="candidate", cascade="all, delete-orphan", lazy="selectin"
+        "Application", back_populates="candidate", cascade="all, delete-orphan", lazy="noload"
     )
 
     def __repr__(self) -> str:
