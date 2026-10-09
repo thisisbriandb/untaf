@@ -36,7 +36,7 @@ chargement était répété toutes les 2,5 s (mission), 30 s (cloche) et 2 min
 | VPS | non | administration système à notre charge, une seule machine |
 
 À faire à la mise en production (configuration) :
-- [ ] Service `worker` (Celery) + Redis sur Railway : les missions ne tournent
+- [x] Service `worker` (Celery) + Redis sur Railway : les missions ne tournent
       plus dans le serveur web
 - [ ] `DATABASE_URL` sur le *Transaction pooler* de Supabase (port 6543)
 - [ ] Quota d'envoi Scaleway relevé (la connexion passe par e-mail)
