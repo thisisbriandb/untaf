@@ -25,8 +25,20 @@ def _connect_args(url: str) -> dict:
     return {}
 
 
+def engine_url(url: str) -> str:
+    """
+    Avec le « Transaction pooler », SQLAlchemy garde aussi son propre cache de
+    requêtes préparées, au-dessus d'asyncpg : il réutilisait une requête
+    préparée sur une autre connexion du pool, où elle n'existe pas
+    (« prepared statement … does not exist »). On le coupe dans l'URL.
+    """
+    if ":6543/" in url and "prepared_statement_cache_size" not in url:
+        return url + ("&" if "?" in url else "?") + "prepared_statement_cache_size=0"
+    return url
+
+
 engine = create_async_engine(
-    settings.database_url,
+    engine_url(settings.database_url),
     echo=settings.debug,
     pool_pre_ping=True,
     pool_size=settings.db_pool_size,
