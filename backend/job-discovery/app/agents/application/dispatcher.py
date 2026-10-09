@@ -31,6 +31,12 @@ from app.models.mission import AutonomyLevel, Mission, MissionStatus
 
 logger = logging.getLogger(__name__)
 
+#: Lettre sans signature : on la demande avant l'envoi.
+MISSING_SIGNATURE_REASON = (
+    "ta lettre partirait sans signature : signe une fois (dans ta lettre, « Ajouter ma signature ») "
+    "ou donne ton feu vert pour l'envoyer ainsi"
+)
+
 #: Canal de l'offre → canal d'envoi.
 #: Destination d'un envoi La bonne alternance : `lba:<recipient_id>`.
 LBA_PREFIX = "lba:"
@@ -389,8 +395,14 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
 
     # Pas de candidature signée « Candidat » : sans nom, rien ne part.
     from app.agents.application.identity import MISSING_NAME_REASON, real_name
-    if not real_name(await session.get(Candidate, dispatch.candidate_id)):
+    candidate = await session.get(Candidate, dispatch.candidate_id)
+    if not real_name(candidate):
         return Hold(DispatchStatus.AWAITING_APPROVAL, MISSING_NAME_REASON)
+
+    # Une lettre non signée est mal vue : sans signature, on la demande avant
+    # l'envoi. Le feu vert explicite du candidat (approved_at) vaut accord.
+    if not getattr(candidate, "signature_image", None) and not dispatch.approved_at:
+        return Hold(DispatchStatus.AWAITING_APPROVAL, MISSING_SIGNATURE_REASON)
 
     if application:
         row = (await session.execute(

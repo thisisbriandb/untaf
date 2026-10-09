@@ -368,6 +368,28 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
         top_items = [Item(title, display_company(company) or "", "dossier prêt")
                      for _, title, company in ready_rows[:5]]
 
+        # Formule gratuite : ce que l'abonnement débloquerait, chiffré sur sa
+        # propre recherche (offres retenues qui attendent encore leur dossier).
+        from app import billing
+        upsell = None
+        if billing.settings.billing_enabled:
+            _, paid = await billing.limits_for(session, candidate_id)
+            if not paid:
+                waiting_packs = (await session.execute(
+                    select(func.count(Application.id))
+                    .where(Application.candidate_id == candidate_id)
+                    .where(Application.status == ApplicationStatus.MATCHED)
+                    .where(~Application.metadata_json.has_key("cover_letter"))
+                )).scalar() or 0
+                upsell = (
+                    (f"{waiting_packs} offre{'s' if waiting_packs > 1 else ''} retenue"
+                     f"{'s' if waiting_packs > 1 else ''} pour toi attend{'ent' if waiting_packs > 1 else ''} "
+                     f"encore {'leur' if waiting_packs > 1 else 'son'} dossier. " if waiting_packs else "")
+                    + f"Avec l'abonnement ({billing.settings.billing_price_label}, sans engagement), je "
+                    f"prépare jusqu'à {billing.settings.paid_packs_per_week} dossiers par semaine et "
+                    f"j'écris à {billing.settings.spontaneous_weekly_cap} entreprises qui recrutent sans annonce."
+                )
+
     by_status = {s: n for s, n in dispatch_rows}
     sent = by_status.get(DispatchStatus.SENT, 0)
 
@@ -383,6 +405,8 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
             f"ton feu vert."
         )
     paragraphs += [f"— {e}" for e in events[:4]]
+    if upsell:
+        paragraphs.append(upsell)
 
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d" if period == "daily" else "%G-W%V")
     email = Email(

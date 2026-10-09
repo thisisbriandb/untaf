@@ -27,6 +27,12 @@ const DOT: Record<string, string> = {
   error: "bg-red-500",
 };
 
+/** La limite de formule portée par un événement du journal, s'il y en a une. */
+function planLimitOf(e: { payload?: Record<string, unknown> | null }) {
+  const limit = e.payload?.plan_limit as { code?: string; paid?: boolean } | undefined;
+  return limit && limit.code === "plan_limit" && !limit.paid ? limit : null;
+}
+
 export function MissionStream({
   candidateId,
   run,
@@ -113,7 +119,18 @@ export function MissionStream({
               className="flex items-start gap-2.5 text-[15px] font-light text-[#1A1918]/80 leading-relaxed tracking-tight"
             >
               <span className={cn("mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full", DOT[e.kind] ?? "bg-[#1A1918]/25")} />
-              <span>{e.summary}</span>
+              <span>
+                {e.summary}
+                {planLimitOf(e) && (
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("untaf:plan-limit", { detail: planLimitOf(e) }))}
+                    className="ml-2 inline-flex items-center gap-1 rounded-full bg-[#006045] px-2.5 py-0.5 text-[11px] text-white align-middle hover:bg-[#004d37] cursor-pointer"
+                  >
+                    Débloquer
+                  </button>
+                )}
+              </span>
             </motion.p>
           ))}
         </AnimatePresence>

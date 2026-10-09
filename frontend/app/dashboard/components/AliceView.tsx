@@ -32,9 +32,21 @@ import { chez, companyOf } from "@/lib/company";
  * est une mission confiée. La nuance porte tout le positionnement du produit.
  */
 const SUGGESTIONS = [
-  { label: "Trouve-moi des offres", query: "Montre-moi les nouvelles offres" },
-  { label: "Prépare mes candidatures", query: "Prépare les dossiers de mes meilleures offres et dis-moi lesquelles tu peux envoyer toi-même" },
-  { label: "Fais le point", query: "Où en est ma recherche ? Fais-moi le bilan." },
+  {
+    label: "Trouve-moi des offres",
+    detail: "Je lis les annonces chaque jour et je garde celles qui te vont.",
+    query: "Montre-moi les nouvelles offres",
+  },
+  {
+    label: "Prépare mes candidatures",
+    detail: "CV adapté et lettre signée pour chaque offre, à ton style.",
+    query: "Prépare les dossiers de mes meilleures offres et dis-moi lesquelles tu peux envoyer toi-même",
+  },
+  {
+    label: "Écris aux entreprises",
+    detail: "Celles qui recrutent sans publier d'annonce : je leur écris pour toi.",
+    mission: true,
+  },
 ];
 
 // ── Inline UI Blocks ───────────────────────────────────────────────────────
@@ -233,6 +245,48 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
+// ── Réponses en un geste ───────────────────────────────────────────────────
+
+/**
+ * Quand Alice termine par une question, on peut répondre d'un clic : taper
+ * « oui » pour « Je te montre les offres ? », personne n'en a envie.
+ */
+export function quickRepliesFor(text: string): string[] {
+  const t = text.trim().replace(/[\s*_)»"]+$/u, "");
+  if (!t.endsWith("?")) return [];
+  // La question d'abord, le message entier ensuite (« J'ai 12 offres. Je te les montre ? »).
+  const last = t.slice(Math.max(t.lastIndexOf("\n"), t.lastIndexOf(". ") + 1)).toLowerCase();
+  for (const scope of [last, t.toLowerCase()]) {
+    if (/mission|lance/.test(scope)) return ["Oui, lance-la", "Plus tard"];
+    if (/dossier|pr[ée]par|lettre|\bcv\b/.test(scope)) return ["Oui, vas-y", "Pas maintenant"];
+    if (/offre|montre/.test(scope)) return ["Oui, montre-moi", "Plus tard"];
+  }
+  return ["Oui", "Non merci"];
+}
+
+function QuickReplies({ text, onPick }: { text: string; onPick: (reply: string) => void }) {
+  const replies = quickRepliesFor(text);
+  if (!replies.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 pl-10 pt-2">
+      {replies.map((r, i) => (
+        <button
+          key={r}
+          type="button"
+          onClick={() => onPick(r)}
+          className={
+            i === 0
+              ? "px-3 py-1.5 rounded-full bg-[#006045] text-white text-xs tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer"
+              : "px-3 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-xs text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer"
+          }
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 /**
@@ -412,6 +466,9 @@ export function AliceView({
                   className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
                 >
                   <ChatBubble msg={msg} />
+                  {msg.sender === "alice" && !isThinking && msg.id === messages[messages.length - 1]?.id && (
+                    <QuickReplies text={msg.text} onPick={send} />
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -440,17 +497,20 @@ export function AliceView({
             />
           </div>
         )}
+        {/* Ce qu'Alice sait faire, en trois cartes : on comprend l'outil en
+            le voyant, et un clic suffit pour le lancer. */}
         {!hasConversation && (
-          <div className="flex flex-wrap justify-center gap-1.5 pb-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pb-3">
             {SUGGESTIONS.map((m) => (
               <button
                 key={m.label}
                 type="button"
-                onClick={() => send(m.query)}
+                onClick={() => (m.mission ? setShowLauncher(true) : m.query && send(m.query))}
                 disabled={isThinking}
-                className="px-3 py-1.5 rounded-full border border-[#1A1918]/8 bg-white text-[11px] font-normal text-[#1A1918]/60 hover:border-[#006045]/35 hover:text-[#006045] transition-colors cursor-pointer disabled:opacity-40"
+                className="text-left rounded-2xl border border-[#1A1918]/8 bg-white px-3.5 py-3 hover:border-[#006045]/35 transition-colors cursor-pointer disabled:opacity-40"
               >
-                {m.label}
+                <span className="block text-[13px] text-[#1A1918] tracking-tight">{m.label}</span>
+                <span className="block text-[11px] text-[#1A1918]/55 tracking-tight pt-0.5">{m.detail}</span>
               </button>
             ))}
           </div>
