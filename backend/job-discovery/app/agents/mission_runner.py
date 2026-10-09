@@ -237,7 +237,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
 
         # 2. Un dossier complet par offre.
         prepared = []
-        for app, job, company in targets:
+        for index, (app, job, company) in enumerate(targets):
             if not await _heartbeat(run_id, RunStep.PREPARE):
                 return
             mode = apply_mode(job)
@@ -245,10 +245,27 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
                 try:
                     pack = await build_pack(candidate_id, app.id)
                 except LimitReached as e:
-                    # Plus de dossiers dans la formule : on s'arrête là et on
-                    # le dit, les dossiers déjà prêts continuent leur chemin.
-                    await _say(run_id, candidate_id, MissionEventKind.ERROR, str(e),
-                               {"plan_limit": e.detail()})
+                    # Plus de dossiers dans la formule : on s'arrête là, les
+                    # dossiers déjà prêts continuent leur chemin. En gratuit,
+                    # les offres retenues restent visibles, verrouillées : on
+                    # ne rédige (et ne paie) rien pour elles.
+                    locked = [(a, j, c) for a, j, c in targets[index:] if not is_pack_ready(a)]
+                    if locked and not e.paid:
+                        names = ", ".join(f"« {j.title} »{chez(c)}" for _, j, c in locked[:3])
+                        more = f" et {len(locked) - 3} autre{'s' if len(locked) > 4 else ''}" if len(locked) > 3 else ""
+                        await _say(
+                            run_id, candidate_id, MissionEventKind.SHORTLIST,
+                            f"J'ai retenu {len(locked)} autre{'s' if len(locked) > 1 else ''} offre"
+                            f"{'s' if len(locked) > 1 else ''} pour toi : {names}{more}. "
+                            "Avec l'abonnement, je prépare leurs dossiers tout de suite.",
+                            {"plan_limit": e.detail(), "locked": [
+                                {"job_id": str(j.id), "title": j.title, "company": c,
+                                 "score": a.match_score} for a, j, c in locked
+                            ]},
+                        )
+                    else:
+                        await _say(run_id, candidate_id, MissionEventKind.ERROR, str(e),
+                                   {"plan_limit": e.detail()})
                     break
                 except Exception as e:  # noqa: BLE001
                     logger.error("Pack impossible pour %s : %s", app.id, e)

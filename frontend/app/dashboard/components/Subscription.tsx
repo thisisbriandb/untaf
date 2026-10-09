@@ -186,7 +186,7 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#1A1918]/25 p-4"
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-[#1A1918]/25 p-4"
           onClick={close}
         >
           <motion.div

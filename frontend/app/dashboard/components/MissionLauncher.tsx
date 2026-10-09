@@ -6,6 +6,7 @@ import { ArrowRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
 import { COUNTS, startRun, type MissionRun } from "@/lib/mission-run-client";
+import { fetchBilling } from "@/lib/billing-client";
 
 const SEND_PREF = "alice_mission_send";
 const SPONTANEOUS_PREF = "alice_mission_spontaneous";
@@ -52,11 +53,35 @@ export function MissionLauncher({
   const [isLaunching, setIsLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Limite de la formule : la fenêtre d'abonnement prend le relais.
+  // Limite de la formule : la fenêtre d'abonnement prend le relais (sauf si
+  // c'est l'assistant lui-même qui la propose : il reste ouvert dessous).
   useEffect(() => {
-    window.addEventListener("untaf:plan-limit", onClose);
-    return () => window.removeEventListener("untaf:plan-limit", onClose);
+    const onLimit = (e: Event) => {
+      if (!(e as CustomEvent<{ fromLauncher?: boolean }>).detail?.fromLauncher) onClose();
+    };
+    window.addEventListener("untaf:plan-limit", onLimit);
+    return () => window.removeEventListener("untaf:plan-limit", onLimit);
   }, [onClose]);
+
+  // Les spontanées font partie de l'abonnement : en gratuit, le choix reste
+  // visible mais verrouillé, avec ce qu'il apporterait.
+  const [spontaneousLocked, setSpontaneousLocked] = useState(false);
+  useEffect(() => {
+    void fetchBilling(candidateId).then((b) => {
+      const locked = Boolean(b?.enabled && b.usage.spontaneous && b.usage.spontaneous.limit === 0);
+      setSpontaneousLocked(locked);
+      if (locked) setSpontaneous(0);
+    });
+  }, [candidateId]);
+
+  const offerSpontaneous = () =>
+    window.dispatchEvent(new CustomEvent("untaf:plan-limit", {
+      detail: {
+        code: "plan_limit", kind: "spontaneous", used: 0, limit: 0, paid: false, fromLauncher: true,
+        message: "Avec l'abonnement, j'écris chaque semaine à 15 entreprises de ton métier qui "
+          + "recrutent sans publier d'annonce, à l'adresse qu'elles donnent sur leur site.",
+      },
+    }));
 
   const launch = async () => {
     setIsLaunching(true);
@@ -125,15 +150,16 @@ export function MissionLauncher({
               key={n}
               type="button"
               whileTap={{ scale: 0.95 }}
-              onClick={() => setSpontaneous(n)}
+              onClick={() => (spontaneousLocked && n > 0 ? offerSpontaneous() : setSpontaneous(n))}
               className={cn(
                 "px-4 py-2 rounded-full border text-sm transition-colors cursor-pointer",
+                spontaneousLocked && n > 0 && "opacity-60",
                 spontaneous === n
                   ? "border-[#006045] bg-[#006045]/8 text-[#006045]"
                   : "border-[#1A1918]/12 text-[#1A1918]/60 hover:border-[#1A1918]/30 hover:text-[#1A1918]",
               )}
             >
-              {n === 0 ? "Aucune" : n}
+              {n === 0 ? "Aucune" : spontaneousLocked ? `🔒 ${n}` : n}
             </motion.button>
           ))}
         </div>

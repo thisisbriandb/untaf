@@ -100,8 +100,14 @@ Décision : **écartées quand l'indice est fort**, signalées sinon.
 Décision : **en gratuit, une mission prépare les dossiers inclus et montre les
 autres offres verrouillées** (on ne paie jamais ce qui est verrouillé).
 
-- [ ] Mission gratuite : offres au-delà de la formule trouvées, classées,
-      affichées verrouillées
-- [ ] Spontanées : choix visible mais verrouillé, avec la proposition
-- [ ] Bilan de la semaine : ce qu'Alice a fait, ce que l'abonnement débloque
-- [ ] Proposition au bon moment (4ᵉ dossier, fin de mission)
+- [x] Mission gratuite : au-delà de la formule, les offres retenues sont
+      annoncées (« J'ai retenu N autres offres pour toi : … ») avec un bouton
+      « Débloquer », sans rien rédiger pour elles
+- [x] Spontanées : choix visible mais verrouillé (🔒 3, 🔒 5) ; un clic ouvre
+      la proposition, l'assistant de mission reste ouvert dessous
+- [x] Bilan de la semaine (e-mail) : en gratuit, nombre d'offres retenues qui
+      attendent leur dossier, et ce que l'abonnement débloque
+- [x] Au bon moment : 4ᵉ dossier, téléchargement, message, mission → fenêtre
+      d'abonnement (402) ; encart permanent dans la barre latérale
+- [ ] Mesurer : taux de passage à l'abonnement, et à quel moment (Lemon
+      Squeezy + `usage_events`)
