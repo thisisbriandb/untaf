@@ -18,7 +18,7 @@ import { startRun } from "@/lib/mission-run-client";
 import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
-import { SignaturePad } from "@/app/dashboard/components/SignaturePad";
+import { SignatureChooser } from "@/app/dashboard/components/SignatureChooser";
 import { saveCvDesign, uploadPhoto } from "@/lib/cv-profile";
 import { CvLookStep, DEFAULT_LOOK, type CvLook } from "./CvLookStep";
 import Link from "next/link";
@@ -950,13 +950,14 @@ export function AliceExperience() {
 
               {/* ── Phase 7: Signature des lettres ── */}
               {phase === 7 && (
-                <div className="w-full max-w-md mx-auto space-y-2 text-left">
-                  <SignaturePad
+                <div className="w-full max-w-lg mx-auto space-y-2 text-left">
+                  <SignatureChooser
+                    fullName={`${profile.firstName} ${profile.lastName}`.trim()}
                     onSave={(dataUrl) => void handleSignatureDone(dataUrl)}
                     onCancel={() => void handleSignatureDone(null)}
                   />
                   <p className="text-[11px] text-[#1A1918]/50 tracking-tight">
-                    Trace ta signature au doigt ou à la souris. Elle ne sert qu&apos;au bas de tes lettres.
+                    Elle ne sert qu&apos;au bas de tes lettres de motivation.
                   </p>
                 </div>
               )}
