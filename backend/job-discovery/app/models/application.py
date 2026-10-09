@@ -65,7 +65,7 @@ class Application(Base):
     # ── Relationships ────────────────────────────────────
     candidate = relationship("Candidate", back_populates="applications")
     # Chargée par jointure explicite là où l'offre est utile (voir candidate.py).
-    job_posting = relationship("JobPosting", lazy="noload")
+    job_posting = relationship("JobPosting", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<Application Candidate={self.candidate_id} Job={self.job_posting_id} Status={self.status.value}>"

@@ -60,6 +60,9 @@ export function JobCard({ job }: { job: JobCardData }) {
               )}
             </p>
           )}
+          {job.warning && (
+            <p className="text-[11px] font-normal text-amber-700 tracking-tight">⚠ {job.warning}</p>
+          )}
         </div>
         <span className="shrink-0 text-xs font-medium text-[#006045] tabular-nums">
           {job.match_score}%

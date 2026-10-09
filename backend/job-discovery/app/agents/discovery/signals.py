@@ -251,6 +251,73 @@ def is_generic_posting(title: str | None) -> bool:
     return bool(_GENERIC_POSTING.search(title or ""))
 
 
+# ── Écoles qui recrutent des élèves sous couvert d'alternance ──────────────
+#
+# Des écoles, CFA et organismes de formation publient des « offres »
+# d'alternance pour remplir leurs promotions : le candidat croit postuler à un
+# poste, il s'inscrit à une formation. Une école peut aussi embaucher un vrai
+# alternant (assistant RH, chargé de com…) : un seul indice ne suffit pas à
+# écarter, il en faut deux qui concordent.
+
+#: NAF « 85 » : enseignement (85.59A formation continue, 85.42Z supérieur…).
+_EDUCATION_NAF = re.compile(r"^\s*85")
+_SCHOOL_NAME = re.compile(
+    r"\b(e|é)coles?\b|\bschool\b|\bcfa\b|\bcampus\b|\binstitut\b|\bacad(e|é)m(y|ie)\b|"
+    r"\bcentre de formation\b|\borganisme de formation\b|\bformations?\b|\bbusiness school\b|"
+    r"\bapprentissage\b",
+    re.I,
+)
+#: Instituts, académies… qui sont de vrais employeurs.
+_REAL_EMPLOYERS = re.compile(
+    r"institut (pasteur|curie|gustave roussy|national|de recherche|fran(c|ç)ais du p(e|é)trole)|"
+    r"\binserm\b|\bcnrs\b|\binrae?\b|\bifremer\b|acad(e|é)mie (de|d')|\bminist(e|è)re\b",
+    re.I,
+)
+_STUDENT_PITCH = re.compile(
+    r"formation (100 ?% )?(gratuite|financ(e|é)e|prise en charge)|frais de (scolarit(e|é)|formation) "
+    r"(pris en charge|financ|offert)|entreprises? partenaires?|r(e|é)seau d'entreprises|"
+    r"rejoin(s|dre|t|ez) (notre|nos) (e|é)cole|int(e|è)gre[rz]? (notre|nos) (formation|programme|(e|é)cole)|"
+    r"\badmissions?\b|inscri(s|ption|vez|re)[- ](toi|vous)?|places? limit(e|é)es?|"
+    r"rentr(e|é)e (de |en )?(septembre|octobre|janvier|f(e|é)vrier|mars)|nos (e|é)tudiants|"
+    r"pr(e|é)pare[rz]? (un|le|ton|votre) (titre|dipl(o|ô)me|bachelor|mast(e|è)re|bts)|"
+    r"titre rncp|nous (te|vous) (trouvons|accompagnons dans la recherche d')(une|ton|votre) entreprise|"
+    r"recrutons pour (le compte de )?(nos|des) (entreprises|partenaires|clients)",
+    re.I,
+)
+
+
+def training_org_evidence(
+    company_name: str | None,
+    description: str | None,
+    employer: dict | None = None,
+) -> tuple[str | None, str]:
+    """
+    (« strong » | « weak » | None, motif) : l'annonce vient-elle d'une école
+    qui recrute des élèves ? « strong » demande deux indices concordants.
+    """
+    employer = employer or {}
+    name = company_name or ""
+    clues: list[str] = []
+
+    naf = str(employer.get("naf") or employer.get("sector_code") or "")
+    sector = str(employer.get("sector") or employer.get("naf_label") or "")
+    if _EDUCATION_NAF.match(naf.replace(".", "")) or re.search(r"enseignement|formation", sector, re.I):
+        clues.append(f"employeur du secteur de l'enseignement ({naf or sector})")
+
+    for label in dict.fromkeys(x for x in (name, employer.get("legal_name")) if x):
+        if _SCHOOL_NAME.search(label) and not _REAL_EMPLOYERS.search(label):
+            clues.append(f"nom d'école ou d'organisme de formation (« {label} »)")
+            break
+
+    pitches = {m.group(0).lower() for m in _STUDENT_PITCH.finditer(description or "")}
+    if pitches:
+        clues.append("annonce qui recrute des élèves (" + ", ".join(f"« {x} »" for x in sorted(pitches)[:2]) + ")")
+    strong = len(clues) >= 2 or len(pitches) >= 2
+    if not clues:
+        return None, ""
+    return ("strong" if strong else "weak"), " ; ".join(clues)
+
+
 def detect_job_family(title: str | None, tech_stack: list[str] | None = None) -> str:
     """Coarse job family, or 'unknown'."""
     text = f" {(title or '').lower()} "

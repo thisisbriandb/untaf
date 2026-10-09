@@ -122,6 +122,13 @@ def to_scraped_job(item: dict) -> ScrapedJob | None:
                 "salary_max": None,
                 "summary_french": title,
                 "source": "labonnealternance",
+                # Qui publie : le code NAF trahit l'école qui recrute des élèves.
+                "employer": {k: v for k, v in {
+                    "naf": (((workplace.get("domain") or {}).get("naf") or {}).get("code")),
+                    "naf_label": (((workplace.get("domain") or {}).get("naf") or {}).get("label")),
+                    "siret": workplace.get("siret"),
+                    "legal_name": workplace.get("legal_name"),
+                }.items() if v},
             },
         },
     )

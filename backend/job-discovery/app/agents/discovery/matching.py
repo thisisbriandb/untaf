@@ -16,6 +16,7 @@ This version:
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -27,6 +28,7 @@ from app.agents.discovery.signals import (
     detect_country,
     detect_job_family,
     is_generic_posting,
+    training_org_evidence,
     detect_language,
     detect_seniority,
     seniority_distance,
@@ -213,6 +215,18 @@ def evaluate_match(
 
     if is_generic_posting(title):
         rejections.append("annonce générique (candidature spontanée, vivier) : pas un poste")
+
+    # Une école qui « recrute » des alternants remplit sa promotion : ce n'est
+    # pas un poste. Deux indices concordants → écartée ; un seul → signalée.
+    if job_contract in ("alternance", "stage") or re.search(r"alternan|apprenti", title, re.I):
+        level, motif = training_org_evidence(
+            company_name if company_name is not None else _safe_company_name(job),
+            job.description_raw, parsed.get("employer"),
+        )
+        if level == "strong":
+            rejections.append(f"organisme de formation : {motif}")
+        elif level == "weak":
+            signals["training_org"] = motif
 
     family_known = job_family != "unknown"
     # Seule une famille choisie écarte une offre ; déduite de l'ancien poste,

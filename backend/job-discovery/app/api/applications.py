@@ -57,7 +57,7 @@ async def list_applications(
     
     applications = []
     for app, posting, company_name, company_domain in result.all():
-        app_data = ApplicationDetail.model_validate(app)
+        app_data = ApplicationDetail(**ApplicationOut.model_validate(app).model_dump())
         job_data = JobPostingOut.model_validate(posting)
         job_data.company_name = company_name
         job_data.company_domain = company_domain
@@ -87,7 +87,7 @@ async def get_application(
         
     app, posting, company_name, company_domain = row
     await assert_owner(db, user, app.candidate_id)
-    app_data = ApplicationDetail.model_validate(app)
+    app_data = ApplicationDetail(**ApplicationOut.model_validate(app).model_dump())
     job_data = JobPostingOut.model_validate(posting)
     job_data.company_name = company_name
     job_data.company_domain = company_domain

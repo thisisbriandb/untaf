@@ -300,6 +300,12 @@ def _job_card(app, job, company) -> dict:
         "source_url": job.source_url,
         "status": app.status.value,
         "apply_mode": apply_mode(job),
+        # Un seul indice d'école qui recrute des élèves : on montre, on prévient.
+        "warning": (
+            "Probablement une école qui recrute des élèves plutôt qu'un vrai poste"
+            if ((app.metadata_json or {}).get("match") or {}).get("signals", {}).get("training_org")
+            else None
+        ),
     }
 
 
