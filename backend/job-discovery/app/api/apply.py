@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.outcome import build_outcome
@@ -798,6 +799,8 @@ async def application_state(
 
     dispatches = (await db.execute(
         select(ApplicationDispatch)
+        # Le PDF envoyé ne sert qu'au téléchargement : pas dans les listes.
+        .options(defer(ApplicationDispatch.resume_blob, raiseload=True))
         .where(ApplicationDispatch.application_id == application.id)
         .where(ApplicationDispatch.status != DispatchStatus.REJECTED)
         .order_by(ApplicationDispatch.created_at)

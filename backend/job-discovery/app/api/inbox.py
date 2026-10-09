@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import defer
+from sqlalchemy.orm import defer, load_only
 
 from app.config import settings
 from app.database import get_db
@@ -167,17 +167,36 @@ def _query(candidate_id: UUID):
     )
 
 
+@router.get("/candidates/{candidate_id}/inbox/unread")
+async def inbox_unread(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Le seul compteur, pour le badge : interrogé régulièrement, il doit rester léger."""
+    unread = (await db.execute(
+        select(func.count()).select_from(InboundEmail)
+        .where(InboundEmail.candidate_id == candidate_id).where(InboundEmail.read_at.is_(None))
+    )).scalar_one()
+    return {"unread": unread}
+
+
 @router.get("/candidates/{candidate_id}/inbox", response_model=InboxOut)
 async def inbox(candidate_id: UUID, job_id: UUID | None = None, db: AsyncSession = Depends(get_db)):
-    from app.agents.inbox import ensure_reply_address
+    from app.agents.inbox import ensure_reply_address, reply_address_of
 
-    candidate = await db.get(Candidate, candidate_id)
+    # Seulement ce qu'il faut pour l'adresse de réponse : pas le CV ni la photo.
+    candidate = (await db.execute(
+        select(Candidate).where(Candidate.id == candidate_id).options(load_only(
+            Candidate.id, Candidate.reply_token, Candidate.full_name, Candidate.email, raiseload=True,
+        ))
+    )).scalars().first()
     if not candidate:
         raise HTTPException(404, "Profil introuvable.")
-    address = await ensure_reply_address(db, candidate)
-    await db.commit()
+    if not candidate.reply_token:
+        address = await ensure_reply_address(db, candidate)
+        await db.commit()
+    else:
+        address = reply_address_of(candidate)
 
-    query = _query(candidate_id)
+    # La liste n'affiche pas le corps des messages : il n'est lu qu'à l'ouverture.
+    query = _query(candidate_id).options(defer(InboundEmail.text), defer(InboundEmail.html))
     if job_id:
         query = query.where(JobPosting.id == job_id)
     rows = (await db.execute(query.order_by(InboundEmail.received_at.desc()).limit(200))).all()

@@ -2,6 +2,7 @@
 API routes for Candidates — register and manage job seeker profiles.
 """
 
+import asyncio
 import logging
 import re
 from uuid import UUID
@@ -526,7 +527,7 @@ async def download_cover_letter(letter: CoverLetterResult):
     import unicodedata
 
     try:
-        pdf = render_letter_pdf(letter)
+        pdf = await asyncio.to_thread(render_letter_pdf, letter)
     except Exception as e:
         logger.error("Rendu PDF de la lettre impossible : %s", e, exc_info=True)
         raise HTTPException(500, f"Génération du PDF impossible : {e}")
@@ -803,7 +804,7 @@ async def download_candidate_cv_pdf(data: CVRenderRequest):
 
     try:
         typst_code = render_cv(cv_data, design=design_config, locale="fr", bold_keywords=data.skills or [])
-        pdf_bytes = compile_typst_to_pdf(typst_code)
+        pdf_bytes = await asyncio.to_thread(compile_typst_to_pdf, typst_code)
         
         ascii_name = unicodedata.normalize('NFKD', cv_data["name"]).encode('ascii', 'ignore').decode('ascii')
         safe_filename_name = re.sub(r'[^\w\s-]', '', ascii_name).strip().replace(' ', '_') or "candidat"
@@ -869,7 +870,7 @@ async def render_cv_preview_svg(data: CVRenderRequest):
 
     try:
         typst_code = render_cv(cv_data, design=design_config, locale="fr", bold_keywords=data.skills or [])
-        svg_content = compile_typst_to_svg(typst_code)
+        svg_content = await asyncio.to_thread(compile_typst_to_svg, typst_code)
         
         return Response(
             content=svg_content,

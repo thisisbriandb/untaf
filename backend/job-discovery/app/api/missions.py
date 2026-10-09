@@ -33,14 +33,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/candidates/{candidate_id}/mission", tags=["missions"])
 
 
-async def _load(db: AsyncSession, candidate_id: UUID) -> tuple[Candidate, Mission]:
-    candidate = await db.get(Candidate, candidate_id)
-    if not candidate:
+async def _load(db: AsyncSession, candidate_id: UUID) -> tuple[None, Mission]:
+    """
+    La mission du candidat. Appelée toutes les quelques secondes (suivi de
+    mission, cloche) : on ne charge pas le candidat — son CV, sa photo… —
+    pour vérifier qu'il existe, et on n'écrit que si la mission est créée.
+    """
+    exists = (await db.execute(select(Candidate.id).where(Candidate.id == candidate_id))).first()
+    if not exists:
         raise HTTPException(404, "Candidate profile not found")
     mission = await get_or_create_mission(db, candidate_id)
-    await db.commit()
-    await db.refresh(mission)
-    return candidate, mission
+    if db.new:
+        await db.commit()
+        await db.refresh(mission)
+    return None, mission
 
 
 async def _stats(db: AsyncSession, candidate_id: UUID, mission: Mission) -> MissionStats:
@@ -79,7 +85,8 @@ async def _stats(db: AsyncSession, candidate_id: UUID, mission: Mission) -> Miss
 @router.get("", response_model=MissionDetail)
 async def get_mission(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
     """La mission, son mandat effectif, ses compteurs et le début du journal."""
-    candidate, mission = await _load(db, candidate_id)
+    _, mission = await _load(db, candidate_id)
+    candidate = await db.get(Candidate, candidate_id)
 
     events = (await db.execute(
         select(MissionEvent)

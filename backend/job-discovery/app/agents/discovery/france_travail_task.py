@@ -7,10 +7,11 @@ respecter la contrainte d'unicité de `Company.domain` sans jamais confondre
 deux employeurs homonymes avec une vraie entreprise référencée.
 """
 
+import json
 import logging
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -212,6 +213,22 @@ async def ingest_france_travail(
     }
 
 
+#: Une même requête France Travail (mêmes codes métier, même contrat) sert à
+#: tous les candidats qui la partagent : on ne la rejoue pas avant ce délai.
+#: Mille candidats du même métier ne font plus mille fois le même import.
+PLAN_TTL = timedelta(hours=2)
+_RECENT_PLANS: dict[str, datetime] = {}
+
+
+def _plan_key(plan: dict) -> str:
+    return json.dumps(plan, sort_keys=True, default=str)
+
+
+def _fresh_plan(plan: dict, now: datetime) -> bool:
+    done = _RECENT_PLANS.get(_plan_key(plan))
+    return bool(done and now - done < PLAN_TTL)
+
+
 async def ingest_for_candidate(candidate_id) -> dict:
     """
     Ingestion pilotée par le mandat.
@@ -259,7 +276,10 @@ async def ingest_for_candidate(candidate_id) -> dict:
 
     total, fetched, companies = 0, 0, 0
     ft_report: dict = {"ok": True}
+    now = datetime.now(timezone.utc)
     for plan in plans:
+        if _fresh_plan(plan, now):
+            continue
         report = await ingest_france_travail(
             contract_types=None,   # le tri fin revient au moteur de matching
             **plan,
@@ -267,6 +287,7 @@ async def ingest_for_candidate(candidate_id) -> dict:
         if not report.get("ok"):
             ft_report = report
             break
+        _RECENT_PLANS[_plan_key(plan)] = now
         total += report["processed"]
         fetched += report.get("fetched", 0)
         companies += report.get("new_companies", 0)

@@ -9,6 +9,7 @@ executes it server-side, and returns a structured response.
 import json
 import re
 import logging
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from google.genai import types
@@ -357,6 +358,11 @@ def _parts(response: types.GenerateContentResponse) -> list[types.Part]:
 
 # ── Tool execution (server-side) ─────────────────────────────────────────────
 
+#: Dernier rafraîchissement des offres demandé depuis la conversation.
+REFRESH_EVERY = timedelta(minutes=30)
+_LAST_REFRESH: dict[UUID, datetime] = {}
+
+
 async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
     """
     Les offres réellement proposables au candidat.
@@ -371,18 +377,23 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
     query = (args.get("query") or "").strip()
 
     refreshed = 0
-    try:
-        # Rafraîchissement à la demande : la donnée métier vit chez la source,
-        # pas dans notre copie locale.
-        from app.agents.discovery.france_travail_task import ingest_for_candidate
-        from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
+    now = datetime.now(timezone.utc)
+    last = _LAST_REFRESH.get(candidate_id)
+    # Rafraîchir (import + re-notation de tout le stock) prend du temps et
+    # charge la base : une fois par demi-heure suffit, pas à chaque message.
+    if not last or now - last >= REFRESH_EVERY:
+        try:
+            # La donnée métier vit chez la source, pas dans notre copie locale.
+            from app.agents.discovery.france_travail_task import ingest_for_candidate
+            from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
 
-        report = await ingest_for_candidate(candidate_id)
-        if report.get("ok"):
-            refreshed = report["processed"]
-            await _match_candidate_to_existing_jobs(candidate_id)
-    except Exception as e:  # noqa: BLE001 — on sert le stock plutôt que rien
-        logger.warning("Rafraîchissement des offres impossible : %s", e)
+            report = await ingest_for_candidate(candidate_id)
+            if report.get("ok"):
+                refreshed = report["processed"]
+                await _match_candidate_to_existing_jobs(candidate_id)
+            _LAST_REFRESH[candidate_id] = now
+        except Exception as e:  # noqa: BLE001 — on sert le stock plutôt que rien
+            logger.warning("Rafraîchissement des offres impossible : %s", e)
 
     async with async_session() as session:
         stmt = (

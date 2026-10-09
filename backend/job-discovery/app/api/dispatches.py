@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
@@ -64,7 +65,9 @@ async def list_dispatches(
     db: AsyncSession = Depends(get_db),
 ):
     """Historique des candidatures, du plus récent au plus ancien."""
-    query = select(ApplicationDispatch).where(
+    query = select(ApplicationDispatch).options(
+        defer(ApplicationDispatch.resume_blob, raiseload=True)  # PDF : téléchargement seulement
+    ).where(
         ApplicationDispatch.candidate_id == candidate_id
     )
     if status:

@@ -85,6 +85,12 @@ export function fetchInbox(candidateId: string, jobId?: string) {
   return json<Inbox>(apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/inbox${q}`));
 }
 
+/** Le seul nombre de messages non lus (badge) : bien plus léger que la boîte. */
+export async function fetchUnread(candidateId: string): Promise<number | null> {
+  const r = await json<{ unread: number }>(apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/inbox/unread`));
+  return r ? r.unread : null;
+}
+
 export async function fetchReply(candidateId: string, replyId: string) {
   const r = await json<ReplyDetail>(apiFetch(`${API_BASE_URL}/api/candidates/${candidateId}/inbox/${replyId}`));
   if (r && typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
