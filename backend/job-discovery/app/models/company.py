@@ -116,7 +116,7 @@ class Company(Base):
     # ── Relationships ────────────────────────────────────
     # Une entreprise anonyme (« Employeur non précisé ») porte des milliers
     # d'offres : on ne les charge jamais avec elle.
-    job_postings = relationship("JobPosting", back_populates="company", lazy="noload")
+    job_postings = relationship("JobPosting", back_populates="company", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<Company {self.name} ({self.domain}) status={self.status.value}>"

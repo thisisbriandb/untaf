@@ -68,12 +68,18 @@ chargement était répété toutes les 2,5 s (mission), 30 s (cloche) et 2 min
 
 Décision : **écartées quand l'indice est fort**, signalées sinon.
 
-- [ ] Garder à l'import le secteur / code NAF (France Travail), le SIRET et le
-      NAF (La bonne alternance)
-- [ ] Règle « organisme de formation » : NAF 85.xx, nom (école, CFA, campus,
-      institut, academy… avec exceptions), phrases (« formation gratuite et
-      rémunérée », « nos entreprises partenaires »…)
-- [ ] Fort → écartée (motif visible dans le journal) ; faible → avertissement
+- [x] Garder à l'import : secteur et code NAF (France Travail), NAF, SIRET et
+      raison sociale (La bonne alternance), dans `description_parsed.employer`
+- [x] Règle « organisme de formation » (`signals.training_org_evidence`) :
+      NAF 85, nom (école, CFA, campus, institut, academy… sauf vrais
+      employeurs : Institut Pasteur, CNRS…), phrases (« formation gratuite et
+      rémunérée », « entreprises partenaires », « admissions »…)
+- [x] Deux indices concordants → écartée (motif « organisme de formation »
+      dans le journal) ; un seul → gardée avec « ⚠ Probablement une école qui
+      recrute des élèves » ; seulement pour l'alternance et les stages (un CDI
+      de formateur dans un CFA reste un vrai poste)
+- [ ] À valider sur de vraies offres : me signaler toute école passée au
+      travers ou tout vrai poste écarté, pour ajuster les phrases
 
 ## 4. L'utilisateur au centre
 

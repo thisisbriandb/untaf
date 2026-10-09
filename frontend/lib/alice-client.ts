@@ -19,6 +19,8 @@ export interface JobCardData {
   status: string;
   /** Qui envoie : auto (Alice) · assisted (un clic) · manual (sur le site). */
   apply_mode?: ApplyMode;
+  /** Un indice qui mérite l'attention (ex. école qui recrute des élèves). */
+  warning?: string | null;
 }
 
 export type ApplyMode = "auto" | "assisted" | "manual";

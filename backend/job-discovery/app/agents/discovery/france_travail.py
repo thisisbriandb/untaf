@@ -341,7 +341,16 @@ def to_scraped_job(offer: dict) -> ScrapedJob:
             "contact": contact_info,
             # Qualification déterministe : l'offre est matchable dès son
             # enregistrement, sans passer par le qualifieur LLM.
-            "parsed": to_description_parsed(offer),
+            "parsed": {
+                **to_description_parsed(offer),
+                # Qui publie : le secteur trahit l'école qui recrute des élèves.
+                "employer": {k: v for k, v in {
+                    "naf": offer.get("codeNAF"),
+                    "sector_code": offer.get("secteurActivite"),
+                    "sector": _clean(offer.get("secteurActiviteLibelle")),
+                    "about": _clean(entreprise.get("description"))[:500] if entreprise.get("description") else None,
+                }.items() if v},
+            },
         },
     )
 
