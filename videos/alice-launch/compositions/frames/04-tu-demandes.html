@@ -1,0 +1,113 @@
+<template>
+<div id="root" data-composition-id="04-tu-demandes" data-width="1080" data-height="1920" data-start="0" data-duration="4.5">
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+    #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: "Geist", sans-serif; }
+    #04-tu-demandes-bg { position: absolute; inset: 0; background: #FAFAF8; }
+    #04-tu-demandes-stage { position: absolute; inset: 0; }
+    /* caption band: 9%–20% of height */
+    #04-tu-demandes-caption { position: absolute; left: 80px; right: 80px; top: 173px; height: 211px; }
+    .04-tu-demandes-cap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+      font-size: 66px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: #1A1918; }
+    .04-tu-demandes-cap > div { max-width: 900px; }
+    .04-tu-demandes-c1w, .04-tu-demandes-c2w { display: inline-block; }
+    .04-tu-demandes-hl { color: #006045; }
+    /* floating phone card */
+    #04-tu-demandes-phone { position: absolute; left: 0; right: 0; margin: 0 auto; top: 410px; width: 821px; height: 1170px;
+      background: #FAFAF8; border: 1.5px solid rgba(0, 96, 69, 0.2); border-radius: 64px; overflow: hidden;
+      box-shadow: 0 48px 96px rgba(26, 25, 24, 0.10), 0 14px 28px rgba(26, 25, 24, 0.06); }
+    #04-tu-demandes-scroll { position: absolute; left: 0; top: 0; width: 821px; height: 1776.7px; }
+    .04-tu-demandes-slice { position: absolute; left: 0; width: 821px; overflow: hidden; }
+    .04-tu-demandes-slice img { position: absolute; left: 0; width: 821px; height: 1776.7px; display: block; }
+    .04-tu-demandes-header { background: #FAFAF8; }
+    #04-tu-demandes-hdrwrap { position: absolute; left: 0; top: 0; width: 821px; height: 167.0px; }
+    .04-tu-demandes-glow { position: absolute; width: 120px; height: 72px; border-radius: 100px; opacity: 0;
+      background: radial-gradient(closest-side, rgba(0, 96, 69, 0.30), rgba(0, 96, 69, 0.10) 60%, rgba(0, 96, 69, 0) 100%); }
+    /* rebuilt user bubble (screenshot bubble region, sampled #EDECE8) */
+    #04-tu-demandes-bubble { position: absolute; left: 183.1px; top: 273.7px; width: 595.0px; min-height: 136.1px;
+      box-sizing: border-box; padding: 22px 30px 22px 34px; background: #EDECE8; border-radius: 36px;
+      font-size: 28px; font-weight: 400; line-height: 46px; color: #222221; }
+    .04-tu-demandes-w { white-space: nowrap; }
+    .04-tu-demandes-ch { display: none; }
+    #04-tu-demandes-caret { display: inline-block; width: 3px; height: 32px; margin-left: 2px; vertical-align: -6px; background: #006045; border-radius: 2px; opacity: 0; }
+  </style>
+
+  <div id="04-tu-demandes-bg" class="clip" data-start="0" data-duration="4.5" data-track-index="0"></div>
+
+  <div id="04-tu-demandes-stage" class="clip" data-start="0" data-duration="4.5" data-track-index="1">
+    <div id="04-tu-demandes-caption">
+      <div class="04-tu-demandes-cap" id="04-tu-demandes-cap1"><div><span class="04-tu-demandes-c1w">Tu</span> <span class="04-tu-demandes-c1w">lui</span> <span class="04-tu-demandes-c1w">dis</span> <span class="04-tu-demandes-c1w">ce</span> <span class="04-tu-demandes-c1w">que</span> <span class="04-tu-demandes-c1w">tu</span> <span class="04-tu-demandes-c1w">cherches.</span></div></div>
+      <div class="04-tu-demandes-cap" id="04-tu-demandes-cap2"><div><span class="04-tu-demandes-c2w">Elle</span> <span class="04-tu-demandes-c2w">trouve</span> <span class="04-tu-demandes-c2w">les</span> <span class="04-tu-demandes-c2w">offres</span> <span class="04-tu-demandes-c2w">qui</span> <span class="04-tu-demandes-c2w 04-tu-demandes-hl">te</span> <span class="04-tu-demandes-c2w"><span class="04-tu-demandes-hl">correspondent</span>.</span></div></div>
+    </div>
+
+    <div id="04-tu-demandes-phone">
+      <div id="04-tu-demandes-scroll">
+        <div class="04-tu-demandes-slice 04-tu-demandes-conv" style="top:175.4px;height:80.7px"><img src="assets/chat-offers.png" alt="" style="top:-175.4px"></div><div class="04-tu-demandes-slice 04-tu-demandes-reply" style="top:425.2px;height:226.0px"><img src="assets/chat-offers.png" alt="" style="top:-425.2px"></div><div class="04-tu-demandes-slice 04-tu-demandes-card 04-tu-demandes-card1" style="top:660.3px;height:199.3px"><img src="assets/chat-offers.png" alt="" style="top:-660.3px"><div class="04-tu-demandes-glow" style="left:659.3px;top:32.099999999999994px"></div></div><div class="04-tu-demandes-slice 04-tu-demandes-card 04-tu-demandes-card2" style="top:866.6px;height:201.4px"><img src="assets/chat-offers.png" alt="" style="top:-866.6px"><div class="04-tu-demandes-glow" style="left:659.3px;top:32.099999999999994px"></div></div><div class="04-tu-demandes-slice 04-tu-demandes-card 04-tu-demandes-card3" style="top:1075.0px;height:199.3px"><img src="assets/chat-offers.png" alt="" style="top:-1075.0px"><div class="04-tu-demandes-glow" style="left:659.3px;top:32.099999999999994px"></div></div><div class="04-tu-demandes-slice 04-tu-demandes-card 04-tu-demandes-card4" style="top:1281.3px;height:201.4px"><img src="assets/chat-offers.png" alt="" style="top:-1281.3px"><div class="04-tu-demandes-glow" style="left:659.3px;top:32.099999999999994px"></div></div>
+        <div id="04-tu-demandes-bubble"><span id="04-tu-demandes-typed"><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.000">T</span><span class="04-tu-demandes-ch" data-t="1.014">r</span><span class="04-tu-demandes-ch" data-t="1.027">o</span><span class="04-tu-demandes-ch" data-t="1.041">u</span><span class="04-tu-demandes-ch" data-t="1.054">v</span><span class="04-tu-demandes-ch" data-t="1.068">e</span><span class="04-tu-demandes-ch" data-t="1.081">-</span><span class="04-tu-demandes-ch" data-t="1.095">m</span><span class="04-tu-demandes-ch" data-t="1.108">o</span><span class="04-tu-demandes-ch" data-t="1.122">i</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.135"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.169">u</span><span class="04-tu-demandes-ch" data-t="1.183">n</span><span class="04-tu-demandes-ch" data-t="1.196">e</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.210"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.244">a</span><span class="04-tu-demandes-ch" data-t="1.257">l</span><span class="04-tu-demandes-ch" data-t="1.271">t</span><span class="04-tu-demandes-ch" data-t="1.284">e</span><span class="04-tu-demandes-ch" data-t="1.298">r</span><span class="04-tu-demandes-ch" data-t="1.311">n</span><span class="04-tu-demandes-ch" data-t="1.325">a</span><span class="04-tu-demandes-ch" data-t="1.338">n</span><span class="04-tu-demandes-ch" data-t="1.352">c</span><span class="04-tu-demandes-ch" data-t="1.365">e</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.379"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.413">e</span><span class="04-tu-demandes-ch" data-t="1.426">n</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.440"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.474">m</span><span class="04-tu-demandes-ch" data-t="1.487">a</span><span class="04-tu-demandes-ch" data-t="1.501">r</span><span class="04-tu-demandes-ch" data-t="1.514">k</span><span class="04-tu-demandes-ch" data-t="1.528">e</span><span class="04-tu-demandes-ch" data-t="1.541">t</span><span class="04-tu-demandes-ch" data-t="1.555">i</span><span class="04-tu-demandes-ch" data-t="1.568">n</span><span class="04-tu-demandes-ch" data-t="1.582">g</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.595"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.629">d</span><span class="04-tu-demandes-ch" data-t="1.643">i</span><span class="04-tu-demandes-ch" data-t="1.656">g</span><span class="04-tu-demandes-ch" data-t="1.670">i</span><span class="04-tu-demandes-ch" data-t="1.683">t</span><span class="04-tu-demandes-ch" data-t="1.697">a</span><span class="04-tu-demandes-ch" data-t="1.710">l</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.724"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.758">à</span></span><span class="04-tu-demandes-ch 04-tu-demandes-sp" data-t="1.771"> </span><span class="04-tu-demandes-w"><span class="04-tu-demandes-ch" data-t="1.805">L</span><span class="04-tu-demandes-ch" data-t="1.819">y</span><span class="04-tu-demandes-ch" data-t="1.832">o</span><span class="04-tu-demandes-ch" data-t="1.846">n</span></span></span><span id="04-tu-demandes-caret"></span></div>
+      </div>
+      <div id="04-tu-demandes-hdrwrap"><div class="04-tu-demandes-slice 04-tu-demandes-header" style="top:0.0px;height:167.0px"><img src="assets/chat-offers.png" alt="" style="top:-0.0px"></div></div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      var F = "04-tu-demandes";
+      var root = document.querySelector('[data-composition-id="' + F + '"]');
+      var q = function (sel) { return root.querySelectorAll(sel); };
+      var one = function (sel) { return root.querySelector(sel); };
+      var tl = gsap.timeline({ paused: true });
+
+      var phone = one("#" + F + "-phone");
+      var scroll = one("#" + F + "-scroll");
+      var bubble = one("#" + F + "-bubble");
+      var caret = one("#" + F + "-caret");
+
+      /* Scene 1 (0.0–0.8): phone rises with a long-tail settle; header + conversation row only */
+      tl.fromTo(phone, { y: 300 }, { y: 0, duration: 1.0, ease: "expo.out" }, 0);
+      tl.fromTo(phone, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 0);
+      tl.fromTo(q("." + F + "-c1w"), { y: 46, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.07 }, 0.1);
+
+      /* Scene 2 (0.8–2.0): bubble appears, ask types with caret, small send press */
+      tl.fromTo(bubble, { scale: 0.86, opacity: 0, transformOrigin: "100% 50%" }, { scale: 1, opacity: 1, duration: 0.3, ease: "power3.out" }, 0.8);
+      tl.set(caret, { opacity: 1 }, 0.82);
+      tl.set(caret, { opacity: 0 }, 0.92);
+      tl.set(caret, { opacity: 1 }, 0.98);
+      q("." + F + "-ch").forEach(function (el) {
+        tl.set(el, { display: "inline" }, parseFloat(el.getAttribute("data-t")));
+      });
+      tl.set(caret, { opacity: 0 }, 1.92);
+      tl.to(bubble, { scale: 0.965, duration: 0.07, ease: "power2.in", transformOrigin: "100% 50%" }, 1.88);
+      tl.to(bubble, { scale: 1, duration: 0.3, ease: "power3.out" }, 1.95);
+
+      /* Scene 3 (2.0–3.6): reply wipes down, cards cascade with score glow; caption swaps */
+      tl.to(q("." + F + "-c1w"), { y: -36, opacity: 0, duration: 0.22, ease: "power2.in", stagger: 0.02 }, 2.0);
+      tl.fromTo(q("." + F + "-c2w"), { y: 46, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out", stagger: 0.06 }, 2.12);
+
+      tl.fromTo(one("." + F + "-reply"), { clipPath: "inset(0% 0% 100% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.4, ease: "power2.out" }, 2.0);
+
+      var cardT = [2.4, 2.7, 3.0, 3.3];
+      cardT.forEach(function (t, i) {
+        var card = one("." + F + "-card" + (i + 1));
+        var glow = card.querySelector("." + F + "-glow");
+        tl.fromTo(card, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, ease: "power3.out" }, t);
+        tl.fromTo(glow, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.15, duration: 0.16, ease: "power2.out" }, t + 0.18);
+        tl.to(glow, { opacity: 0, scale: 1.3, duration: 0.45, ease: "power2.in" }, t + 0.34);
+      });
+
+      /* chat auto-scrolls under the pinned header so card 4 lands fully in view */
+      tl.fromTo(scroll, { y: 0 }, { y: -334, duration: 1.0, ease: "power1.inOut" }, 2.6);
+
+      /* Scene 4 (3.6–4.5): hold on the full list — subtle drift only */
+      tl.fromTo(phone, { rotation: 0 }, { y: -6, rotation: -0.25, duration: 0.9, ease: "sine.inOut" }, 3.6);
+
+      tl.set({}, {}, 4.5);
+      window.__timelines = window.__timelines || {};
+      window.__timelines[F] = tl;
+    })();
+  </script>
+</div>
+</template>

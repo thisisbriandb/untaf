@@ -1,0 +1,354 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: "Geist", sans-serif;
+      color: #1A1918;
+    }
+    [id="05-elle-travaille-bg"] {
+      position: absolute;
+      inset: 0;
+      background: #FAFAF8;
+    }
+
+    /* ---------- caption band (y 150–410) ---------- */
+    [id="05-elle-travaille-count-wrap"] {
+      position: absolute;
+      left: 0;
+      top: 160px;
+      width: 1080px;
+      text-align: center;
+    }
+    [id="05-elle-travaille-count"] {
+      display: inline-block;
+      font-size: 150px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: #006045;
+      font-variant-numeric: tabular-nums;
+      transform-origin: 50% 60%;
+    }
+    [id="05-elle-travaille-count-sub"] {
+      margin-top: 20px;
+      font-size: 48px;
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: #1A1918;
+    }
+    [class~="05-elle-travaille-line"] {
+      position: absolute;
+      left: 54px;
+      top: 228px;
+      width: 972px;
+      text-align: center;
+      font-size: 84px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #1A1918;
+      white-space: nowrap;
+    }
+    [class~="05-elle-travaille-w"] {
+      display: inline-block;
+      opacity: 0;
+    }
+    [class~="05-elle-travaille-accent"] { color: #006045; }
+
+    /* ---------- floating phone (x 130–950, y 422–1574) ---------- */
+    [id="05-elle-travaille-phone"] {
+      position: absolute;
+      left: 130px;
+      top: 422px;
+      width: 820px;
+      height: 1152px;
+      border-radius: 64px;
+      border: 1.5px solid rgba(0, 96, 69, 0.2);
+      background: #FAFAF8;
+      overflow: hidden;
+      box-shadow: 0 48px 90px -36px rgba(26, 25, 24, 0.22), 0 14px 28px -14px rgba(26, 25, 24, 0.10);
+    }
+    [id="05-elle-travaille-screen"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 820px;
+      height: 1152px;
+    }
+    /* screenshot 1170x2532 at scale 0.76, framed on y 1016-2532 */
+    [class~="05-elle-travaille-shot"] {
+      position: absolute;
+      width: 889.2px;
+      height: 1924.32px;
+      max-width: none;
+      display: block;
+    }
+    [id="05-elle-travaille-base"] { left: -34.6px; top: -772.16px; }
+    [class~="05-elle-travaille-patch"] {
+      position: absolute;
+      left: 11px;
+      width: 798px;
+      background: #FFFFFF;
+    }
+    [class~="05-elle-travaille-strip"] {
+      position: absolute;
+      left: 11px;
+      width: 798px;
+      overflow: hidden;
+    }
+    [class~="05-elle-travaille-strip-in"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 798px;
+      height: 100%;
+    }
+    [class~="05-elle-travaille-badge"] {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      margin-left: -22px;
+      margin-top: -22px;
+      border-radius: 50%;
+      background: #006045;
+      z-index: 3;
+    }
+    [class~="05-elle-travaille-badge"] svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 44px;
+      height: 44px;
+    }
+    [class~="05-elle-travaille-badge"] path {
+      fill: none;
+      stroke: #FFFFFF;
+      stroke-width: 4.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    [id="05-elle-travaille-glow"] {
+      position: absolute;
+      left: 47.5px;
+      top: 807.9px;
+      width: 200px;
+      height: 200px;
+      margin-left: -100px;
+      margin-top: -100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 96, 69, 0.55) 0%, rgba(0, 96, 69, 0.18) 38%, rgba(0, 96, 69, 0) 70%);
+      z-index: 2;
+      opacity: 0;
+    }
+    [id="05-elle-travaille-pulse"] {
+      position: absolute;
+      left: 47.1px;
+      top: 278.9px;
+      width: 16px;
+      height: 16px;
+      margin-left: -8px;
+      margin-top: -8px;
+      border-radius: 50%;
+      border: 2px solid #006045;
+      opacity: 0;
+      z-index: 3;
+    }
+  </style>
+
+  <div id="root" data-composition-id="05-elle-travaille" data-width="1080" data-height="1920" data-duration="5">
+    <div id="05-elle-travaille-bg" class="clip" data-start="0" data-duration="5" data-track-index="0"></div>
+
+    <!-- floating phone, framed on the live mission card -->
+    <div id="05-elle-travaille-phone" class="clip" data-start="0" data-duration="5" data-track-index="1">
+      <div id="05-elle-travaille-screen">
+        <img id="05-elle-travaille-base" class="05-elle-travaille-shot" src="assets/chat-top.png" alt="" />
+
+        <!-- patches hide the not-yet-written rows (card interior is #FFFFFF) -->
+        <div class="05-elle-travaille-patch" style="top:459.04px;height:109.44px"></div>
+        <div class="05-elle-travaille-patch" style="top:586.72px;height:100.32px"></div>
+        <div class="05-elle-travaille-patch" style="top:708.32px;height:57.76px"></div>
+        <div class="05-elle-travaille-patch" style="top:773.68px;height:115.52px"></div>
+        <div class="05-elle-travaille-patch" style="top:902.88px;height:35.72px"></div>
+
+        <!-- real rows, revealed as masked strips -->
+        <div class="05-elle-travaille-strip" style="top:459.04px;height:109.44px">
+          <div id="05-elle-travaille-s-retenue" class="05-elle-travaille-strip-in">
+            <img class="05-elle-travaille-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1231.2px" />
+          </div>
+        </div>
+        <div class="05-elle-travaille-strip" style="top:586.72px;height:100.32px">
+          <div id="05-elle-travaille-s-cv" class="05-elle-travaille-strip-in">
+            <img class="05-elle-travaille-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1358.88px" />
+          </div>
+        </div>
+        <div class="05-elle-travaille-strip" style="top:708.32px;height:57.76px">
+          <div id="05-elle-travaille-s-lettre" class="05-elle-travaille-strip-in">
+            <img class="05-elle-travaille-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1480.48px" />
+          </div>
+        </div>
+        <div class="05-elle-travaille-strip" style="top:773.68px;height:115.52px">
+          <div id="05-elle-travaille-s-cand" class="05-elle-travaille-strip-in">
+            <img class="05-elle-travaille-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1545.84px" />
+          </div>
+        </div>
+
+        <!-- working pulse on the mission header dot -->
+        <div id="05-elle-travaille-pulse"></div>
+
+        <!-- glow + rebuilt check badges over the rows' bullets -->
+        <div id="05-elle-travaille-glow"></div>
+        <div id="05-elle-travaille-b-cv" class="05-elle-travaille-badge" style="left:47.5px;top:610.2px">
+          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
+        </div>
+        <div id="05-elle-travaille-b-lettre" class="05-elle-travaille-badge" style="left:47.5px;top:739.5px">
+          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
+        </div>
+        <div id="05-elle-travaille-b-cand" class="05-elle-travaille-badge" style="left:47.5px;top:807.9px">
+          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- caption band -->
+    <div id="05-elle-travaille-caption" class="clip" data-start="0" data-duration="5" data-track-index="2">
+      <div id="05-elle-travaille-count-wrap">
+        <div id="05-elle-travaille-count">0</div>
+        <div id="05-elle-travaille-count-sub">offres passées en revue</div>
+      </div>
+      <div id="05-elle-travaille-l-cv" class="05-elle-travaille-line"><span class="05-elle-travaille-w">CV</span> <span class="05-elle-travaille-w">adapté.</span></div>
+      <div id="05-elle-travaille-l-lettre" class="05-elle-travaille-line"><span class="05-elle-travaille-w">Lettre</span> <span class="05-elle-travaille-w">rédigée.</span></div>
+      <div id="05-elle-travaille-l-cand" class="05-elle-travaille-line"><span class="05-elle-travaille-w">Candidature</span> <span class="05-elle-travaille-w 05-elle-travaille-accent">envoyée.</span></div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FID = "05-elle-travaille";
+      var $ = function (s) { return document.getElementById(FID + "-" + s); };
+      var words = function (s) { return Array.prototype.slice.call($(s).querySelectorAll('[class~="05-elle-travaille-w"]')); };
+
+      var tl = gsap.timeline({ paused: true });
+
+      // ---- Macro: gentle content drift inside the phone (camera stays locked) ----
+      tl.fromTo($("screen"), { y: 0 }, { y: -36, duration: 5, ease: "sine.inOut" }, 0);
+
+      // ---- Scene 1 (0.0–1.6s): counter 0 -> 1 284 (counting-dynamic-scale) ----
+      var countEl = $("count");
+      var fmt = function (n) {
+        n = Math.round(n);
+        if (n < 1000) return String(n);
+        var r = String(n % 1000);
+        while (r.length < 3) r = "0" + r;
+        return Math.floor(n / 1000) + " " + r;
+      };
+      var state = { v: 0 };
+      countEl.textContent = "0";
+      tl.fromTo($("count-wrap"), { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, 0);
+      tl.fromTo(state, { v: 0 }, {
+        v: 1284, duration: 1.2, ease: "power2.out",
+        onUpdate: function () { countEl.textContent = fmt(state.v); }
+      }, 0.1);
+      tl.fromTo(countEl, { scale: 0.8 }, { scale: 1, duration: 1.2, ease: "power2.out" }, 0.1);
+      tl.fromTo($("count-sub"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.3);
+
+      // working pulse on the mission header dot (diegetic, finite, killed at 3.6s)
+      var pulse = $("pulse");
+      var ph = { p: 0 };
+      tl.fromTo(ph, { p: 0 }, {
+        p: 4, duration: 3.6, ease: "none",
+        onUpdate: function () {
+          var f = ph.p % 1;
+          pulse.style.opacity = String(0.55 * (1 - f));
+          pulse.style.transform = "scale(" + (1 + f * 1.6) + ")";
+        }
+      }, 0);
+      tl.set(pulse, { opacity: 0 }, 3.6);
+
+      // the retained offer row lands as the count settles
+      tl.fromTo($("s-retenue"), { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 1.15);
+
+      // counter clears up (cut-the-curve, vertical)
+      tl.to($("count-wrap"), { y: -90, duration: 0.3, ease: "power4.in" }, 1.32);
+      tl.to($("count-wrap"), { opacity: 0, duration: 0.2, ease: "power1.in" }, 1.42);
+
+      // ---- line swaps ----
+      var lineIn = function (key, t, axis) {
+        var ws = words(key);
+        var gap = 0.05, at = t;
+        ws.forEach(function (w, i) {
+          var from = {}; from[axis] = axis === "x" ? 230 : 90;
+          var to = { duration: 0.3, ease: "power4.out" }; to[axis] = 0;
+          var pre = { opacity: 0 }; pre[axis] = from[axis];
+          tl.set(w, pre, 0);
+          tl.set(w, { opacity: 0.35 }, at);
+          tl.fromTo(w, from, to, at);
+          tl.to(w, { opacity: 1, duration: 0.3, ease: "power2.out" }, at);
+          at += gap; gap *= 0.84;
+        });
+      };
+      var lineOut = function (key, cut) {
+        var ws = words(key), n = ws.length;
+        ws.forEach(function (w, i) {
+          var s = cut - 0.18 - (n - 1 - i) * 0.022;
+          tl.to(w, { x: -230, duration: 0.34, ease: "power4.in" }, s);
+          tl.to(w, { opacity: 0, duration: 0.18, ease: "power1.in" }, s);
+        });
+      };
+
+      // check badge: pop (spring-pop-entrance) + tick draw (svg-path-draw)
+      var check = function (key, t) {
+        var b = $("b-" + key);
+        var p = b.querySelector("path");
+        var len = p.getTotalLength();
+        p.style.strokeDasharray = String(len);
+        tl.fromTo(b, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, t);
+        tl.fromTo(p, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out" }, t + 0.14);
+      };
+      var row = function (key, t) {
+        tl.fromTo($("s-" + key), { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, t);
+      };
+
+      // ---- Scene 2 (1.6–2.6s): CV adapté ----
+      lineIn("l-cv", 1.62, "y");
+      row("cv", 1.62);
+      check("cv", 1.95);
+
+      // ---- Scene 3 (2.6–3.6s): Lettre rédigée ----
+      lineOut("l-cv", 2.62);
+      lineIn("l-lettre", 2.62, "x");
+      row("lettre", 2.62);
+      check("lettre", 2.92);
+
+      // ---- Scene 4 (3.6–5.0s): Candidature envoyée + glow bloom, hold ----
+      lineOut("l-lettre", 3.62);
+      lineIn("l-cand", 3.62, "x");
+      row("cand", 3.62);
+      check("cand", 3.92);
+      var glow = $("glow");
+      tl.fromTo(glow, { opacity: 0, scale: 0.5 }, { opacity: 0.42, scale: 1, duration: 0.5, ease: "power2.out" }, 3.82);
+      var gb = { p: 0 };
+      tl.fromTo(gb, { p: 0 }, {
+        p: Math.PI * 2, duration: 0.68, ease: "none",
+        onUpdate: function () {
+          var s = Math.sin(gb.p);
+          glow.style.opacity = String(0.42 + s * 0.03);
+          glow.style.transform = "scale(" + (1 + s * 0.04) + ")";
+        }
+      }, 4.32);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["05-elle-travaille"] = tl;
+    })();
+  </script>
+</template>
