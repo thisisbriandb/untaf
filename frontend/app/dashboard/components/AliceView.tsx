@@ -233,6 +233,48 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
+// ── Réponses en un geste ───────────────────────────────────────────────────
+
+/**
+ * Quand Alice termine par une question, on peut répondre d'un clic : taper
+ * « oui » pour « Je te montre les offres ? », personne n'en a envie.
+ */
+export function quickRepliesFor(text: string): string[] {
+  const t = text.trim().replace(/[\s*_)»"]+$/u, "");
+  if (!t.endsWith("?")) return [];
+  // La question d'abord, le message entier ensuite (« J'ai 12 offres. Je te les montre ? »).
+  const last = t.slice(Math.max(t.lastIndexOf("\n"), t.lastIndexOf(". ") + 1)).toLowerCase();
+  for (const scope of [last, t.toLowerCase()]) {
+    if (/mission|lance/.test(scope)) return ["Oui, lance-la", "Plus tard"];
+    if (/dossier|pr[ée]par|lettre|\bcv\b/.test(scope)) return ["Oui, vas-y", "Pas maintenant"];
+    if (/offre|montre/.test(scope)) return ["Oui, montre-moi", "Plus tard"];
+  }
+  return ["Oui", "Non merci"];
+}
+
+function QuickReplies({ text, onPick }: { text: string; onPick: (reply: string) => void }) {
+  const replies = quickRepliesFor(text);
+  if (!replies.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 pl-10 pt-2">
+      {replies.map((r, i) => (
+        <button
+          key={r}
+          type="button"
+          onClick={() => onPick(r)}
+          className={
+            i === 0
+              ? "px-3 py-1.5 rounded-full bg-[#006045] text-white text-xs tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer"
+              : "px-3 py-1.5 rounded-full border border-[#1A1918]/10 bg-white text-xs text-[#1A1918]/65 tracking-tight hover:border-[#006045]/40 hover:text-[#006045] transition-colors cursor-pointer"
+          }
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 /**
@@ -412,6 +454,9 @@ export function AliceView({
                   className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
                 >
                   <ChatBubble msg={msg} />
+                  {msg.sender === "alice" && !isThinking && msg.id === messages[messages.length - 1]?.id && (
+                    <QuickReplies text={msg.text} onPick={send} />
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

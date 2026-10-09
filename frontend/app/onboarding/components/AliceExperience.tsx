@@ -18,6 +18,9 @@ import { startRun } from "@/lib/mission-run-client";
 import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
+import { SignaturePad } from "@/app/dashboard/components/SignaturePad";
+import { saveCvDesign, uploadPhoto } from "@/lib/cv-profile";
+import { CvLookStep, DEFAULT_LOOK, type CvLook } from "./CvLookStep";
 import Link from "next/link";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -88,6 +91,11 @@ export function AliceExperience() {
 
   // Mandat de recherche — dernière étape du parcours (phase 5)
   const [criteria, setCriteria] = useState<CriteriaDraft>(DEFAULT_CRITERIA);
+  // Allure des CV (phase 6) et signature des lettres (phase 7), enregistrées
+  // au profil à l'activation : tous les dossiers les suivent.
+  const [look, setLook] = useState<CvLook>(DEFAULT_LOOK);
+  const [lookChosen, setLookChosen] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
   const [cityInput, setCityInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
@@ -330,12 +338,34 @@ export function AliceExperience() {
     setNameError(null);
     setShowComponent(false);
     await say("Ton CV est prêt.", "happy", 950);
-    await say("Tu pourras le modifier avec moi à tout moment.", "listening", 1250);
+    await say("Choisis son allure : chaque dossier que je prépare la suivra.", "listening", 1100);
+    setEmotion("listening");
+    setShowComponent(true);
+    setPhase(6);
+  }, [profile.firstName, profile.lastName, say]);
+
+  const handleLookChosen = useCallback(async () => {
+    setLookChosen(true);
+    setShowComponent(false);
+    await say("Noté.", "happy", 700);
+    await say("Une lettre signée fait plus sérieux. Signe une fois, je la mettrai sur chacune.", "listening", 1300);
+    setEmotion("listening");
+    setShowComponent(true);
+    setPhase(7);
+  }, [say]);
+
+  const handleSignatureDone = useCallback(async (dataUrl: string | null) => {
+    setSignature(dataUrl);
+    setShowComponent(false);
+    await say(
+      dataUrl ? "Parfait, tes lettres partiront signées." : "D'accord, je te la redemanderai avant le premier envoi.",
+      "happy", 1000,
+    );
     await think("Où, et à quelles conditions ?", 700);
     setEmotion("listening");
     setShowComponent(true);
     setPhase(5);
-  }, [profile.firstName, profile.lastName, say, think]);
+  }, [say, think]);
 
   const handleBypassCv = useCallback(async () => {
     setShowComponent(false);
@@ -460,6 +490,30 @@ export function AliceExperience() {
         console.error("CV content save failed:", err);
       }
 
+      // L'allure des CV et la signature, choisies pendant l'inscription :
+      // enregistrées avant la première mission, pour que ses dossiers les
+      // portent déjà. Un échec ne bloque pas l'entrée dans l'application.
+      try {
+        if (look.photo) await uploadPhoto(candidate.id, look.photo);
+        if (lookChosen) {
+          await saveCvDesign(candidate.id, {
+            mode: "template",
+            template_id: look.templateId,
+            color_hex: look.colorHex,
+            show_photo: look.showPhoto && Boolean(look.photo),
+          });
+        }
+        if (signature) {
+          await apiFetch(`${API_BASE_URL}/api/candidates/${candidate.id}/signature`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: signature }),
+          });
+        }
+      } catch (err) {
+        console.error("CV look / signature save failed:", err);
+      }
+
       localStorage.setItem("candidate_id", candidate.id);
       localStorage.setItem("candidate_email", candidate.email);
       localStorage.setItem("candidate_name", candidate.full_name);
@@ -507,7 +561,7 @@ export function AliceExperience() {
       );
       setIsActivating(false);
     }
-  }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say]);
+  }, [profile, emailInput, criteria, targetRole, linkedinUrl, cvFile, router, say, look, lookChosen, signature]);
 
   const activateRef = useRef(handleActivateAlice);
   useEffect(() => {
@@ -882,6 +936,24 @@ export function AliceExperience() {
                   >
                     déposer un autre CV
                   </button>
+                </div>
+              )}
+
+              {/* ── Phase 6: L'allure des CV ── */}
+              {phase === 6 && (
+                <CvLookStep profile={profile} value={look} onChange={setLook} onContinue={handleLookChosen} />
+              )}
+
+              {/* ── Phase 7: Signature des lettres ── */}
+              {phase === 7 && (
+                <div className="w-full max-w-md mx-auto space-y-2 text-left">
+                  <SignaturePad
+                    onSave={(dataUrl) => void handleSignatureDone(dataUrl)}
+                    onCancel={() => void handleSignatureDone(null)}
+                  />
+                  <p className="text-[11px] text-[#1A1918]/50 tracking-tight">
+                    Trace ta signature au doigt ou à la souris. Elle ne sert qu&apos;au bas de tes lettres.
+                  </p>
                 </div>
               )}
 
