@@ -106,7 +106,11 @@ export function CvLookStep({
 
   return (
     <div className="w-full mx-auto grid gap-6 md:grid-cols-[minmax(0,1fr)_260px] text-left">
-      <div className="relative rounded-2xl border border-[#1A1918]/8 bg-white p-3 overflow-hidden">
+      {/* Sur mobile, le haut du CV suffit à juger l'allure (en-tête, couleur,
+          photo) : on le limite pour garder les réglages à portée de pouce.
+          « Agrandir » montre la page entière. */}
+      <div className="relative rounded-2xl border border-[#1A1918]/8 bg-white p-3 overflow-hidden max-h-[46vh] md:max-h-none">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent md:hidden" />
         <button
           type="button"
           onClick={() => setZoom(true)}
@@ -222,13 +226,16 @@ export function CvLookStep({
           {photoError && <p className="text-[11px] text-red-600">{photoError}</p>}
         </section>
 
-        <button
-          type="button"
-          onClick={onContinue}
-          className="w-full rounded-full bg-[#006045] px-4 py-2.5 text-sm text-white hover:bg-[#004d37] transition-colors cursor-pointer"
-        >
-          C&apos;est mon style
-        </button>
+        {/* Toujours visible sur mobile, sans avoir à descendre. */}
+        <div className="sticky bottom-3 z-10 md:static">
+          <button
+            type="button"
+            onClick={onContinue}
+            className="w-full rounded-full bg-[#006045] px-4 py-2.5 text-sm text-white shadow-lg md:shadow-none hover:bg-[#004d37] transition-colors cursor-pointer"
+          >
+            C&apos;est mon style
+          </button>
+        </div>
         <p className="text-[11px] text-[#1A1918]/50 text-center tracking-tight">
           Tous tes dossiers suivront ce choix. Tu pourras le changer à tout moment.
         </p>
