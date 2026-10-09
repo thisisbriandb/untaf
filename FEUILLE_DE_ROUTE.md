@@ -44,17 +44,25 @@ chargement était répété toutes les 2,5 s (mission), 30 s (cloche) et 2 min
 
 ## 2. Faille et abus (coûts non maîtrisés)
 
-- [ ] Routes sans connexion qui appellent l'IA ou Typst : `parse-resume`,
-      `cv-content`, `audit-cv`, `download-cv`, `render-preview-svg`,
-      `download-cover-letter`, `render-cv`, `parse-linkedin` → connexion
-      obligatoire
-- [ ] Compter ce qui coûte : import d'offre collée, réponses de l'extension,
-      relance régénérée, lettre écrite pendant une candidature, recherches
-      d'entreprises des spontanées
-- [ ] Limite atteinte au téléchargement : 402 (fenêtre d'abonnement), plus
-      d'erreur 500 ni d'alerte
-- [ ] Comptage réservé avant l'appel à l'IA (requêtes simultanées)
-- [ ] PDF mis en cache au lieu d'être refaits à chaque téléchargement
+- [x] Routes sans connexion qui appellent l'IA ou Typst : connexion
+      obligatoire pour `cv-content`, `audit-cv`, `download-cover-letter` ;
+      limites par heure (IP sans connexion, compte sinon, plafond global) pour
+      celles de l'inscription (`parse-resume` 5/h/IP, `parse-linkedin`,
+      `download-cv`, `render-cv`, `render-preview-svg`)
+- [x] `parse-linkedin` : seulement https://*.linkedin.com (le serveur allait
+      chercher n'importe quelle adresse contenant « linkedin.com »)
+- [x] Comptés comme un message : import d'offre collée, réponses de
+      l'extension, relance rédigée, lettre écrite pendant une candidature (et
+      plus aucune lettre pour une offre hors de la liste)
+- [x] Limite atteinte au téléchargement : 402, plus d'erreur 500 ni d'alerte
+- [x] Dossier réservé avant l'appel à l'IA, sous verrou, rendu en cas d'échec
+      (vérifié : 10 demandes simultanées, limite 3 → 3 accordées)
+- [x] Téléchargements et mises en page : plafond horaire par compte (au lieu
+      d'un cache)
+- [ ] Recherches d'entreprises ratées des spontanées : non comptées (bornées
+      par mission : 5 × le nombre demandé)
+- [ ] Un message à Alice peut coûter 3 à 5 appels au modèle (outils) : borné
+      par la limite de messages, à surveiller sur la facture Gemini
 
 ## 3. Offres d'écoles et de CFA
 

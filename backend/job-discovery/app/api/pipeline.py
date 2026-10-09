@@ -259,6 +259,8 @@ async def prepare_followup(
     existing = meta.get("followup") or {}
 
     if not existing.get("body") or regenerate:
+        from app import billing
+        await billing.consume(candidate_id, "message")  # un appel au modèle
         candidate = await db.get(Candidate, candidate_id)
         letter = (meta.get("cover_letter") or {}).get("body") or ""
         draft = await draft_followup(candidate, application, title, company or "", letter)

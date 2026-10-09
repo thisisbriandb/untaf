@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ratelimit import limited
 from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
 from app.agents.mission_log import log_event
 from app.database import get_db
@@ -104,7 +105,7 @@ async def dispatch_summary(candidate_id: UUID, db: AsyncSession = Depends(get_db
     return summary
 
 
-@router.post("/prepare", response_model=DispatchOut, status_code=201)
+@router.post("/prepare", response_model=DispatchOut, status_code=201, dependencies=[Depends(limited("render", anonymous=0, user=240, overall=20000))])
 async def prepare(
     candidate_id: UUID,
     body: PrepareRequest,
