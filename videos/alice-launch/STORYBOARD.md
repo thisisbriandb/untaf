@@ -28,7 +28,7 @@ No narration: on-screen kinetic type carries every line (the `voiceover` field i
 - voiceover: "Candidature n°47. — Madame, Monsieur,"
 - duration: 3.5s
 - transition_in: cut
-- status: outline
+- status: animated
 - src: compositions/frames/01-lettre-47.html
 - type: hook
 - persuasion: Pain validation
@@ -53,7 +53,7 @@ Scene 4 (2.8–3.5s): hold on the retyped line with the caret blinking; a faint 
 - voiceover: "Un CV à refaire. — Une lettre à réécrire. — Un formulaire de plus. — 0 réponse."
 - duration: 4s
 - transition_in: cut
-- status: outline
+- status: animated
 - src: compositions/frames/02-zero-reponse.html
 - type: pain_point
 - persuasion: Pain agitation
@@ -77,7 +77,7 @@ Scene 4 (2.4–4.0s): hard cut to the slam: a giant "0" (poster scale, ~40% of f
 - voiceover: "Et si quelqu'un le faisait pour toi ? — Alice. — Elle cherche. Elle adapte. Elle postule."
 - duration: 4s
 - transition_in: zoom-through
-- status: outline
+- status: animated
 - src: compositions/frames/03-alice-arrive.html
 - type: product_intro
 - persuasion: Negative contrast → relief
@@ -103,7 +103,7 @@ Scene 4 (2.8–4.0s): the tagline builds beneath the wordmark, one verb phrase p
 - voiceover: "Tu lui dis ce que tu cherches. — Elle trouve les offres qui te correspondent."
 - duration: 4.5s
 - transition_in: crossfade
-- status: outline
+- status: animated
 - src: compositions/frames/04-tu-demandes.html
 - type: feature_showcase
 - persuasion: Show-don't-tell proof
@@ -130,7 +130,7 @@ Scene 4 (3.6–4.5s): hold on the complete list; subtle jitter only.
 - voiceover: "1 284 offres passées en revue. — CV adapté. — Lettre rédigée. — Candidature envoyée."
 - duration: 5s
 - transition_in: push-slide UP
-- status: outline
+- status: animated
 - src: compositions/frames/05-elle-travaille.html
 - type: feature_showcase
 - persuasion: Statistical proof + show-don't-tell
@@ -157,7 +157,7 @@ Scene 4 (3.6–5.0s): row "Candidature envoyée…" reveals + check pops with a 
 - voiceover: "Tes candidatures partent. — Pendant que tu vis ta vie."
 - duration: 4s
 - transition_in: push-slide UP
-- status: outline
+- status: animated
 - src: compositions/frames/06-envoyees.html
 - type: benefit_highlight
 - persuasion: Feature-to-benefit translation
@@ -183,7 +183,7 @@ Scene 3 (2.4–4.0s): the caption swaps (out-up / in-up) to "Pendant que tu vis 
 - voiceover: "Les offres. — Le CV. — La lettre. — L'envoi. — Les relances. — Alice s'en charge."
 - duration: 3.5s
 - transition_in: zoom-through
-- status: outline
+- status: animated
 - src: compositions/frames/07-alice-s-en-charge.html
 - type: benefit_highlight
 - persuasion: Value stacking
@@ -205,7 +205,7 @@ Scene 2 (2.4–3.5s): "Alice s'en charge." lands on two lines (~150px), with the
 - voiceover: "Ta prochaine candidature, c'est Alice qui l'envoie. — alice-agent.fr — Gratuit pour commencer."
 - duration: 4s
 - transition_in: crossfade
-- status: outline
+- status: animated
 - src: compositions/frames/08-cta.html
 - type: cta
 - persuasion: Risk reversal

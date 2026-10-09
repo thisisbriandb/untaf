@@ -14,10 +14,10 @@
       color: #1A1918;
     }
     .clip { position: absolute; inset: 0; }
-    .a03-alice-arrive-bg { background: #FAFAF8; }
+    .af03-bg { background: #FAFAF8; }
 
     /* Scene 1 — question */
-    .a03-alice-arrive-question {
+    .af03-question {
       position: absolute;
       left: 110px;
       width: 860px;
@@ -36,17 +36,17 @@
       text-align: center;
       transform-origin: 50% 50%;
     }
-    .a03-alice-arrive-qw { display: inline-block; white-space: nowrap; }
+    .af03-qw { display: inline-block; white-space: nowrap; }
 
     /* Scene 2/3 — eyes */
-    .a03-alice-arrive-eyes {
+    .af03-eyes {
       position: absolute;
       left: 0;
       width: 1080px;
       top: 778px; /* center at 864 (45%) */
       height: 172px;
     }
-    .a03-alice-arrive-glow {
+    .af03-glow {
       position: absolute;
       left: 90px;
       top: -364px;
@@ -55,7 +55,7 @@
       border-radius: 50%;
       background: radial-gradient(circle at 50% 50%, rgba(0, 96, 69, 0.15) 0%, rgba(0, 96, 69, 0.08) 38%, rgba(0, 96, 69, 0) 70%);
     }
-    .a03-alice-arrive-mark {
+    .af03-mark {
       position: absolute;
       left: 324px;
       top: 0;
@@ -63,7 +63,7 @@
       height: 172px;
       overflow: visible;
     }
-    .a03-alice-arrive-ring {
+    .af03-ring {
       fill: none;
       stroke: #006045;
       stroke-width: 22;
@@ -71,7 +71,7 @@
     }
 
     /* Scene 3 — wordmark */
-    .a03-alice-arrive-wm-mask {
+    .af03-wm-mask {
       position: absolute;
       left: 0;
       width: 1080px;
@@ -80,7 +80,7 @@
       overflow: hidden;
       text-align: center;
     }
-    .a03-alice-arrive-wm {
+    .af03-wm {
       display: block;
       font-size: 260px;
       font-weight: 700;
@@ -90,7 +90,7 @@
     }
 
     /* Scene 4 — tagline */
-    .a03-alice-arrive-tagline {
+    .af03-tagline {
       position: absolute;
       left: 0;
       width: 1080px;
@@ -102,42 +102,42 @@
       line-height: 1.25;
       color: #1A1918;
     }
-    .a03-alice-arrive-line { display: block; }
-    .a03-alice-arrive-verb { color: #006045; }
+    .af03-line { display: block; }
+    .af03-verb { color: #006045; }
   </style>
 
-  <div id="root" data-composition-id="03-alice-arrive" data-width="1080" data-height="1920" data-duration="4">
-    <div class="clip a03-alice-arrive-bg" data-start="0" data-duration="4" data-track-index="0"></div>
+  <div id="root" data-composition-id="03-alice-arrive" data-width="1080" data-height="1920" data-duration="4.5">
+    <div class="clip af03-bg" data-start="0" data-duration="4.5" data-track-index="0"></div>
 
-    <div class="clip" data-start="0" data-duration="4" data-track-index="1">
-      <div class="a03-alice-arrive-question" id="a03-alice-arrive-question">
-        <span class="a03-alice-arrive-qw">Et</span>
-        <span class="a03-alice-arrive-qw">si</span>
-        <span class="a03-alice-arrive-qw">quelqu’un</span>
-        <span class="a03-alice-arrive-qw">le</span>
-        <span class="a03-alice-arrive-qw">faisait</span>
-        <span class="a03-alice-arrive-qw">pour</span>
-        <span class="a03-alice-arrive-qw">toi&nbsp;?</span>
+    <div class="clip" data-start="0" data-duration="4.5" data-track-index="1">
+      <div class="af03-question" id="af03-question">
+        <span class="af03-qw">Et</span>
+        <span class="af03-qw">si</span>
+        <span class="af03-qw">quelqu’un</span>
+        <span class="af03-qw">le</span>
+        <span class="af03-qw">faisait</span>
+        <span class="af03-qw">pour</span>
+        <span class="af03-qw">toi&nbsp;?</span>
       </div>
     </div>
 
-    <div class="clip" data-start="0" data-duration="4" data-track-index="2">
-      <div class="a03-alice-arrive-eyes" id="a03-alice-arrive-eyes">
-        <div class="a03-alice-arrive-glow" id="a03-alice-arrive-glow"></div>
-        <svg class="a03-alice-arrive-mark" id="a03-alice-arrive-mark" viewBox="0 0 432 172" xmlns="http://www.w3.org/2000/svg">
-          <circle class="a03-alice-arrive-ring" id="a03-alice-arrive-ring-l" cx="86" cy="86" r="70" style="transform-origin: 86px 86px; transform: rotate(-90deg)" />
-          <circle class="a03-alice-arrive-ring" id="a03-alice-arrive-ring-r" cx="346" cy="86" r="70" style="transform-origin: 346px 86px; transform: rotate(-90deg)" />
+    <div class="clip" data-start="0" data-duration="4.5" data-track-index="2">
+      <div class="af03-eyes" id="af03-eyes">
+        <div class="af03-glow" id="af03-glow"></div>
+        <svg class="af03-mark" id="af03-mark" viewBox="0 0 432 172" xmlns="http://www.w3.org/2000/svg">
+          <circle class="af03-ring" id="af03-ring-l" cx="86" cy="86" r="70" style="transform-origin: 86px 86px; transform: rotate(-90deg)" />
+          <circle class="af03-ring" id="af03-ring-r" cx="346" cy="86" r="70" style="transform-origin: 346px 86px; transform: rotate(-90deg)" />
         </svg>
       </div>
 
-      <div class="a03-alice-arrive-wm-mask">
-        <span class="a03-alice-arrive-wm" id="a03-alice-arrive-wm">Alice</span>
+      <div class="af03-wm-mask">
+        <span class="af03-wm" id="af03-wm">Alice</span>
       </div>
 
-      <div class="a03-alice-arrive-tagline">
-        <span class="a03-alice-arrive-line" id="a03-alice-arrive-l1">Elle <span class="a03-alice-arrive-verb">cherche.</span></span>
-        <span class="a03-alice-arrive-line" id="a03-alice-arrive-l2">Elle <span class="a03-alice-arrive-verb">adapte.</span></span>
-        <span class="a03-alice-arrive-line" id="a03-alice-arrive-l3">Elle <span class="a03-alice-arrive-verb">postule.</span></span>
+      <div class="af03-tagline">
+        <span class="af03-line" id="af03-l1">Elle <span class="af03-verb">cherche.</span></span>
+        <span class="af03-line" id="af03-l2">Elle <span class="af03-verb">adapte.</span></span>
+        <span class="af03-line" id="af03-l3">Elle <span class="af03-verb">postule.</span></span>
       </div>
     </div>
   </div>
@@ -150,7 +150,7 @@
       var tl = gsap.timeline({ paused: true });
 
       // Ring draw setup — measured geometry
-      var rings = [q("#a03-alice-arrive-ring-l"), q("#a03-alice-arrive-ring-r")];
+      var rings = [q("#af03-ring-l"), q("#af03-ring-r")];
       var lens = rings.map(function (r) {
         var len = r.getTotalLength ? r.getTotalLength() : 2 * Math.PI * 70;
         r.style.strokeDasharray = len + " " + len;
@@ -158,16 +158,16 @@
       });
 
       // Scene 1 (0.0–1.2): question words land staggered, hold, then shrink toward center + fade
-      var words = root.querySelectorAll(".a03-alice-arrive-qw");
+      var words = root.querySelectorAll(".af03-qw");
       tl.fromTo(words,
         { opacity: 0, y: 36 },
         { opacity: 1, y: 0, duration: 0.32, ease: "power3.out", stagger: 0.06 }, 0.02);
-      tl.fromTo("#a03-alice-arrive-question",
+      tl.fromTo("#af03-question",
         { scale: 1, opacity: 1 },
         { scale: 0.82, opacity: 0, duration: 0.28, ease: "power2.in", immediateRender: false }, 0.9);
 
       // Scene 2 (1.2–2.0): glow ignites, eye rings self-draw clockwise, then blink once
-      tl.fromTo("#a03-alice-arrive-glow",
+      tl.fromTo("#af03-glow",
         { opacity: 0, scale: 0.55 },
         { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }, 1.2);
       tl.fromTo(rings[0],
@@ -176,22 +176,22 @@
       tl.fromTo(rings[1],
         { strokeDashoffset: lens[1], opacity: 1 },
         { strokeDashoffset: 0, duration: 0.42, ease: "power2.inOut" }, 1.32);
-      tl.fromTo("#a03-alice-arrive-mark",
+      tl.fromTo("#af03-mark",
         { scaleY: 1 },
         { scaleY: 0.1, duration: 0.09, ease: "power2.in", transformOrigin: "50% 50%" }, 1.8);
-      tl.to("#a03-alice-arrive-mark",
+      tl.to("#af03-mark",
         { scaleY: 1, duration: 0.11, ease: "power2.out", transformOrigin: "50% 50%" }, 1.89);
 
       // Scene 3 (2.0–2.8): eyes rise to ~32% height, wordmark unmasks beneath
-      tl.fromTo("#a03-alice-arrive-eyes",
+      tl.fromTo("#af03-eyes",
         { y: 0 },
         { y: -250, duration: 0.5, ease: "power3.inOut" }, 2.0);
-      tl.fromTo("#a03-alice-arrive-wm",
+      tl.fromTo("#af03-wm",
         { yPercent: 100 },
         { yPercent: 0, duration: 0.5, ease: "power3.out" }, 2.18);
 
       // Scene 4 (2.8–4.0): tagline builds verb by verb, then the lockup holds
-      ["#a03-alice-arrive-l1", "#a03-alice-arrive-l2", "#a03-alice-arrive-l3"].forEach(function (sel, i) {
+      ["#af03-l1", "#af03-l2", "#af03-l3"].forEach(function (sel, i) {
         tl.fromTo(sel,
           { opacity: 0, y: 40 },
           { opacity: 1, y: 0, duration: 0.3, ease: "back.out(1.6)" }, 2.82 + i * 0.34);

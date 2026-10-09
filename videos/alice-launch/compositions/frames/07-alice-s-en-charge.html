@@ -82,8 +82,8 @@
     }
   </style>
 
-  <div id="root" data-composition-id="07-alice-s-en-charge" data-start="0" data-duration="3.5" data-width="1080" data-height="1920">
-    <div class="clip s07-ground" id="07-alice-s-en-charge-ground" data-start="0" data-duration="3.5" data-track-index="0"></div>
+  <div id="root" data-composition-id="07-alice-s-en-charge" data-start="0" data-duration="4" data-width="1080" data-height="1920">
+    <div class="clip s07-ground" id="f07-ground" data-start="0" data-duration="4" data-track-index="0"></div>
 
     <svg width="0" height="0" aria-hidden="true" style="position:absolute">
       <filter id="s07-streak" x="-50%" y="-50%" width="200%" height="200%">
@@ -91,7 +91,7 @@
       </filter>
     </svg>
 
-    <div class="clip s07-stage" id="07-alice-s-en-charge-stage" data-start="0" data-duration="3.5" data-track-index="1">
+    <div class="clip s07-stage" id="f07-stage" data-start="0" data-duration="4" data-track-index="1">
       <div class="s07-word" id="s07-w1">Les offres.</div>
       <div class="s07-word" id="s07-w2"><span id="s07-w2-in" style="display:inline-block;filter:url(#s07-streak)">Le CV.</span></div>
       <div class="s07-word" id="s07-w3">La lettre.</div>
@@ -142,8 +142,8 @@
 
       // Beat 3 — "La lettre." letter-spacing collapse.
       tl.fromTo("#s07-w3",
-        { letterSpacing: "0.45em", opacity: 0 },
-        { letterSpacing: "-0.02em", opacity: 1, duration: 0.32, ease: "power3.out" },
+        { scaleX: 1.6, opacity: 0, filter: "blur(10px)" },
+        { scaleX: 1, opacity: 1, filter: "blur(0px)", duration: 0.32, ease: "power3.out" },
         BEATS[2]);
       tl.set("#s07-w3", { opacity: 0 }, BEATS[3]);
 

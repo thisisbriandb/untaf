@@ -14,17 +14,17 @@
       font-family: "Geist", sans-serif;
       color: #1A1918;
     }
-    [id="08-cta-bg"] {
+    [id="f08-bg"] {
       position: absolute;
       inset: 0;
       background: #FAFAF8;
     }
-    [id="08-cta-stage"] {
+    [id="f08-stage"] {
       position: absolute;
       inset: 0;
     }
     /* soft closing atmosphere — static, behind everything */
-    [id="08-cta-halo"] {
+    [id="f08-halo"] {
       position: absolute;
       left: 90px;
       top: 433px;
@@ -34,7 +34,7 @@
       background: radial-gradient(circle, rgba(0, 96, 69, 0.08) 0%, rgba(0, 96, 69, 0.04) 40%, rgba(0, 96, 69, 0) 70%);
     }
     /* big eyes — center (540, 653) = 34% height */
-    [id="08-cta-eyes"] {
+    [id="f08-eyes"] {
       position: absolute;
       left: 330px;
       top: 553px;
@@ -43,14 +43,14 @@
       transform-origin: 50% 50%;
       z-index: 2;
     }
-    [id="08-cta-eyes-svg"] {
+    [id="f08-eyes-svg"] {
       display: block;
       width: 420px;
       height: 200px;
       transform-origin: 50% 50%;
     }
     /* scene-1 line */
-    [id="08-cta-line"] {
+    [id="f08-line"] {
       position: absolute;
       left: 60px;
       right: 60px;
@@ -68,7 +68,7 @@
       margin: 0 0.12em;
     }
     /* CTA pill — center (540, 883) = 46% height, ~80% width */
-    [id="08-cta-pill"] {
+    [id="f08-pill"] {
       position: absolute;
       left: 108px;
       top: 783px;
@@ -87,7 +87,7 @@
       transform-origin: 50% 50%;
       z-index: 4;
     }
-    [id="08-cta-ring"] {
+    [id="f08-ring"] {
       position: absolute;
       left: 108px;
       top: 783px;
@@ -102,7 +102,7 @@
       z-index: 3;
     }
     /* small eyes re-formed above the pill — center (540, 663) */
-    [id="08-cta-eyes-sm"] {
+    [id="f08-eyes-sm"] {
       position: absolute;
       left: 435px;
       top: 613px;
@@ -111,12 +111,12 @@
       transform-origin: 50% 50%;
       z-index: 4;
     }
-    [id="08-cta-eyes-sm"] svg {
+    [id="f08-eyes-sm"] svg {
       display: block;
       width: 210px;
       height: 100px;
     }
-    [id="08-cta-sub"] {
+    [id="f08-sub"] {
       position: absolute;
       left: 90px;
       right: 90px;
@@ -132,31 +132,31 @@
   </style>
 
   <div id="root" data-composition-id="08-cta" data-width="1080" data-height="1920" data-duration="4">
-    <div id="08-cta-bg" class="clip" data-start="0" data-duration="4" data-track-index="0"></div>
+    <div id="f08-bg" class="clip" data-start="0" data-duration="4" data-track-index="0"></div>
 
-    <div id="08-cta-stage" class="clip" data-start="0" data-duration="4" data-track-index="1">
-      <div id="08-cta-halo"></div>
+    <div id="f08-stage" class="clip" data-start="0" data-duration="4" data-track-index="1">
+      <div id="f08-halo"></div>
 
-      <div id="08-cta-eyes">
-        <svg id="08-cta-eyes-svg" viewBox="0 0 420 200" aria-hidden="true">
+      <div id="f08-eyes">
+        <svg id="f08-eyes-svg" viewBox="0 0 420 200" aria-hidden="true">
           <circle cx="90" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
           <circle cx="330" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
         </svg>
       </div>
 
-      <div id="08-cta-line"><span class="w08">Ta</span><span class="w08">prochaine</span><span class="w08">candidature,</span><br /><span class="w08">c'est</span><span class="w08">Alice</span><span class="w08">qui</span><span class="w08">l'envoie.</span></div>
+      <div id="f08-line"><span class="w08">Ta</span><span class="w08">prochaine</span><span class="w08">candidature,</span><br /><span class="w08">c'est</span><span class="w08">Alice</span><span class="w08">qui</span><span class="w08">l'envoie.</span></div>
 
-      <div id="08-cta-ring"></div>
-      <div id="08-cta-pill">alice-agent.fr</div>
+      <div id="f08-ring"></div>
+      <div id="f08-pill">alice-agent.fr</div>
 
-      <div id="08-cta-eyes-sm">
+      <div id="f08-eyes-sm">
         <svg viewBox="0 0 420 200" aria-hidden="true">
           <circle cx="90" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
           <circle cx="330" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
         </svg>
       </div>
 
-      <div id="08-cta-sub">Gratuit pour commencer</div>
+      <div id="f08-sub">Gratuit pour commencer</div>
     </div>
   </div>
 
@@ -164,14 +164,14 @@
   <script>
     (function () {
       var $ = function (id) { return document.getElementById(id); };
-      var eyes = $("08-cta-eyes");
-      var eyesSvg = $("08-cta-eyes-svg");
-      var line = $("08-cta-line");
+      var eyes = $("f08-eyes");
+      var eyesSvg = $("f08-eyes-svg");
+      var line = $("f08-line");
       var words = line.querySelectorAll(".w08");
-      var pill = $("08-cta-pill");
-      var ring = $("08-cta-ring");
-      var eyesSm = $("08-cta-eyes-sm");
-      var sub = $("08-cta-sub");
+      var pill = $("f08-pill");
+      var ring = $("f08-ring");
+      var eyesSm = $("f08-eyes-sm");
+      var sub = $("f08-sub");
 
       var tl = gsap.timeline({ paused: true });
 
