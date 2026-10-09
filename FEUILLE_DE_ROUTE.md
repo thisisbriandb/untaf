@@ -83,13 +83,17 @@ Décision : **écartées quand l'indice est fort**, signalées sinon.
 
 ## 4. L'utilisateur au centre
 
-- [ ] Boutons de réponse sous les messages d'Alice (« Je te montre les
-      offres ? » → [Oui] [Plus tard])
-- [ ] Onboarding : étape « L'allure de tes CV » (modèle, photo, couleur, avec
-      aperçu), enregistrée au profil et utilisée par tous les dossiers
-- [ ] Onboarding : étape « Ta signature » ; sans signature, Alice la demande
-      avant le premier envoi
-- [ ] Accueil : ce qu'Alice sait faire, en 3 cartes
+- [x] Boutons de réponse sous la dernière question d'Alice (« Oui, montre-moi
+      » / « Plus tard », « Oui, vas-y » / « Pas maintenant »…)
+- [x] Inscription : étape « L'allure de tes CV » (modèle, couleur, photo, avec
+      l'aperçu de son vrai CV), enregistrée au profil avant la première
+      mission : tous les dossiers la suivent
+- [x] Inscription : étape « Ta signature » ; sans signature, une candidature
+      attend avant l'envoi (signer une fois, ou feu vert pour l'envoyer ainsi)
+- [x] Accueil : ce qu'Alice sait faire, en 3 cartes cliquables
+- [ ] Photo du CV importé proposée d'office (extraction de l'image du PDF)
+- [ ] À valider en vrai : un parcours d'inscription complet sur mobile et
+      ordinateur
 
 ## 5. Passage à l'abonnement
 
