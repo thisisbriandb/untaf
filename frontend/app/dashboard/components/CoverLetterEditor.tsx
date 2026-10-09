@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Download, Eye, Loader2, PenLine, PenTool, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "./Markdown";
-import { SignaturePad } from "./SignaturePad";
+import { SignatureChooser } from "./SignatureChooser";
 import {
   downloadLetterPdf,
   emptyLetter,
@@ -180,7 +180,8 @@ export function CoverLetterEditor({
 
         {showSignaturePad && candidateId && (
           <div className="pt-1">
-            <SignaturePad
+            <SignatureChooser
+              fullName={letter.signature_name || letter.sender_name || ""}
               onCancel={() => setShowSignaturePad(false)}
               onSave={async (dataUrl) => {
                 await saveSignature(candidateId, dataUrl);
