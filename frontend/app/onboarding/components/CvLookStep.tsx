@@ -10,7 +10,7 @@
  */
 
 import { useRef, useState } from "react";
-import { Camera, Check, Trash2 } from "lucide-react";
+import { Camera, Check, Maximize2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shrinkPhoto } from "@/lib/cv-profile";
 import { colorSwatches, cvTemplates } from "../types";
@@ -66,6 +66,7 @@ export function CvLookStep({
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [zoom, setZoom] = useState(false);
 
   const featured = cvTemplates.filter((t) => FEATURED.includes(t.id));
   const templates = showAll || featured.length < 2 ? cvTemplates : featured;
@@ -81,28 +82,59 @@ export function CvLookStep({
     }
   };
 
+  // Le vrai CV du candidat, avec son allure : dans la carte, et en grand.
+  const preview = (
+    <CandidateCvPreview
+      fluid
+      fullName={`${profile.firstName} ${profile.lastName}`.trim()}
+      headline={profile.headline}
+      summary={profile.summary}
+      email={profile.email}
+      phone={profile.phone}
+      linkedinUrl=""
+      skills={profile.skills}
+      experienceYears={profile.experienceYears ?? 0}
+      experiences={profile.experiences}
+      education={profile.education}
+      languages={profile.languages}
+      templateId={value.templateId}
+      selectedColorHex={value.colorHex}
+      showPhoto={value.showPhoto && Boolean(value.photo)}
+      userPhotoUrl={value.photo}
+    />
+  );
+
   return (
-    <div className="w-full max-w-3xl mx-auto grid gap-6 md:grid-cols-[1fr_260px] text-left">
-      <div className="rounded-2xl border border-[#1A1918]/8 bg-white p-3 overflow-hidden">
-        <CandidateCvPreview
-          fluid
-          fullName={`${profile.firstName} ${profile.lastName}`.trim()}
-          headline={profile.headline}
-          summary={profile.summary}
-          email={profile.email}
-          phone={profile.phone}
-          linkedinUrl=""
-          skills={profile.skills}
-          experienceYears={profile.experienceYears ?? 0}
-          experiences={profile.experiences}
-          education={profile.education}
-          languages={profile.languages}
-          templateId={value.templateId}
-          selectedColorHex={value.colorHex}
-          showPhoto={value.showPhoto && Boolean(value.photo)}
-          userPhotoUrl={value.photo}
-        />
+    <div className="w-full mx-auto grid gap-6 md:grid-cols-[minmax(0,1fr)_260px] text-left">
+      <div className="relative rounded-2xl border border-[#1A1918]/8 bg-white p-3 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setZoom(true)}
+          className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 border border-[#1A1918]/10 px-2.5 py-1 text-[11px] text-[#1A1918]/70 hover:text-[#006045] cursor-pointer"
+        >
+          <Maximize2 className="h-3 w-3" /> Agrandir
+        </button>
+        {preview}
       </div>
+
+      {zoom && (
+        <div
+          className="fixed inset-0 z-[80] bg-[#1A1918]/40 flex items-start justify-center overflow-y-auto p-4 md:p-10"
+          onClick={() => setZoom(false)}
+        >
+          <div className="relative w-full max-w-[760px] rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setZoom(false)}
+              aria-label="Fermer"
+              className="absolute right-3 top-3 z-10 p-1.5 rounded-full bg-white border border-[#1A1918]/10 text-[#1A1918]/60 hover:text-[#1A1918] cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            {preview}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-5">
         <section className="space-y-2">

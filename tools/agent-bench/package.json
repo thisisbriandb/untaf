@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "description": "Banc d'essai : un modèle « computer use » remplit des formulaires de candidature, sans jamais les soumettre.",
-  "scripts": { "bench": "node bench.mjs" },
-  "dependencies": { "playwright": "^1.56.1" }
+  "scripts": {
+    "bench": "node bench.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
 }

@@ -667,7 +667,11 @@ def _build_cv_data_from_request(data: CVRenderRequest) -> dict:
             edu_list.append({
                 "institution": institution,
                 "area": degree,
-                "degree": degree,
+                # « degree » s'affiche dans une colonne étroite prévue pour
+                # une abréviation (« MSc ») : un intitulé complet y était
+                # coupé syllabe par syllabe. Il va dans « area », comme sur
+                # les CV envoyés (cv_resolver).
+                "degree": "",
                 "location": loc,
                 "start_date": start_year,
                 "end_date": end_year,
@@ -676,15 +680,15 @@ def _build_cv_data_from_request(data: CVRenderRequest) -> dict:
 
     sections = {}
     if data.summary:
-        sections["profil"] = [data.summary]
+        sections["Profil"] = [data.summary]
 
-    sections["experience"] = exp_list
+    sections["Expérience"] = exp_list
 
     if edu_list:
-        sections["education"] = edu_list
+        sections["Formation"] = edu_list
 
     if data.skills:
-        sections["competences"] = [", ".join(data.skills)]
+        sections["Compétences"] = [", ".join(data.skills)]
 
     if data.languages:
         lang_items = []
@@ -698,7 +702,7 @@ def _build_cv_data_from_request(data: CVRenderRequest) -> dict:
                 lang_items.append(l)
 
         if lang_items:
-            sections["langues"] = lang_items
+            sections["Langues"] = lang_items
 
     social_networks = []
     if data.linkedin_url:
