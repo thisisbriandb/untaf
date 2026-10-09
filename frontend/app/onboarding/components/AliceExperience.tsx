@@ -617,7 +617,11 @@ export function AliceExperience() {
       )}
       <div
         ref={scrollRef}
-        className="w-full max-w-[520px] mx-auto px-6 py-10 md:py-14 flex flex-col items-center gap-6 overflow-y-auto"
+        className={cn(
+          "w-full mx-auto px-6 py-10 md:py-14 flex flex-col items-center gap-6 overflow-y-auto",
+          // L'allure des CV se choisit sur un aperçu lisible : la colonne s'élargit.
+          phase === 6 ? "max-w-[980px]" : "max-w-[520px]",
+        )}
         style={{ maxHeight: "100vh" }}
       >
         {/* ═══ Alice Presence (Always visible abstract eyes & gaze) ═══ */}
