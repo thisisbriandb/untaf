@@ -30,7 +30,9 @@ target_metadata = Base.metadata
 
 # alembic.ini passe par configparser, pour qui « % » introduit une
 # interpolation : un mot de passe encodé (%24, %2F…) le ferait échouer.
-config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
+from app.database import engine_url  # noqa: E402
+
+config.set_main_option("sqlalchemy.url", engine_url(settings.database_url).replace("%", "%%"))
 
 
 def _include(object, name, type_, reflected, compare_to):
