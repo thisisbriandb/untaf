@@ -85,83 +85,43 @@
       width: 820px;
       height: 1152px;
     }
-    /* screenshot 1170x2532 at scale 0.76, framed on y 1016-2532 */
-    [class~="f05-shot"] {
-      position: absolute;
-      width: 889.2px;
-      height: 1924.32px;
-      max-width: none;
-      display: block;
+    /* app chrome cropped from the real screenshot (scale 820/1170) */
+    [class~="f05-crop"] { position: absolute; left: 0; width: 820px; overflow: hidden; }
+    [class~="f05-crop"] img { position: absolute; left: 0; width: 820px; height: 1774.6px; max-width: none; display: block; }
+    [id="f05-top"] { top: 0; height: 150px; }
+    [id="f05-top"] img { top: 0; }
+    [id="f05-bottom"] { top: 975px; height: 177px; }
+    [id="f05-bottom"] img { top: -1598px; }
+    /* rebuilt live mission card */
+    [id="f05-card"] {
+      position: absolute; left: 30px; top: 196px; width: 760px; height: 686px;
+      background: #FFFFFF; border: 1.5px solid #ECEAE5; border-radius: 34px;
+      clip-path: inset(0px 0px 562px 0px round 34px);
     }
-    [id="f05-base"] { left: -34.6px; top: -772.16px; }
-    [class~="f05-patch"] {
-      position: absolute;
-      left: 11px;
-      width: 798px;
-      background: #FFFFFF;
+    [id="f05-head"] {
+      position: absolute; left: 34px; top: 30px; width: 692px; height: 74px;
+      font-size: 22px; line-height: 1.5; color: #66655F;
     }
-    [class~="f05-strip"] {
-      position: absolute;
-      left: 11px;
-      width: 798px;
-      overflow: hidden;
+    [id="f05-head-txt"] { position: absolute; left: 34px; top: 0; width: 520px; }
+    [id="f05-head-stop"] { position: absolute; right: 0; top: 16px; color: #6B6A66; }
+    [id="f05-dot"] { position: absolute; left: 4px; top: 13px; width: 12px; height: 12px; border-radius: 50%; background: #006045; }
+    [id="f05-pulse"] { position: absolute; left: -2px; top: 7px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #006045; opacity: 0; }
+    [class~="f05-row"] {
+      position: absolute; left: 34px; width: 692px; height: 92px;
+      font-size: 28px; line-height: 1.55; color: #2A2927; opacity: 0;
     }
-    [class~="f05-strip-in"] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 798px;
-      height: 100%;
-    }
+    [class~="f05-row"] span { position: absolute; left: 52px; top: 0; width: 640px; }
+    [class~="f05-bullet"] { position: absolute; left: 10px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: #C9C8C4; }
     [class~="f05-badge"] {
-      position: absolute;
-      width: 44px;
-      height: 44px;
-      margin-left: -22px;
-      margin-top: -22px;
-      border-radius: 50%;
-      background: #006045;
-      z-index: 3;
+      position: absolute; left: -2px; top: 2px; width: 40px; height: 40px;
+      border-radius: 50%; background: #006045; opacity: 0;
     }
-    [class~="f05-badge"] svg {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 44px;
-      height: 44px;
-    }
-    [class~="f05-badge"] path {
-      fill: none;
-      stroke: #FFFFFF;
-      stroke-width: 4.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
+    [class~="f05-badge"] svg { position: absolute; left: 0; top: 0; width: 40px; height: 40px; }
+    [class~="f05-badge"] path { fill: none; stroke: #FFFFFF; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
     [id="f05-glow"] {
-      position: absolute;
-      left: 47.5px;
-      top: 807.9px;
-      width: 200px;
-      height: 200px;
-      margin-left: -100px;
-      margin-top: -100px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(0, 96, 69, 0.55) 0%, rgba(0, 96, 69, 0.18) 38%, rgba(0, 96, 69, 0) 70%);
-      z-index: 2;
+      position: absolute; left: -60px; top: -80px; width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,96,69,0.45) 0%, rgba(0,96,69,0.15) 40%, rgba(0,96,69,0) 70%);
       opacity: 0;
-    }
-    [id="f05-pulse"] {
-      position: absolute;
-      left: 47.1px;
-      top: 278.9px;
-      width: 16px;
-      height: 16px;
-      margin-left: -8px;
-      margin-top: -8px;
-      border-radius: 50%;
-      border: 2px solid #006045;
-      opacity: 0;
-      z-index: 3;
     }
   </style>
 
@@ -171,51 +131,16 @@
     <!-- floating phone, framed on the live mission card -->
     <div id="f05-phone" class="clip" data-start="0" data-duration="5.5" data-track-index="1">
       <div id="f05-screen">
-        <img id="f05-base" class="f05-shot" src="assets/chat-top.png" alt="" />
-
-        <!-- patches hide the not-yet-written rows (card interior is #FFFFFF) -->
-        <div class="f05-patch" style="top:459.04px;height:109.44px"></div>
-        <div class="f05-patch" style="top:586.72px;height:100.32px"></div>
-        <div class="f05-patch" style="top:708.32px;height:57.76px"></div>
-        <div class="f05-patch" style="top:773.68px;height:115.52px"></div>
-        <div class="f05-patch" style="top:902.88px;height:35.72px"></div>
-
-        <!-- real rows, revealed as masked strips -->
-        <div class="f05-strip" style="top:459.04px;height:109.44px">
-          <div id="f05-s-retenue" class="f05-strip-in">
-            <img class="f05-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1231.2px" />
-          </div>
+        <div id="f05-top" class="f05-crop"><img src="assets/chat-top.png" alt="" /></div>
+        <div id="f05-card">
+          <div id="f05-head"><div id="f05-pulse"></div><div id="f05-dot"></div><div id="f05-head-txt">Alternance marketing à Lyon — tu peux fermer l’onglet, je t’écris quand c’est fini.</div><div id="f05-head-stop">arrêter</div></div>
+          <div id="f05-r-scan" class="f05-row" style="top:124px"><div class="f05-bullet"></div><span>J’ai passé 1 284 offres en revue : 63 correspondent à ton profil, j’en retiens 5.</span></div>
+          <div id="f05-r-retenue" class="f05-row" style="top:234px"><div class="f05-bullet"></div><span>Retenue : « Chargée de marketing digital (alternance) » chez Decathlon — 94 %.</span></div>
+          <div id="f05-r-cv" class="f05-row" style="top:344px"><div class="f05-bullet"></div><div id="f05-b-cv" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><span>CV adapté pour Decathlon : marketing digital et réseaux sociaux mis en avant.</span></div>
+          <div id="f05-r-lettre" class="f05-row" style="top:454px"><div class="f05-bullet"></div><div id="f05-b-lettre" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><span>Lettre de motivation rédigée pour Decathlon.</span></div>
+          <div id="f05-r-cand" class="f05-row" style="top:564px"><div class="f05-bullet"></div><div id="f05-b-cand" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><div id="f05-glow"></div><span>Candidature envoyée à Decathlon pour « Chargée de marketing digital (alternance) ».</span></div>
         </div>
-        <div class="f05-strip" style="top:586.72px;height:100.32px">
-          <div id="f05-s-cv" class="f05-strip-in">
-            <img class="f05-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1358.88px" />
-          </div>
-        </div>
-        <div class="f05-strip" style="top:708.32px;height:57.76px">
-          <div id="f05-s-lettre" class="f05-strip-in">
-            <img class="f05-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1480.48px" />
-          </div>
-        </div>
-        <div class="f05-strip" style="top:773.68px;height:115.52px">
-          <div id="f05-s-cand" class="f05-strip-in">
-            <img class="f05-shot" src="assets/chat-top.png" alt="" style="left:-45.6px;top:-1545.84px" />
-          </div>
-        </div>
-
-        <!-- working pulse on the mission header dot -->
-        <div id="f05-pulse"></div>
-
-        <!-- glow + rebuilt check badges over the rows' bullets -->
-        <div id="f05-glow"></div>
-        <div id="f05-b-cv" class="f05-badge" style="left:47.5px;top:610.2px">
-          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
-        </div>
-        <div id="f05-b-lettre" class="f05-badge" style="left:47.5px;top:739.5px">
-          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
-        </div>
-        <div id="f05-b-cand" class="f05-badge" style="left:47.5px;top:807.9px">
-          <svg viewBox="0 0 44 44"><path d="M13 22.5 L19.5 29 L31 16.5" /></svg>
-        </div>
+        <div id="f05-bottom" class="f05-crop"><img src="assets/chat-top.png" alt="" /></div>
       </div>
     </div>
 
@@ -239,54 +164,52 @@
       var words = function (s) { return Array.prototype.slice.call($(s).querySelectorAll('[class~="f05-w"]')); };
 
       var tl = gsap.timeline({ paused: true });
+      var card = $("card");
+      // card grows row by row: visible height = header (124) + rows * 110 (+ 30 padding)
+      var H = 686;
+      var reveal = function (h, t, d) {
+        tl.to(card, { clipPath: "inset(0px 0px " + (H - h) + "px 0px round 34px)", duration: d || 0.45, ease: "power3.out" }, t);
+      };
+      tl.fromTo(card, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.05);
 
-      // ---- Macro: gentle content drift inside the phone (camera stays locked) ----
-      tl.fromTo($("screen"), { y: 0 }, { y: -36, duration: 5, ease: "sine.inOut" }, 0);
-
-      // ---- Scene 1 (0.0–1.6s): counter 0 -> 1 284 (counting-dynamic-scale) ----
+      // ---- Scene 1 (0.0–1.6s): counter 0 -> 1 284 ----
       var countEl = $("count");
       var fmt = function (n) {
         n = Math.round(n);
         if (n < 1000) return String(n);
         var r = String(n % 1000);
         while (r.length < 3) r = "0" + r;
-        return Math.floor(n / 1000) + " " + r;
+        return Math.floor(n / 1000) + "\u00a0" + r;
       };
       var state = { v: 0 };
       countEl.textContent = "0";
       tl.fromTo($("count-wrap"), { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, 0);
-      tl.fromTo(state, { v: 0 }, {
-        v: 1284, duration: 1.2, ease: "power2.out",
-        onUpdate: function () { countEl.textContent = fmt(state.v); }
-      }, 0.1);
+      tl.fromTo(state, { v: 0 }, { v: 1284, duration: 1.2, ease: "power2.out",
+        onUpdate: function () { countEl.textContent = fmt(state.v); } }, 0.1);
       tl.fromTo(countEl, { scale: 0.8 }, { scale: 1, duration: 1.2, ease: "power2.out" }, 0.1);
       tl.fromTo($("count-sub"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.3);
 
-      // working pulse on the mission header dot (diegetic, finite, killed at 3.6s)
-      var pulse = $("pulse");
-      var ph = { p: 0 };
-      tl.fromTo(ph, { p: 0 }, {
-        p: 4, duration: 3.6, ease: "none",
-        onUpdate: function () {
-          var f = ph.p % 1;
-          pulse.style.opacity = String(0.55 * (1 - f));
-          pulse.style.transform = "scale(" + (1 + f * 1.6) + ")";
-        }
-      }, 0);
+      // working pulse on the live dot (finite)
+      var pulse = $("pulse"), ph = { p: 0 };
+      tl.fromTo(ph, { p: 0 }, { p: 4, duration: 3.6, ease: "none", onUpdate: function () {
+        var f = ph.p % 1; pulse.style.opacity = String(0.6 * (1 - f)); pulse.style.transform = "scale(" + (1 + f * 1.4) + ")"; } }, 0);
       tl.set(pulse, { opacity: 0 }, 3.6);
 
-      // the retained offer row lands as the count settles
-      tl.fromTo($("s-retenue"), { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 1.15);
+      var row = function (k, i, t) {
+        reveal(124 + (i + 1) * 110 + 8, t);
+        tl.fromTo($("r-" + k), { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, t + 0.05);
+      };
+      row("scan", 0, 0.75);
+      row("retenue", 1, 1.2);
 
-      // counter clears up (cut-the-curve, vertical)
+      // counter clears up
       tl.to($("count-wrap"), { y: -90, duration: 0.3, ease: "power4.in" }, 1.32);
       tl.to($("count-wrap"), { opacity: 0, duration: 0.2, ease: "power1.in" }, 1.42);
 
-      // ---- line swaps ----
+      // ---- caption line swaps ----
       var lineIn = function (key, t, axis) {
-        var ws = words(key);
-        var gap = 0.05, at = t;
-        ws.forEach(function (w, i) {
+        var ws = words(key), gap = 0.05, at = t;
+        ws.forEach(function (w) {
           var from = {}; from[axis] = axis === "x" ? 230 : 90;
           var to = { duration: 0.3, ease: "power4.out" }; to[axis] = 0;
           var pre = { opacity: 0 }; pre[axis] = from[axis];
@@ -300,53 +223,33 @@
       var lineOut = function (key, cut) {
         var ws = words(key), n = ws.length;
         ws.forEach(function (w, i) {
-          var s = cut - 0.18 - (n - 1 - i) * 0.022;
-          tl.to(w, { x: -230, duration: 0.34, ease: "power4.in" }, s);
-          tl.to(w, { opacity: 0, duration: 0.18, ease: "power1.in" }, s);
+          var s0 = cut - 0.18 - (n - 1 - i) * 0.022;
+          tl.to(w, { x: -230, duration: 0.34, ease: "power4.in" }, s0);
+          tl.to(w, { opacity: 0, duration: 0.18, ease: "power1.in" }, s0);
         });
       };
-
-      // check badge: pop (spring-pop-entrance) + tick draw (svg-path-draw)
-      var check = function (key, t) {
-        var b = $("b-" + key);
-        var p = b.querySelector("path");
-        var len = p.getTotalLength();
+      var check = function (k, t) {
+        var b = $("b-" + k), p = b.querySelector("path"), len = p.getTotalLength();
         p.style.strokeDasharray = String(len);
         tl.fromTo(b, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, t);
         tl.fromTo(p, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out" }, t + 0.14);
       };
-      var row = function (key, t) {
-        tl.fromTo($("s-" + key), { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, t);
-      };
 
       // ---- Scene 2 (1.6–2.6s): CV adapté ----
       lineIn("l-cv", 1.62, "y");
-      row("cv", 1.62);
+      row("cv", 2, 1.62);
       check("cv", 1.95);
-
       // ---- Scene 3 (2.6–3.6s): Lettre rédigée ----
       lineOut("l-cv", 2.62);
       lineIn("l-lettre", 2.62, "x");
-      row("lettre", 2.62);
+      row("lettre", 3, 2.62);
       check("lettre", 2.92);
-
-      // ---- Scene 4 (3.6–5.0s): Candidature envoyée + glow bloom, hold ----
+      // ---- Scene 4 (3.6–5.0s): Candidature envoyée + glow, hold ----
       lineOut("l-lettre", 3.62);
       lineIn("l-cand", 3.62, "x");
-      row("cand", 3.62);
+      row("cand", 4, 3.62);
       check("cand", 3.92);
-      var glow = $("glow");
-      tl.fromTo(glow, { opacity: 0, scale: 0.5 }, { opacity: 0.42, scale: 1, duration: 0.5, ease: "power2.out" }, 3.82);
-      var gb = { p: 0 };
-      tl.fromTo(gb, { p: 0 }, {
-        p: Math.PI * 2, duration: 0.68, ease: "none",
-        onUpdate: function () {
-          if (gb.p <= 0) return;
-          var s = Math.sin(gb.p);
-          glow.style.opacity = String(0.42 + s * 0.03);
-          glow.style.transform = "scale(" + (1 + s * 0.04) + ")";
-        }
-      }, 4.32);
+      tl.fromTo($("glow"), { opacity: 0, scale: 0.5 }, { opacity: 0.5, scale: 1, duration: 0.5, ease: "power2.out" }, 3.82);
 
       window.__timelines = window.__timelines || {};
       window.__timelines["05-elle-travaille"] = tl;
