@@ -1,0 +1,211 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: "Geist", sans-serif;
+      color: #1A1918;
+    }
+    [id="08-cta-bg"] {
+      position: absolute;
+      inset: 0;
+      background: #FAFAF8;
+    }
+    [id="08-cta-stage"] {
+      position: absolute;
+      inset: 0;
+    }
+    /* soft closing atmosphere — static, behind everything */
+    [id="08-cta-halo"] {
+      position: absolute;
+      left: 90px;
+      top: 433px;
+      width: 900px;
+      height: 900px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 96, 69, 0.08) 0%, rgba(0, 96, 69, 0.04) 40%, rgba(0, 96, 69, 0) 70%);
+    }
+    /* big eyes — center (540, 653) = 34% height */
+    [id="08-cta-eyes"] {
+      position: absolute;
+      left: 330px;
+      top: 553px;
+      width: 420px;
+      height: 200px;
+      transform-origin: 50% 50%;
+      z-index: 2;
+    }
+    [id="08-cta-eyes-svg"] {
+      display: block;
+      width: 420px;
+      height: 200px;
+      transform-origin: 50% 50%;
+    }
+    /* scene-1 line */
+    [id="08-cta-line"] {
+      position: absolute;
+      left: 60px;
+      right: 60px;
+      top: 820px;
+      text-align: center;
+      font-size: 72px;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #1A1918;
+      z-index: 2;
+    }
+    .w08 {
+      display: inline-block;
+      margin: 0 0.12em;
+    }
+    /* CTA pill — center (540, 883) = 46% height, ~80% width */
+    [id="08-cta-pill"] {
+      position: absolute;
+      left: 108px;
+      top: 783px;
+      width: 864px;
+      height: 200px;
+      border-radius: 100px;
+      background: #006045;
+      color: #FAFAF8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 96px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      transform-origin: 50% 50%;
+      z-index: 4;
+    }
+    [id="08-cta-ring"] {
+      position: absolute;
+      left: 108px;
+      top: 783px;
+      width: 864px;
+      height: 200px;
+      box-sizing: border-box;
+      border-radius: 100px;
+      border: 4px solid #006045;
+      box-shadow: 0 0 36px rgba(0, 96, 69, 0.35);
+      transform-origin: 50% 50%;
+      opacity: 0;
+      z-index: 3;
+    }
+    /* small eyes re-formed above the pill — center (540, 663) */
+    [id="08-cta-eyes-sm"] {
+      position: absolute;
+      left: 435px;
+      top: 613px;
+      width: 210px;
+      height: 100px;
+      transform-origin: 50% 50%;
+      z-index: 4;
+    }
+    [id="08-cta-eyes-sm"] svg {
+      display: block;
+      width: 210px;
+      height: 100px;
+    }
+    [id="08-cta-sub"] {
+      position: absolute;
+      left: 90px;
+      right: 90px;
+      top: 1036px;
+      text-align: center;
+      font-size: 52px;
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: rgba(26, 25, 24, 0.6);
+      z-index: 4;
+    }
+  </style>
+
+  <div id="root" data-composition-id="08-cta" data-width="1080" data-height="1920" data-duration="4">
+    <div id="08-cta-bg" class="clip" data-start="0" data-duration="4" data-track-index="0"></div>
+
+    <div id="08-cta-stage" class="clip" data-start="0" data-duration="4" data-track-index="1">
+      <div id="08-cta-halo"></div>
+
+      <div id="08-cta-eyes">
+        <svg id="08-cta-eyes-svg" viewBox="0 0 420 200" aria-hidden="true">
+          <circle cx="90" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
+          <circle cx="330" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
+        </svg>
+      </div>
+
+      <div id="08-cta-line"><span class="w08">Ta</span><span class="w08">prochaine</span><span class="w08">candidature,</span><br /><span class="w08">c'est</span><span class="w08">Alice</span><span class="w08">qui</span><span class="w08">l'envoie.</span></div>
+
+      <div id="08-cta-ring"></div>
+      <div id="08-cta-pill">alice-agent.fr</div>
+
+      <div id="08-cta-eyes-sm">
+        <svg viewBox="0 0 420 200" aria-hidden="true">
+          <circle cx="90" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
+          <circle cx="330" cy="100" r="64" fill="none" stroke="#006045" stroke-width="22" />
+        </svg>
+      </div>
+
+      <div id="08-cta-sub">Gratuit pour commencer</div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var eyes = $("08-cta-eyes");
+      var eyesSvg = $("08-cta-eyes-svg");
+      var line = $("08-cta-line");
+      var words = line.querySelectorAll(".w08");
+      var pill = $("08-cta-pill");
+      var ring = $("08-cta-ring");
+      var eyesSm = $("08-cta-eyes-sm");
+      var sub = $("08-cta-sub");
+
+      var tl = gsap.timeline({ paused: true });
+
+      // ── Scene 1 (0.0–1.2s): eyes return + blink; line builds word by word ──
+      tl.fromTo(eyes, { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 0);
+      // blink — vertical squash of both rings (inner svg, so it never fights the wrapper's transforms)
+      tl.fromTo(eyesSvg, { scaleY: 1 }, { scaleY: 0.12, duration: 0.09, ease: "power2.in" }, 0.55);
+      tl.to(eyesSvg, { scaleY: 1, duration: 0.15, ease: "power2.out" }, 0.64);
+      tl.fromTo(words, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out", stagger: 0.08 }, 0.1);
+
+      // ── Scene 2 (1.2–2.2s): line clears; eyes condense at one center into the pill ──
+      tl.to(line, { opacity: 0, y: -20, duration: 0.25, ease: "power2.in" }, 1.2);
+      // eyes glide to the pill's center (46% height) so both share one transform-origin point
+      tl.to(eyes, { y: 230, duration: 0.3, ease: "power2.inOut" }, 1.2);
+      // scale-swap: outgoing shrink-fade (power2.in) ↔ incoming pop (back.out), 0.15s overlap
+      tl.to(eyes, { scale: 0.7, opacity: 0, duration: 0.4, ease: "power2.in" }, 1.45);
+      tl.fromTo(pill, { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 1.7);
+      // eyes re-form small above the pill
+      tl.fromTo(eyesSm, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.8)" }, 1.9);
+
+      // ── Scene 3 (2.2–2.8s): the pill presses itself + one glow ring blooms outward ──
+      tl.to(pill, { scale: 0.96, duration: 0.12, ease: "power1.in" }, 2.25);
+      tl.to(pill, { scale: 1, duration: 0.45, ease: "back.out(2)" }, 2.4);
+      tl.fromTo(ring, { opacity: 0, scaleX: 1, scaleY: 1 }, { opacity: 0.45, duration: 0.08, ease: "none" }, 2.32);
+      tl.to(ring, { opacity: 0, scaleX: 1.08, scaleY: 1.35, duration: 0.55, ease: "power2.out" }, 2.4);
+
+      // ── Scene 4 (2.8–4.0s): "Gratuit pour commencer" settles beneath; dead-still hold ──
+      tl.fromTo(sub, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 2.85);
+
+      // pin the timeline to the full 4s frame duration
+      tl.set({}, {}, 4);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["08-cta"] = tl;
+    })();
+  </script>
+</template>

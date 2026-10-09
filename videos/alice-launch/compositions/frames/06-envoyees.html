@@ -1,0 +1,252 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: "Geist", sans-serif;
+      color: #1A1918;
+    }
+
+    /* full-bleed ground (clip layer, not the root) */
+    [id="06-envoyees-bg"] {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 62%, rgba(0, 96, 69, 0.08) 0%, rgba(0, 96, 69, 0) 70%),
+        #FAFAF8;
+    }
+
+    /* caption slot — y 150..360 */
+    [id="06-envoyees-captions"] {
+      position: absolute;
+      left: 54px;
+      right: 54px;
+      top: 150px;
+      height: 210px;
+    }
+    .e06-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 92px;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: #1A1918;
+    }
+    .e06-row { display: block; white-space: nowrap; }
+    .e06-w { display: inline-block; will-change: transform, opacity; }
+    .e06-accent { color: #006045; }
+
+    /* floating phone card — x 206..874, y 400..1528 */
+    [id="06-envoyees-phone"] {
+      position: absolute;
+      left: 206px;
+      top: 400px;
+      width: 668px;
+      height: 1128px;
+    }
+    .e06-bezel {
+      position: absolute;
+      inset: 0;
+      border-radius: 58px;
+      background: rgba(0, 96, 69, 0.06);
+      border: 1.5px solid rgba(0, 96, 69, 0.2);
+    }
+    .e06-screen {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      width: 640px;
+      height: 1100px;
+      border-radius: 46px;
+      overflow: hidden;
+      background: #FAFAF8;
+    }
+    /* old content (previous mission view) pushed out */
+    .e06-old {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 640px;
+      height: 1100px;
+      overflow: hidden;
+    }
+    .e06-old img {
+      position: absolute;
+      width: 800px;
+      height: 1731px;
+      left: -80px;
+      top: -855px;
+    }
+    /* scale wrapper: screenshot authored in native 1170px space */
+    .e06-scale {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1170px;
+      height: 2532px;
+      transform-origin: 0 0;
+      transform: scale(0.547009);
+    }
+    .e06-world {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1170px;
+      height: 2532px;
+    }
+    .e06-strip {
+      position: absolute;
+      left: 0;
+      width: 1170px;
+      overflow: hidden;
+    }
+    .e06-strip img {
+      position: absolute;
+      left: 0;
+      width: 1170px;
+      height: 2532px;
+    }
+    .e06-pill {
+      position: absolute;
+      left: 951px;
+      width: 171px;
+      border-radius: 100px;
+      background: #006045;
+      color: #FAFAF8;
+      font-weight: 500;
+      font-size: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.01em;
+    }
+    .e06-ring {
+      position: absolute;
+      left: 38px;
+      width: 140px;
+      height: 140px;
+    }
+  </style>
+
+  <div id="root" data-composition-id="06-envoyees" data-start="0" data-duration="4" data-width="1080" data-height="1920">
+    <div id="06-envoyees-bg" class="clip" data-start="0" data-duration="4" data-track-index="0"></div>
+
+    <div id="06-envoyees-phone" class="clip" data-start="0" data-duration="4" data-track-index="1">
+      <div class="e06-bezel"></div>
+      <div class="e06-screen">
+        <div class="e06-old" id="06-envoyees-old">
+          <img src="assets/chat-top.png" alt="" />
+        </div>
+        <div class="e06-scale">
+          <div class="e06-world" id="06-envoyees-world" data-layout-allow-overflow>
+            <div class="e06-strip" id="06-envoyees-head" style="top:0;height:622px">
+              <img src="assets/candidatures.png" alt="" style="top:0" />
+            </div>
+            <div class="e06-strip" id="06-envoyees-r1" style="top:622px;height:381px">
+              <img src="assets/candidatures.png" alt="" style="top:-622px" />
+              <svg class="e06-ring" id="06-envoyees-ring1" style="top:34px" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="50" fill="none" stroke="#FAFAF8" stroke-width="15" />
+              <circle cx="70" cy="70" r="50" fill="none" stroke="rgba(0,96,69,0.1)" stroke-width="9" />
+              <circle id="06-envoyees-arc1" cx="70" cy="70" r="50" fill="none" stroke="#006045" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="314.159" stroke-dashoffset="314.159" transform="rotate(-90 70 70)" />
+            </svg>
+              <div class="e06-pill" id="06-envoyees-pill1" style="top:43px;height:61px">Envoyée</div>
+            </div>
+            <div class="e06-strip" id="06-envoyees-r2" style="top:1003px;height:384px">
+              <img src="assets/candidatures.png" alt="" style="top:-1003px" />
+              <svg class="e06-ring" id="06-envoyees-ring2" style="top:34px" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="50" fill="none" stroke="#FAFAF8" stroke-width="15" />
+              <circle cx="70" cy="70" r="50" fill="none" stroke="rgba(0,96,69,0.1)" stroke-width="9" />
+              <circle id="06-envoyees-arc2" cx="70" cy="70" r="50" fill="none" stroke="#006045" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="314.159" stroke-dashoffset="314.159" transform="rotate(-90 70 70)" />
+            </svg>
+              <div class="e06-pill" id="06-envoyees-pill2" style="top:44px;height:62px">Envoyée</div>
+            </div>
+            <div class="e06-strip" id="06-envoyees-r3" style="top:1387px;height:312px">
+              <img src="assets/candidatures.png" alt="" style="top:-1387px" />
+            </div>
+            <div class="e06-strip" id="06-envoyees-r4" style="top:1699px;height:420px">
+              <img src="assets/candidatures.png" alt="" style="top:-1699px" />
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="06-envoyees-captions" class="clip" data-start="0" data-duration="4" data-track-index="2">
+      <div class="e06-line" id="06-envoyees-cap1">
+        <span class="e06-row"><span class="e06-w e06-c1">Tes</span> <span class="e06-w e06-c1">candidatures</span></span>
+        <span class="e06-row"><span class="e06-w e06-c1">partent.</span></span>
+      </div>
+      <div class="e06-line" id="06-envoyees-cap2">
+        <span class="e06-row"><span class="e06-w e06-c2">Pendant</span> <span class="e06-w e06-c2">que</span></span>
+        <span class="e06-row"><span class="e06-w e06-c2">tu</span> <span class="e06-w e06-c2">vis</span> <span class="e06-w e06-c2 e06-accent">ta</span> <span class="e06-w e06-c2 e06-accent">vie.</span></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      var root = document.querySelector('[data-composition-id="06-envoyees"]');
+      var $ = function (id) { return root.querySelector('[id="06-envoyees-' + id + '"]'); };
+      var cap1 = root.querySelectorAll(".e06-c1");
+      var cap2 = root.querySelectorAll(".e06-c2");
+      var C = 314.159;
+
+      var tl = gsap.timeline({ paused: true });
+
+      // ── Scene 1 (0.0–1.0): screen push — old content up/out, Candidatures pulls up
+      tl.fromTo($("old"), { y: 0, opacity: 1 }, { y: -1100, opacity: 0.4, duration: 0.75, ease: "power3.inOut" }, 0);
+      tl.fromTo($("world"), { y: 2011 }, { y: 0, duration: 0.8, ease: "power3.inOut" }, 0);
+      // rows stay masked to the screen bg until Scene 2; header + filters ride in
+      ["r1", "r2", "r3", "r4"].forEach(function (id) {
+        tl.fromTo($(id), { opacity: 0, y: 44 }, { opacity: 0, y: 44, duration: 0.01 }, 0);
+      });
+      // caption 1, per-word up
+      tl.fromTo(cap1, { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.14 }, 0.15);
+      // caption 2 parked hidden
+      tl.fromTo(cap2, { y: 60, opacity: 0 }, { y: 60, opacity: 0, duration: 0.01 }, 0);
+
+      // quiet micro-drift on the held device (static tour floor)
+      tl.fromTo($("phone"), { y: 10 }, { y: -10, duration: 4, ease: "sine.inOut" }, 0);
+
+      // ── Scene 2 (1.0–2.4): rows reveal top→down, pills pop, rings sweep
+      tl.to($("r1"), { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.0);
+      tl.to($("r2"), { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.22);
+      tl.to($("r3"), { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.44);
+      tl.to($("r4"), { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.62);
+
+      tl.fromTo($("ring1"), { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, 1.05);
+      tl.fromTo($("arc1"), { attr: { "stroke-dashoffset": C } }, { attr: { "stroke-dashoffset": C * (1 - 0.94) }, duration: 0.8, ease: "power2.out" }, 1.1);
+      tl.fromTo($("ring2"), { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, 1.27);
+      tl.fromTo($("arc2"), { attr: { "stroke-dashoffset": C } }, { attr: { "stroke-dashoffset": C * (1 - 0.91) }, duration: 0.8, ease: "power2.out" }, 1.32);
+
+      tl.fromTo($("pill1"), { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2.4)" }, 1.4);
+      tl.fromTo($("pill2"), { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2.4)" }, 1.68);
+
+      // ── Scene 3 (2.4–4.0): caption swap out-up / in-up, then hold
+      tl.to(cap1, { y: -50, opacity: 0, duration: 0.3, ease: "power2.in", stagger: 0.05 }, 2.4);
+      tl.to(cap2, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.09 }, 2.58);
+
+      // settle to full duration
+      tl.to({}, { duration: 0.01 }, 3.99);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["06-envoyees"] = tl;
+    })();
+  </script>
+</template>

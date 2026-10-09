@@ -1,0 +1,189 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("assets/fonts/Geist-Bold.woff2") format("woff2");
+      font-weight: 700;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+    }
+    .s07-ground {
+      position: absolute;
+      inset: 0;
+      background: #006045;
+    }
+    .s07-stage {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .s07-word {
+      position: absolute;
+      left: 0;
+      width: 1080px;
+      top: 735px;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Geist", sans-serif;
+      font-weight: 700;
+      font-size: 170px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: #FAFAF8;
+      white-space: nowrap;
+      transform-origin: 50% 50%;
+    }
+    .s07-word.s07-tight { font-size: 150px; }
+    .s07-mask {
+      display: inline-block;
+      overflow: hidden;
+      padding: 10px 0 18px;
+    }
+    .s07-mask-inner { display: block; }
+    .s07-final {
+      position: absolute;
+      left: 0;
+      width: 1080px;
+      top: 560px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: "Geist", sans-serif;
+      font-weight: 700;
+      color: #FAFAF8;
+      letter-spacing: -0.02em;
+    }
+    .s07-eyes {
+      display: flex;
+      gap: 34px;
+      height: 84px;
+      margin-bottom: 44px;
+    }
+    .s07-ring {
+      width: 84px;
+      height: 84px;
+      box-sizing: border-box;
+      border: 14px solid #FAFAF8;
+      border-radius: 50%;
+    }
+    .s07-line {
+      font-size: 150px;
+      line-height: 1.06;
+      white-space: nowrap;
+      transform-origin: 50% 50%;
+    }
+  </style>
+
+  <div id="root" data-composition-id="07-alice-s-en-charge" data-start="0" data-duration="3.5" data-width="1080" data-height="1920">
+    <div class="clip s07-ground" id="07-alice-s-en-charge-ground" data-start="0" data-duration="3.5" data-track-index="0"></div>
+
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+      <filter id="s07-streak" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur id="s07-streak-blur" in="SourceGraphic" stdDeviation="0 0" />
+      </filter>
+    </svg>
+
+    <div class="clip s07-stage" id="07-alice-s-en-charge-stage" data-start="0" data-duration="3.5" data-track-index="1">
+      <div class="s07-word" id="s07-w1">Les offres.</div>
+      <div class="s07-word" id="s07-w2"><span id="s07-w2-in" style="display:inline-block;filter:url(#s07-streak)">Le CV.</span></div>
+      <div class="s07-word" id="s07-w3">La lettre.</div>
+      <div class="s07-word" id="s07-w4"><span class="s07-mask"><span class="s07-mask-inner" id="s07-w4-in">L’envoi.</span></span></div>
+      <div class="s07-word s07-tight" id="s07-w5">Les relances.</div>
+
+      <div class="s07-final" id="s07-final">
+        <div class="s07-eyes">
+          <div class="s07-ring" id="s07-eye-l"></div>
+          <div class="s07-ring" id="s07-eye-r"></div>
+        </div>
+        <div class="s07-line" id="s07-l1">Alice</div>
+        <div class="s07-line" id="s07-l2">s’en charge.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      // One beat grid drives every hard cut (~0.45s per beat).
+      var PULSE = 0.45;
+      var BEATS = [0, PULSE, PULSE * 2, PULSE * 3, PULSE * 4];
+      var FINAL = 2.4;
+
+      // Beat 1 — "Les offres." scale-down from oversized.
+      tl.fromTo("#s07-w1",
+        { scale: 1.9, opacity: 0, filter: "blur(14px)" },
+        { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "power4.out" },
+        BEATS[0]);
+      tl.set("#s07-w1", { opacity: 0 }, BEATS[1]);
+
+      // Beat 2 — "Le CV." motion-blur fly-in from left (directional SVG blur, locked envelope).
+      var blurNode = document.getElementById("s07-streak-blur");
+      var blurProxy = { v: 30 };
+      var writeBlur = function () { blurNode.setAttribute("stdDeviation", blurProxy.v + " 0"); };
+      writeBlur();
+      tl.fromTo("#s07-w2", { opacity: 0 }, { opacity: 1, duration: 0.04, ease: "none" }, BEATS[1]);
+      tl.fromTo("#s07-w2-in",
+        { x: -520 },
+        { x: 0, duration: 0.32, ease: "expo.out" },
+        BEATS[1]);
+      tl.fromTo(blurProxy, { v: 30 }, { v: 0, duration: 0.32, ease: "expo.out", onUpdate: writeBlur }, BEATS[1]);
+      tl.set("#s07-w2", { opacity: 0 }, BEATS[2]);
+
+      // Beat 3 — "La lettre." letter-spacing collapse.
+      tl.fromTo("#s07-w3",
+        { letterSpacing: "0.45em", opacity: 0 },
+        { letterSpacing: "-0.02em", opacity: 1, duration: 0.32, ease: "power3.out" },
+        BEATS[2]);
+      tl.set("#s07-w3", { opacity: 0 }, BEATS[3]);
+
+      // Beat 4 — "L'envoi." masked rise from below.
+      tl.fromTo("#s07-w4", { opacity: 0 }, { opacity: 1, duration: 0.01, ease: "none" }, BEATS[3]);
+      tl.fromTo("#s07-w4-in",
+        { yPercent: 110 },
+        { yPercent: 0, duration: 0.32, ease: "circ.out" },
+        BEATS[3]);
+      tl.set("#s07-w4", { opacity: 0 }, BEATS[4]);
+
+      // Beat 5 — "Les relances." scale-down slam (held a touch longer before the payoff).
+      tl.fromTo("#s07-w5",
+        { scale: 2.4, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.34, ease: "expo.out" },
+        BEATS[4]);
+      tl.set("#s07-w5", { opacity: 0 }, FINAL);
+
+      // Scene 2 — "Alice s'en charge." lands on two lines, eye rings dot in, then holds still.
+      tl.fromTo("#s07-l1",
+        { scale: 1.35, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.36, ease: "back.out(1.6)" },
+        FINAL);
+      tl.fromTo("#s07-l2",
+        { y: 70, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.36, ease: "power4.out" },
+        FINAL + 0.12);
+      tl.fromTo("#s07-eye-l",
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(2.6)" },
+        FINAL + 0.34);
+      tl.fromTo("#s07-eye-r",
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(2.6)" },
+        FINAL + 0.44);
+
+      // Pad the timeline to the fixed frame duration (hold still to 3.5s).
+      tl.set({}, {}, 3.5);
+
+      window.__timelines["07-alice-s-en-charge"] = tl;
+    })();
+  </script>
+</template>
