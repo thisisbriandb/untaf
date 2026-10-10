@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1080, height=1920" />
+    <meta name="viewport" content="width=1920, height=1080" />
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
       * {
@@ -12,15 +12,15 @@
       }
       html,
       body {
-        width: 1080px;
-        height: 1920px;
+        width: 1920px;
+        height: 1080px;
         overflow: hidden;
         background: #000;
       }
       #root {
         position: relative;
-        width: 1080px;
-        height: 1920px;
+        width: 1920px;
+        height: 1080px;
         overflow: hidden;
         background: #FAFAF8;
       }
@@ -38,8 +38,8 @@
       data-composition-id="main"
       data-start="0"
       data-duration="32.5"
-      data-width="1080"
-      data-height="1920"
+      data-width="1920"
+      data-height="1080"
     >
       <div
         id="el-01-lettre-47"
@@ -455,10 +455,10 @@
         tl.fromTo("#el-03-alice-arrive", { scale: 0.5, opacity: 0, filter: "blur(8px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power3.out" }, 7.5);
         tl.to("#el-03-alice-arrive", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 11.5);
         tl.fromTo("#el-04-tu-demandes", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 11.5);
-        tl.to("#el-04-tu-demandes", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 16);
-        tl.fromTo("#el-05-elle-travaille", { y: 1920, opacity: 1 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.inOut" }, 16);
-        tl.to("#el-05-elle-travaille", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 21);
-        tl.fromTo("#el-06-envoyees", { y: 1920, opacity: 1 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.inOut" }, 21);
+        tl.to("#el-04-tu-demandes", { y: -1080, duration: 0.5, ease: "power3.inOut" }, 16);
+        tl.fromTo("#el-05-elle-travaille", { y: 1080, opacity: 1 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.inOut" }, 16);
+        tl.to("#el-05-elle-travaille", { y: -1080, duration: 0.5, ease: "power3.inOut" }, 21);
+        tl.fromTo("#el-06-envoyees", { y: 1080, opacity: 1 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.inOut" }, 21);
         tl.to("#el-06-envoyees", { scale: 2.5, opacity: 0, filter: "blur(8px)", duration: 0.4, ease: "power3.in" }, 25);
         tl.fromTo("#el-07-alice-s-en-charge", { scale: 0.5, opacity: 0, filter: "blur(8px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power3.out" }, 25);
         tl.to("#el-07-alice-s-en-charge", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 28.5);
