@@ -47,3 +47,19 @@ select
      select candidate_id from usage_events where kind = 'pack' and created_at > now() - interval '7 days'
      group by candidate_id having count(*) >= 3) u join c on c.id = u.candidate_id)  as ont_atteint_la_limite_gratuite_7j,
   (select count(distinct s.candidate_id) from subscriptions s join c on c.id = s.candidate_id) as abonnes;
+
+-- 3) Pourquoi les dossiers ne sont pas partis (30 derniers jours).
+select lower(d.status::text) as statut, lower(d.channel::text) as canal,
+       coalesce(d.error, '—') as motif, count(*) as nb, count(distinct d.candidate_id) as personnes
+from application_dispatches d
+join candidates c on c.id = d.candidate_id
+where c.created_at > now() - interval '30 days'
+group by 1, 2, 3
+order by nb desc;
+
+-- 4) Les deux erreurs à dater : de la période de test, ou de vrais utilisateurs ?
+select d.created_at::date as le, c.email, lower(d.status::text) as statut, left(d.error, 60) as motif
+from application_dispatches d
+join candidates c on c.id = d.candidate_id
+where d.error like 'CV adapté indisponible%' or d.error like 'Champs obligatoires%'
+order by d.created_at;

@@ -15,7 +15,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.agents.company_name import chez, display_company
 from app.billing import LimitReached
@@ -94,8 +94,30 @@ async def _say(run_id: UUID, candidate_id: UUID, kind: MissionEventKind, summary
         await session.commit()
 
 
-async def _targets(candidate_id: UUID, count: int, sendable_first: bool):
-    """Les offres à traiter : retenues, pas encore parties, les meilleures d'abord."""
+async def _is_first_run(run_id: UUID) -> bool:
+    """Vrai pour la toute première mission du candidat (celle de l'inscription)."""
+    async with async_session() as session:
+        run = await session.get(MissionRun, run_id)
+        if not run:
+            return False
+        earlier = (await session.execute(
+            select(func.count()).select_from(MissionRun)
+            .where(MissionRun.mission_id == run.mission_id)
+            .where(MissionRun.id != run.id)
+            .where(MissionRun.created_at < run.created_at)
+        )).scalar_one()
+        return earlier == 0
+
+
+async def _targets(candidate_id: UUID, count: int, sendable_first: bool,
+                   sendable_only: bool = False):
+    """
+    Les offres à traiter : retenues, pas encore parties, les meilleures d'abord.
+
+    `sendable_only` (première mission) : s'il existe au moins une offre où
+    Alice envoie elle-même, on s'en tient à celles-là. Le premier contact avec
+    Alice doit être une candidature qui part, pas un dossier à finir ailleurs.
+    """
     from app.agents.alice_state import OPEN_STATUSES
     from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode
     from app.models.company import Company
@@ -113,7 +135,7 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool):
             .where(Application.match_score >= settings.match_min_score)
             .where(JobPosting.status == PostingStatus.ACTIVE)
             .order_by(Application.match_score.desc())
-            .limit(count * 8)
+            .limit(count * (40 if sendable_only else 8))
         )).all()
         settled = set((await session.execute(
             select(ApplicationDispatch.application_id)
@@ -125,6 +147,10 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool):
         )).scalars().all())
 
     rows = [r for r in rows if r[0].id not in settled]
+    if sendable_only:
+        direct = [r for r in rows if apply_mode(r[1]) != "manual"]
+        if direct:
+            rows = direct
     if sendable_first:
         # Mission « postuler » : d'abord ce qu'Alice peut réellement envoyer.
         rows.sort(key=lambda r: (APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
@@ -183,7 +209,10 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         except Exception as e:  # noqa: BLE001 — on travaille sur le stock déjà noté
             logger.warning("Re-notation impossible pendant la mission : %s", e)
             kept = 0
-        targets = await _targets(candidate_id, count, sendable_first=objective == "apply")
+        targets = await _targets(
+            candidate_id, count, sendable_first=objective == "apply",
+            sendable_only=await _is_first_run(run_id),
+        )
 
         # 1 bis. Les entreprises qui recrutent sans offre publiée : Alice
         #        cherche leur adresse de recrutement et leur écrit.

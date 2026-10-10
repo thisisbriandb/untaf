@@ -76,6 +76,8 @@ export interface CriteriaDraft {
   remotePolicies: string[];
   languages: string[];
   jobFamilies: string[];
+  /** Alice envoie elle-même ce qui peut partir (e-mail, La bonne alternance). */
+  autoSend: boolean;
 }
 
 export const DEFAULT_CRITERIA: CriteriaDraft = {
@@ -84,6 +86,7 @@ export const DEFAULT_CRITERIA: CriteriaDraft = {
   remotePolicies: ["remote", "hybrid"],
   languages: ["fr", "en"],
   jobFamilies: [],
+  autoSend: true,
 };
 
 interface CriteriaStepProps {
@@ -316,6 +319,38 @@ export function CriteriaStep({
           />
         </Field>
       )}
+
+      {/* L'accord d'envoi : demandé une fois, clairement, avant la première mission. */}
+      <Field label="Quand un dossier peut partir">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {[
+            { send: true, label: "Envoie-le pour moi", detail: "Recommandé : ta candidature part tout de suite." },
+            { send: false, label: "Montre-le-moi d'abord", detail: "Tu valides chaque envoi d'un clic." },
+          ].map((opt) => (
+            <button
+              key={String(opt.send)}
+              type="button"
+              onClick={() => onChange({ ...value, autoSend: opt.send })}
+              className={cn(
+                "p-3 rounded-2xl border text-left transition-colors cursor-pointer",
+                value.autoSend === opt.send
+                  ? "border-[#006045] bg-[#006045]/[0.06]"
+                  : "border-[#1A1918]/10 hover:border-[#1A1918]/25",
+              )}
+            >
+              <span className={cn("block text-sm", value.autoSend === opt.send ? "text-[#006045]" : "text-[#1A1918]")}>
+                {opt.label}
+              </span>
+              <span className="block text-[11px] font-normal text-[#1A1918]/60 mt-0.5">{opt.detail}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-[#1A1918]/50 leading-relaxed">
+          J&apos;envoie moi-même quand l&apos;offre le permet (e-mail, La bonne alternance), avec ton CV adapté
+          et ta lettre. Quand l&apos;employeur a son propre formulaire, je te prépare le dossier et tu finis en un geste.
+          Tu peux changer d&apos;avis à chaque mission.
+        </p>
+      </Field>
 
       {error && <p className="text-center text-xs text-red-600/80">{error}</p>}
 

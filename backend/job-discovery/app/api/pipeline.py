@@ -209,7 +209,17 @@ async def approve_all(candidate_id: UUID, db: AsyncSession = Depends(get_db)):
         select(ApplicationDispatch)
         .where(ApplicationDispatch.candidate_id == candidate_id)
         .where(ApplicationDispatch.status == DispatchStatus.AWAITING_APPROVAL)
+        .order_by(ApplicationDispatch.created_at)
     )).scalars().all()
+    # Formule gratuite : autant d'envois qu'il en reste ; s'il n'en reste
+    # aucun, 402 → la fenêtre d'abonnement. Le reste attend, prêt.
+    from app import billing
+    from app.config import settings
+    if settings.billing_enabled and waiting:
+        left = await billing.remaining(db, candidate_id, "send")
+        if left <= 0:
+            await billing.check(db, candidate_id, "send")
+        waiting = waiting[:left]
     now = datetime.now(timezone.utc)
     for d in waiting:
         d.status = DispatchStatus.APPROVED

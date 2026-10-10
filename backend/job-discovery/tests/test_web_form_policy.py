@@ -23,7 +23,7 @@ def test_unrecognized_page_is_not_an_outage():
     assert browser_failure(nothing) == ("prepared", None)
     partial = {"ok": False, "proof": {"filled_fields": ["email"], "uploaded_files": [],
                                       "unhandled_fields": ["resume"]}}
-    assert browser_failure(partial) == ("failed", "form_incomplete")
+    assert browser_failure(partial) == ("prepared", "form_incomplete")
 
 
 def test_captcha_protected_ats_go_through_the_extension(monkeypatch):

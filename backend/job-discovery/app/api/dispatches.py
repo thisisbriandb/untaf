@@ -135,6 +135,10 @@ async def approve(
         raise HTTPException(404, "Envoi introuvable")
     if dispatch.status not in (DispatchStatus.AWAITING_APPROVAL, DispatchStatus.PREPARED):
         raise HTTPException(409, f"Statut « {dispatch.status.value} » : rien à approuver.")
+    # Formule gratuite épuisée : 402 → la fenêtre d'abonnement, au moment où
+    # le candidat veut qu'une candidature de plus parte.
+    from app import billing
+    await billing.check(db, candidate_id, "send")
 
     dispatch.status = DispatchStatus.APPROVED
     dispatch.approved_at = datetime.now(timezone.utc)

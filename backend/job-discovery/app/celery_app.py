@@ -110,6 +110,10 @@ celery_app.conf.beat_schedule = {
     },
     # Relances dues et rapports : envoyés en matinée, quand le candidat
     # ouvre sa messagerie, et une seule fois par jour au plus.
+    "daily-remind-pending": {
+        "task": "app.agents.notifications.tasks.remind_pending",
+        "schedule": crontab(hour=8, minute=25),
+    },
     "daily-check-followups": {
         "task": "app.agents.notifications.tasks.check_followups",
         "schedule": crontab(hour=8, minute=40),

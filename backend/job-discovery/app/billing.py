@@ -7,7 +7,8 @@ Deux formules :
   - « Alice — semaine » : abonnement hebdomadaire sans engagement, résiliable
     en un clic ; ses plafonds ne sont là que contre les abus.
 
-Ce qui coûte est compté dans `usage_events` : un dossier rédigé (deux appels
+Ce qui est compté dans `usage_events` : une candidature envoyée par Alice
+(c'est elle qui mesure la formule gratuite), un dossier rédigé (deux appels
 au modèle), une mission, un message à Alice, une candidature spontanée. Les
 fenêtres sont glissantes (7 jours, 24 heures) : pas de remise à zéro le lundi
 qui inviterait à tout consommer le dimanche.
@@ -45,6 +46,7 @@ DAY = timedelta(days=1)
 
 @dataclass(frozen=True)
 class Limits:
+    sends_per_week: int
     packs_per_week: int
     missions_per_week: int
     spontaneous_per_week: int
@@ -52,17 +54,20 @@ class Limits:
 
 
 def free_limits() -> Limits:
-    return Limits(settings.free_packs_per_week, settings.free_missions_per_week,
+    return Limits(settings.free_sends_per_week, settings.free_packs_per_week,
+                  settings.free_missions_per_week,
                   settings.free_spontaneous_per_week, settings.free_messages_per_day)
 
 
 def paid_limits() -> Limits:
-    return Limits(settings.paid_packs_per_week, settings.paid_missions_per_week,
+    return Limits(settings.paid_sends_per_week, settings.paid_packs_per_week,
+                  settings.paid_missions_per_week,
                   settings.spontaneous_weekly_cap, settings.paid_messages_per_day)
 
 
 #: kind → (champ de Limits, fenêtre, ce qu'on dit quand c'est atteint)
 KINDS = {
+    "send": ("sends_per_week", WEEK, "candidatures envoyées par Alice"),
     "pack": ("packs_per_week", WEEK, "dossiers de candidature"),
     "mission": ("missions_per_week", WEEK, "missions"),
     "spontaneous": ("spontaneous_per_week", WEEK, "candidatures spontanées"),
@@ -82,7 +87,7 @@ class LimitReached(Exception):
         elif limit == 0:
             msg = f"Les {label} font partie de l'abonnement Alice ({settings.billing_price_label})."
         else:
-            msg = (f"Tu as utilisé tes {limit} {label} gratuits {window}. "
+            msg = (f"Tu as utilisé les {limit} {label} de la formule gratuite {window}. "
                    f"Avec l'abonnement ({settings.billing_price_label}, sans engagement), "
                    "Alice continue sans attendre.")
         super().__init__(msg)

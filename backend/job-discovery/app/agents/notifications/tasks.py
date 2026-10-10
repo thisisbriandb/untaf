@@ -39,6 +39,37 @@ def check_followups():
         _release(loop)
 
 
+async def _remind_pending() -> int:
+    from app.agents.notifications import notify_pending
+    from app.database import async_session
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+    async with async_session() as session:
+        ids = (await session.execute(
+            select(ApplicationDispatch.candidate_id)
+            .where(ApplicationDispatch.status.in_((
+                DispatchStatus.AWAITING_APPROVAL, DispatchStatus.PREPARED,
+            )))
+            .distinct()
+        )).scalars().all()
+
+    notified = 0
+    for candidate_id in ids:
+        if await notify_pending(candidate_id):
+            notified += 1
+    return notified
+
+
+@celery_app.task(name="app.agents.notifications.tasks.remind_pending")
+def remind_pending():
+    """Quotidien : rappelle les dossiers prêts qui attendent le candidat (J+1, J+4)."""
+    loop = asyncio.new_event_loop()
+    try:
+        return {"notified": loop.run_until_complete(_remind_pending())}
+    finally:
+        _release(loop)
+
+
 @celery_app.task(name="app.agents.notifications.tasks.send_digests")
 def send_digests(period: str = "weekly"):
     """Rapport d'activité aux candidats abonnés à cette période."""
