@@ -70,6 +70,31 @@ def remind_pending():
         _release(loop)
 
 
+async def _reengage() -> int:
+    from app.agents.notifications import notify_reengagement
+    from app.database import async_session
+    from app.models.candidate import Candidate
+
+    async with async_session() as session:
+        ids = (await session.execute(select(Candidate.id))).scalars().all()
+
+    notified = 0
+    for candidate_id in ids:
+        if await notify_reengagement(candidate_id):
+            notified += 1
+    return notified
+
+
+@celery_app.task(name="app.agents.notifications.tasks.reengage")
+def reengage():
+    """Quotidien : relance les candidats qui ne reviennent plus (J+2, J+7, J+14)."""
+    loop = asyncio.new_event_loop()
+    try:
+        return {"notified": loop.run_until_complete(_reengage())}
+    finally:
+        _release(loop)
+
+
 @celery_app.task(name="app.agents.notifications.tasks.send_digests")
 def send_digests(period: str = "weekly"):
     """Rapport d'activité aux candidats abonnés à cette période."""

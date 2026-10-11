@@ -334,6 +334,7 @@ class NotificationPrefs(BaseModel):
     application_sent: bool = True
     awaiting_approval: bool = True
     followups: bool = True
+    reengagement: bool = True
     digest: str = Field(default="weekly", pattern="^(off|daily|weekly)$")
 
 

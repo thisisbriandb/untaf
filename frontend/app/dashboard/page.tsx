@@ -104,6 +104,8 @@ export default function DashboardPage() {
         return;
       }
       setCandidateId(localStorage.getItem("candidate_id"));
+      // Une visite : c'est ce qui dit qu'on n'a pas à relancer ce candidat.
+      void apiFetch(`${API_BASE_URL}/api/me/seen`, { method: "POST" }).catch(() => {});
     })();
 
     // Session révoquée en cours de route : retour à la connexion.

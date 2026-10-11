@@ -116,6 +116,10 @@ class Candidate(Base):
     )
 
     # ── Timestamps ────────────────────────────────────────
+    #: Dernière ouverture de l'espace (au plus toutes les 30 min) : c'est ce
+    #: qui dit qu'un candidat ne revient plus, et déclenche sa relance.
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

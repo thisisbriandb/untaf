@@ -37,3 +37,26 @@ async def me(user: AuthUser = Depends(require_user), db: AsyncSession = Depends(
         user_id=user.id, email=user.email,
         candidate_id=candidate.id if candidate else None,
     )
+
+
+@router.post("/me/seen", status_code=204)
+async def seen(user: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    """
+    L'espace a été ouvert. Sert à savoir qui ne revient plus (relance des
+    inactifs) ; écrit au plus toutes les 30 minutes.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    if settings.auth_bypassed:
+        return None
+    candidate = await claim_candidate(db, user)
+    if not candidate:
+        return None
+    now = datetime.now(timezone.utc)
+    last = candidate.last_seen_at
+    if last and last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    if not last or now - last > timedelta(minutes=30):
+        candidate.last_seen_at = now
+        await db.commit()
+    return None
