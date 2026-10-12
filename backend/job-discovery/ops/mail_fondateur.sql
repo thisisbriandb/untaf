@@ -1,15 +1,7 @@
--- Liste pour le mail du fondateur : prénom, e-mail, et ce que chaque inscrit a
--- vraiment fait. À lancer dans Supabase > SQL Editor (lecture seule).
---
--- niveau :
---   1 · candidatures envoyées   Alice a envoyé au moins une candidature
---   2 · a utilisé Alice         mission lancée, dossier rédigé ou conversation
---   3 · inscrit sans suite      CV déposé, rien d'autre
---   4 · inscription inachevée   pas même de CV
---
--- Les comptes de test (adresses de démo) sont écartés ; complète la liste
--- `test` si tu en as d'autres (ton adresse personnelle, par exemple).
-
+-- Liste pour le mail du fondateur (lecture seule, Supabase > SQL Editor).
+-- Niveaux : 1 candidatures envoyees, 2 a utilise Alice, 3 inscrit sans suite, 4 inscription inachevee.
+-- Ajouter ses propres adresses de test dans la liste test ci-dessous.
+-- Aucune apostrophe dans ces commentaires : elles cassent le decoupage de l editeur Supabase.
 with test(motif) as (values
   ('%@ex.fr'), ('%@example.%'), ('%demo%@%'), ('%+test%@%')
 ),
@@ -22,8 +14,6 @@ c as (
 a as (
   select
     c.id,
-    -- Prénom : premier mot du nom, en capitale initiale ; à défaut, rien
-    -- (écrire alors « Salut, » sans prénom plutôt qu'un prénom deviné).
     initcap(nullif(split_part(trim(coalesce(c.full_name, '')), ' ', 1), '')) as prenom,
     c.email,
     c.created_at::date                                                   as inscrit_le,
@@ -63,7 +53,6 @@ select
   messages, missions, dossiers, envoyees, en_attente, reponses,
   abonne,
   refuse_les_relances,
-  -- Une ligne à ajouter au mail, selon ce que la personne a fait.
   case
     when envoyees > 0 then
       'P.S. : Alice a déjà envoyé ' || envoyees || ' candidature' || case when envoyees > 1 then 's' else '' end
