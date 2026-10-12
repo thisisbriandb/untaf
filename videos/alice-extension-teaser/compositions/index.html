@@ -1,0 +1,431 @@
+<template>
+  <div id="teaser-root" data-composition-id="teaser" data-start="0" data-duration="12" data-fps="30" data-width="1080" data-height="1920">
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+
+      #teaser-root {
+        --bg: #FAFAF8;
+        --text: #1A1918;
+        --primary: #006045;
+        --text-muted: #004D37;
+        --text-light: #9A9A9A;
+        --text-light-ui: #737373;
+        --accent-light: rgba(0, 96, 69, 0.08);
+        --accent-medium: rgba(0, 96, 69, 0.15);
+        --border: rgba(0, 96, 69, 0.2);
+        --card-bg: rgba(0, 96, 69, 0.04);
+        --eyes-disc: #ECF4F0;
+        --chrome: #F1F0EC;
+        --ui-line: rgba(26, 25, 24, 0.10);
+        --ui-skel: rgba(26, 25, 24, 0.06);
+        --dot: #D9D7D0;
+        --dormant-disc: #E6E5E0;
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        font-family: "Geist", sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      #teaser-root .clip { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+      #teaser-bg { background: var(--bg); }
+
+      /* ---------- eyes svg (shared) ---------- */
+      #teaser-root .eyes { display: block; width: 100%; height: 100%; overflow: visible; }
+      #teaser-root .eyes .disc { fill: var(--eyes-disc); }
+      #teaser-root .eyes .ring { fill: none; stroke: var(--primary); stroke-width: 3.5; stroke-dasharray: 100; stroke-dashoffset: 0; }
+
+      /* ---------- atmosphere rings ---------- */
+      #teaser-root .atmo { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+      #teaser-root .atmo-ring {
+        position: absolute; border-radius: 50%; border: 1.5px solid var(--accent-medium);
+        left: 50%; top: 820px; transform: translate(-50%, -50%);
+      }
+      #teaser-root .atmo-ring.r1 { width: 520px; height: 520px; border-color: var(--accent-medium); }
+      #teaser-root .atmo-ring.r2 { width: 840px; height: 840px; border-color: var(--accent-light); }
+      #teaser-root .atmo-ring.r3 { width: 1160px; height: 1160px; border-color: var(--accent-light); }
+
+      /* ---------- S1 ---------- */
+      #s1-word {
+        position: absolute; left: 0; right: 0; top: 1010px; text-align: center;
+        font-weight: 700; font-size: 128px; line-height: 1.08; letter-spacing: -0.02em; color: var(--text);
+      }
+      #hero-gate { position: absolute; left: 430px; top: 710px; width: 220px; height: 220px; }
+      #hero-eyes { width: 220px; height: 220px; }
+
+      /* ---------- S2 browser ---------- */
+      #ui-exit, #ui-cam { position: absolute; inset: 0; }
+      #browser {
+        position: absolute; left: 60px; top: 330px; width: 960px; height: 1260px;
+        border-radius: 22px; overflow: hidden; background: var(--bg);
+        border: 1.5px solid var(--ui-line);
+        box-shadow: 0 24px 60px rgba(26, 25, 24, 0.08);
+      }
+      #chrome {
+        position: absolute; left: 0; top: 0; width: 100%; height: 72px; background: var(--chrome);
+        border-bottom: 1.5px solid var(--ui-line);
+        display: flex; align-items: center; gap: 22px; padding: 0 20px 0 28px;
+      }
+      #teaser-root .dots { display: flex; gap: 10px; flex: 0 0 auto; }
+      #teaser-root .dots i { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--dot); }
+      #url-pill {
+        flex: 1 1 auto; height: 44px; border-radius: 100px; background: var(--bg);
+        border: 1.5px solid var(--ui-line); display: flex; align-items: center; padding: 0 22px;
+        font-size: 22px; font-weight: 500; color: var(--text-light-ui); white-space: nowrap; overflow: hidden;
+      }
+      #ext-slot { position: relative; flex: 0 0 auto; width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+      #slot-halo { position: absolute; left: 4px; top: 4px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--accent-medium); background: var(--accent-light); opacity: 0; }
+      #slot-eyes { position: relative; width: 40px; height: 40px; opacity: 0; }
+      #slot-eyes .disc { fill: var(--dormant-disc); }
+      #slot-eyes .ring { stroke: var(--text-light); }
+
+      #page { position: absolute; left: 0; top: 72px; width: 960px; height: 1188px; overflow: hidden; }
+      #page-main {
+        position: absolute; left: 0; top: 0; width: 580px; height: 100%;
+        padding: 38px 36px 30px 40px; display: flex; flex-direction: column; gap: 20px;
+      }
+      #teaser-root .eyebrow { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; color: var(--primary); text-transform: uppercase; }
+      #job-title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.12; color: var(--text); white-space: nowrap; }
+      #teaser-root .meta { display: flex; gap: 10px; }
+      #teaser-root .meta span { font-size: 18px; font-weight: 500; color: var(--text-muted); background: var(--accent-light); border-radius: 100px; padding: 6px 16px; }
+      #company { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1.5px solid var(--ui-line); }
+      #company .logo { width: 44px; height: 44px; border-radius: 12px; background: var(--ui-skel); flex: 0 0 auto; }
+      #company .bars { display: flex; flex-direction: column; gap: 8px; }
+      #teaser-root .skel { display: block; height: 12px; border-radius: 6px; background: var(--ui-skel); }
+      #form-title { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-top: 2px; }
+      #teaser-root .fld { display: flex; flex-direction: column; gap: 8px; }
+      #teaser-root .fld-label { font-size: 20px; font-weight: 500; color: var(--text-muted); }
+      #teaser-root .fld-input {
+        position: relative; min-height: 64px; border-radius: 12px; border: 1.5px solid var(--ui-line); background: #FFFFFF;
+        padding: 16px 18px; font-size: 24px; font-weight: 400; line-height: 1.35; color: var(--text);
+      }
+      #teaser-root .fld-input.tall { min-height: 150px; }
+      #teaser-root .fld-input.mid { min-height: 104px; }
+      #teaser-root .caret { display: inline-block; width: 2.5px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; background: var(--primary); opacity: 0; }
+      #cv-ph { position: absolute; left: 18px; top: 16px; font-size: 24px; color: var(--text-light-ui); }
+      #cv-chip {
+        display: inline-flex; align-items: center; gap: 10px; height: 34px; padding: 0 14px 0 10px; margin: -2px 0;
+        border-radius: 100px; background: var(--accent-light); border: 1.5px solid var(--border);
+        font-size: 20px; font-weight: 500; color: var(--text-muted); opacity: 0;
+      }
+      #cv-chip svg { width: 18px; height: 18px; }
+      #lettre-skel { margin-top: 10px; width: 0; height: 12px; }
+      #send-btn {
+        margin-top: 8px; height: 84px; border-radius: 100px; background: var(--primary); color: var(--bg);
+        font-size: 30px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+      }
+      #page-side { position: absolute; left: 580px; top: 0; width: 380px; height: 100%; padding: 40px 30px; display: flex; flex-direction: column; gap: 14px; }
+      #success {
+        position: absolute; left: 30px; top: 440px; width: 520px; padding: 40px 24px 36px;
+        border-radius: 28px; background-color: var(--bg); background-image: linear-gradient(var(--card-bg), var(--card-bg));
+        border: 1.5px solid var(--border);
+        display: flex; flex-direction: column; align-items: center; gap: 22px; opacity: 0;
+      }
+      #success-ring { width: 120px; height: 120px; }
+      #success-text { font-size: 44px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); white-space: nowrap; }
+      #cursor { position: absolute; left: 380px; top: 1080px; width: 44px; height: 56px; opacity: 0; }
+      #ripple { position: absolute; left: 312px; top: 1012px; width: 140px; height: 140px; border-radius: 50%; border: 4px solid var(--accent-medium); background: var(--accent-light); opacity: 0; }
+
+      #panel {
+        position: absolute; left: 580px; top: 0; width: 380px; height: 100%;
+        background-color: var(--bg); background-image: linear-gradient(var(--card-bg), var(--card-bg));
+        border-left: 1.5px solid var(--border); padding: 36px 28px; display: flex; flex-direction: column; gap: 16px;
+      }
+      #panel-head { display: flex; align-items: center; gap: 12px; }
+      #panel-head .mini { width: 34px; height: 34px; }
+      #panel-title { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 8px; }
+      #teaser-root .prow {
+        display: flex; align-items: center; gap: 14px; padding: 16px 16px; border-radius: 14px;
+        background: var(--card-bg); border: 1.5px solid var(--border);
+        font-size: 22px; font-weight: 500; color: var(--text); line-height: 1.25;
+      }
+      #teaser-root .step { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; }
+      #teaser-root .step svg { width: 18px; height: 18px; overflow: visible; }
+      #teaser-root .step path { fill: none; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+      #panel-note { margin-top: 8px; font-size: 20px; font-weight: 400; color: var(--text-muted); }
+
+      /* ---------- S3 ---------- */
+      #s3-exit, #s4-exit { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 260px 90px 360px; text-align: center; }
+      #teaser-root .s3-l1 { font-size: 104px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; color: var(--text); white-space: nowrap; }
+      #teaser-root .w { display: inline-block; }
+      #teaser-root .acc { color: var(--primary); }
+      #s3-l2 { margin-top: 56px; font-size: 128px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; color: var(--text); white-space: nowrap; }
+      #s3-ulwrap { position: relative; display: inline-block; }
+      #s3-ul { position: absolute; left: 4px; right: 4px; bottom: -14px; height: 6px; border-radius: 3px; background: var(--primary); transform-origin: 0% 50%; }
+
+      /* ---------- S4 ---------- */
+      #s4-icon { width: 96px; height: 96px; margin-bottom: 48px; overflow: visible; }
+      #s4-icon * { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      #s4-text { font-size: 76px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.12; color: var(--text); }
+      #s4-text .line { white-space: nowrap; }
+
+      /* ---------- S5 ---------- */
+      #s5-lockup { position: absolute; inset: 0; transform-origin: 540px 940px; }
+      #s5-eyes { position: absolute; left: 440px; top: 660px; width: 200px; height: 200px; }
+      #s5-title { position: absolute; left: 0; right: 0; top: 946px; text-align: center; font-size: 96px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; color: var(--text); white-space: nowrap; }
+      #s5-pill-row { position: absolute; left: 0; right: 0; top: 1082px; display: flex; justify-content: center; }
+      #s5-pill { height: 58px; padding: 0 30px; border-radius: 100px; background: var(--accent-light); border: 1.5px solid var(--border); color: var(--primary); font-size: 34px; font-weight: 600; display: flex; align-items: center; }
+      #s5-url { position: absolute; left: 0; right: 0; top: 1188px; text-align: center; font-size: 34px; font-weight: 500; color: var(--text-muted); }
+    </style>
+
+    <!-- background -->
+    <div id="teaser-bg" class="clip" data-start="0" data-duration="12" data-track-index="0"></div>
+
+    <!-- S1 hook -->
+    <div id="s1" class="clip" data-start="0" data-duration="1.4" data-track-index="1">
+      <div id="s1-atmo" class="atmo">
+        <div class="atmo-ring r1"></div><div class="atmo-ring r2"></div><div class="atmo-ring r3"></div>
+      </div>
+      <div id="s1-word">Bientôt.</div>
+    </div>
+
+    <!-- S2 UI demo -->
+    <div id="s2" class="clip" data-start="1.4" data-duration="5.2" data-track-index="2">
+      <div id="ui-exit">
+        <div id="ui-cam">
+          <div id="browser">
+            <div id="chrome">
+              <div class="dots"><i></i><i></i><i></i></div>
+              <div id="url-pill">emplois.exemple/offre/2481</div>
+              <div id="ext-slot">
+                <div id="slot-halo"></div>
+                <div id="slot-eyes">
+                  <svg class="eyes" viewBox="0 0 64 64"><circle class="disc" id="slot-disc" cx="32" cy="32" r="32"></circle><circle class="ring slot-ring" cx="22" cy="32" r="7" pathLength="100"></circle><circle class="ring slot-ring" cx="42" cy="32" r="7" pathLength="100"></circle></svg>
+                </div>
+              </div>
+            </div>
+            <div id="page">
+              <div id="page-main">
+                <div class="eyebrow">Offre d’emploi</div>
+                <div id="job-title">Chargé·e de communication</div>
+                <div class="meta"><span>CDI</span><span>Lyon</span><span>Hybride</span></div>
+                <div id="company"><div class="logo"></div><div class="bars"><span class="skel" style="width: 180px"></span><span class="skel" style="width: 120px"></span></div></div>
+                <div id="form-title">Postuler</div>
+                <div class="fld"><div class="fld-label">Nom complet</div><div class="fld-input" id="fi-nom"><span id="ft-nom"></span><span class="caret" id="fc-nom"></span></div></div>
+                <div class="fld"><div class="fld-label">E-mail</div><div class="fld-input" id="fi-mail"><span id="ft-mail"></span><span class="caret" id="fc-mail"></span></div></div>
+                <div class="fld"><div class="fld-label">CV</div><div class="fld-input" id="fi-cv"><span id="cv-ph">Joindre un fichier</span><span id="cv-chip"><svg viewBox="0 0 18 18"><path d="M4 1.5h6.5L14 5v11.5H4z M10.5 1.5V5H14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>CV_adapté.pdf<svg viewBox="0 0 18 18"><path d="M4 9.5l3.2 3.2L14 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span></div></div>
+                <div class="fld"><div class="fld-label">Lettre de motivation</div><div class="fld-input tall" id="fi-lettre"><span id="ft-lettre" data-layout-allow-overlap="true"></span><span class="caret" id="fc-lettre"></span><span class="skel" id="lettre-skel"></span></div></div>
+                <div class="fld"><div class="fld-label">Pourquoi ce poste ?</div><div class="fld-input mid" id="fi-why"><span id="ft-why"></span><span class="caret" id="fc-why"></span></div></div>
+                <div id="send-btn">Envoyer</div>
+              </div>
+              <div id="page-side">
+                <span class="skel" style="width: 140px; height: 16px"></span>
+                <span class="skel" style="width: 300px"></span>
+                <span class="skel" style="width: 280px"></span>
+                <span class="skel" style="width: 310px"></span>
+                <span class="skel" style="width: 220px"></span>
+              </div>
+                            <div id="ripple"></div>
+              <svg id="cursor" viewBox="0 0 44 56"><path d="M4 3 L4 44 L14.5 34.5 L21.5 51 L29 47.8 L22 31.5 L36 31.5 Z" fill="#1A1918" stroke="#FAFAF8" stroke-width="3" stroke-linejoin="round"></path></svg>
+              <div id="panel">
+                <div id="panel-head">
+                  <div class="mini"><svg class="eyes" viewBox="0 0 64 64"><circle class="disc" cx="32" cy="32" r="32"></circle><circle class="ring" cx="22" cy="32" r="7" pathLength="100"></circle><circle class="ring" cx="42" cy="32" r="7" pathLength="100"></circle></svg></div>
+                  <div class="eyebrow">Alice</div>
+                </div>
+                <div id="panel-title">Dossier prêt</div>
+                <div class="prow" id="prow-cv"><div class="step" id="step-cv"><svg viewBox="0 0 18 18"><path id="chk-cv" d="M3.5 9.5l3.6 3.6L14.5 5.5" pathLength="100"></path></svg></div><span>CV adapté</span></div>
+                <div class="prow" id="prow-lettre"><div class="step" id="step-lettre"><svg viewBox="0 0 18 18"><path id="chk-lettre" d="M3.5 9.5l3.6 3.6L14.5 5.5" pathLength="100"></path></svg></div><span>Lettre de motivation</span></div>
+                <div class="prow" id="prow-why"><div class="step" id="step-why"><svg viewBox="0 0 18 18"><path id="chk-why" d="M3.5 9.5l3.6 3.6L14.5 5.5" pathLength="100"></path></svg></div><span>Réponses au formulaire</span></div>
+                <div id="panel-note">Relis, puis envoie.</div>
+              </div>
+              <div id="success" data-layout-allow-overlap="true" data-layout-allow-occlusion="true">
+                <svg id="success-ring" viewBox="0 0 120 120"><circle id="success-disc" cx="60" cy="60" r="56" fill="#006045"></circle><path id="success-chk" d="M37 61 L53 77 L84 45" fill="none" stroke="#FAFAF8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></path></svg>
+                <div id="success-text" data-layout-allow-overlap="true">Candidature envoyée</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- hero eyes: S1 logo that flies into the extension slot -->
+    <div id="hero-clip" class="clip" data-start="0" data-duration="2.1" data-track-index="5">
+      <div id="hero-gate">
+        <div id="hero-eyes">
+          <svg class="eyes" viewBox="0 0 64 64"><circle class="disc" id="hero-disc" cx="32" cy="32" r="32"></circle><circle class="ring" id="hero-ring-l" cx="22" cy="32" r="7" pathLength="100"></circle><circle class="ring" id="hero-ring-r" cx="42" cy="32" r="7" pathLength="100"></circle></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3 one click -->
+    <div id="s3" class="clip" data-start="6.6" data-duration="2.2" data-track-index="1">
+      <div id="s3-exit">
+        <div class="s3-l1"><span class="w s3w">Postule</span> <span class="w s3w">avec</span></div>
+        <div class="s3-l1"><span class="w s3w acc">ton</span> <span class="w s3w acc">compte.</span></div>
+        <div id="s3-l2">En <span id="s3-ulwrap">un clic<span id="s3-ul"></span></span>.</div>
+      </div>
+    </div>
+
+    <!-- S4 trust -->
+    <div id="s4" class="clip" data-start="8.8" data-duration="1.6" data-track-index="2">
+      <div id="s4-exit">
+        <svg id="s4-icon" viewBox="0 0 96 96">
+          <rect x="14" y="16" width="68" height="46" rx="6"></rect>
+          <path d="M6 72 H90 L84 80 H12 Z"></path>
+          <g id="lock-shackle"><path d="M42 39 V34 a6 6 0 0 1 12 0 V39"></path></g>
+          <rect x="38" y="39" width="20" height="15" rx="3"></rect>
+        </svg>
+        <div id="s4-text">
+          <div class="line"><span class="w s4w">Tes</span> <span class="w s4w">identifiants</span></div>
+          <div class="line"><span class="w s4w">ne</span> <span class="w s4w">quittent</span> <span class="w s4w" id="s4-jamais">jamais</span></div>
+          <div class="line"><span class="w s4w">ton</span> <span class="w s4w">ordinateur.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5 lockup -->
+    <div id="s5" class="clip" data-start="10.4" data-duration="1.6" data-track-index="1">
+      <div id="s5-atmo" class="atmo">
+        <div class="atmo-ring r1"></div><div class="atmo-ring r2"></div><div class="atmo-ring r3"></div>
+      </div>
+      <div id="s5-lockup">
+        <div id="s5-eyes">
+          <svg class="eyes" viewBox="0 0 64 64"><circle class="disc" id="s5-disc" cx="32" cy="32" r="32"></circle><g id="s5-rings"><circle class="ring" id="s5-ring-l" cx="22" cy="32" r="7" pathLength="100"></circle><circle class="ring" id="s5-ring-r" cx="42" cy="32" r="7" pathLength="100"></circle></g></svg>
+        </div>
+        <div id="s5-title">L’extension Alice</div>
+        <div id="s5-pill-row"><div id="s5-pill">Bientôt</div></div>
+        <div id="s5-url">alice-agent.fr</div>
+      </div>
+    </div>
+
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script>
+      (function () {
+        var ID = "teaser";
+        var C = {
+          primary: "#006045", text: "#1A1918", light: "#9A9A9A", disc: "#ECF4F0",
+          dormantDisc: "#E6E5E0", line: "rgba(26, 25, 24, 0.10)", focus: "rgba(0, 96, 69, 0.45)"
+        };
+        var R = document.getElementById("teaser-root") || document;
+        function q(sel) { return R.querySelector(sel); }
+        function qa(sel) { return R.querySelectorAll(sel); }
+
+        var tl = gsap.timeline({ paused: true });
+
+        /* ================= S1 hook (0 – 1.4) ================= */
+        tl.fromTo("#s1-atmo", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: "sine.out" }, 0.05);
+        tl.fromTo("#s1-atmo .atmo-ring", { scale: 1 }, { scale: 1.04, duration: 1.35, ease: "sine.inOut", stagger: 0.04 }, 0);
+        tl.fromTo("#hero-disc", { scale: 0.85, autoAlpha: 0, transformOrigin: "50% 50%" }, { scale: 1, autoAlpha: 1, duration: 0.45, ease: "power3.out" }, 0.05);
+        tl.fromTo("#hero-ring-l", { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.45, ease: "expo.out" }, 0.08);
+        tl.fromTo("#hero-ring-r", { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.45, ease: "expo.out" }, 0.16);
+        // beat 0.35 — « Bientôt. »
+        tl.fromTo("#s1-word", { autoAlpha: 0, y: 24, filter: "blur(12px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" }, 0.35);
+        tl.to("#s1-word", { autoAlpha: 0, y: -12, duration: 0.25, ease: "power2.in" }, 1.15);
+        tl.to("#s1-atmo", { autoAlpha: 0, duration: 0.25, ease: "power2.in" }, 1.15);
+        // FLIP flight: centre (540,820) @220px -> slot centre (974,366) @40px
+        tl.to("#hero-eyes", { x: 434, y: -454, scale: 40 / 220, transformOrigin: "50% 50%", duration: 0.85, ease: "power3.inOut" }, 1.15);
+        tl.to("#hero-disc", { fill: C.dormantDisc, duration: 0.3, ease: "sine.inOut" }, 1.7);
+        tl.to(["#hero-ring-l", "#hero-ring-r"], { stroke: C.light, duration: 0.3, ease: "sine.inOut" }, 1.7);
+        tl.to("#hero-eyes", { opacity: 0.4, duration: 0.3, ease: "sine.inOut" }, 1.7);
+        tl.to("#hero-gate", { autoAlpha: 0, duration: 0.01 }, 2.0);
+
+        /* ================= S2 UI demo (1.4 – 6.6) ================= */
+        tl.fromTo("#browser", { autoAlpha: 0, y: 180, scale: 0.96 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" }, 1.4);
+        tl.fromTo("#slot-eyes", { autoAlpha: 0 }, { autoAlpha: 0.4, duration: 0.01 }, 2.0);
+        // beat 2.3 — eyes light up
+        tl.to("#slot-eyes", { autoAlpha: 1, duration: 0.25, ease: "power2.out" }, 2.3);
+        tl.to("#slot-disc", { fill: C.disc, duration: 0.25, ease: "power2.out" }, 2.3);
+        tl.to("#teaser-root .slot-ring", { stroke: C.primary, duration: 0.25, ease: "power2.out" }, 2.3);
+        tl.fromTo("#slot-halo", { autoAlpha: 0, scale: 0.8 }, { autoAlpha: 1, scale: 1.1, duration: 0.08, ease: "none" }, 2.3);
+        tl.to("#slot-halo", { autoAlpha: 0, scale: 2.8, duration: 0.5, ease: "circ.out" }, 2.38);
+        // beat 2.75 — side panel
+        tl.fromTo("#panel", { x: 380 }, { x: 0, duration: 0.45, ease: "expo.out" }, 2.75);
+        tl.fromTo("#teaser-root .prow", { autoAlpha: 0, x: 28 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.06 }, 2.92);
+        tl.fromTo("#panel-note", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3, ease: "sine.out" }, 3.15);
+        // camera push-in on the form
+        tl.fromTo("#ui-cam", { scale: 1 }, { scale: 1.08, transformOrigin: "350px 1100px", duration: 2.0, ease: "sine.inOut" }, 2.9);
+
+        // typed fields — single seek-safe driver
+        var FIELDS = [
+          { t: "#ft-nom", c: "#fc-nom", s: 3.10, e: 3.36, text: "Camille Martin" },
+          { t: "#ft-mail", c: "#fc-mail", s: 3.40, e: 3.74, text: "camille.martin@mail.fr" },
+          { t: "#ft-lettre", c: "#fc-lettre", s: 4.00, e: 4.34, text: "Madame, Monsieur, votre offre a retenu toute mon attention…" },
+          { t: "#ft-why", c: "#fc-why", s: 4.45, e: 4.85, text: "J’aime construire des récits clairs pour des marques engagées." }
+        ];
+        FIELDS.forEach(function (f) { f.tEl = q(f.t); f.cEl = q(f.c); });
+        function render(time) {
+          for (var i = 0; i < FIELDS.length; i++) {
+            var f = FIELDS[i];
+            var p = (time - f.s) / (f.e - f.s);
+            p = p < 0 ? 0 : p > 1 ? 1 : p;
+            var s = f.text.slice(0, Math.round(p * f.text.length));
+            if (f.tEl.textContent !== s) f.tEl.textContent = s;
+            var on = time >= f.s - 0.08 && time < f.e + 0.12 ? "1" : "0";
+            if (f.cEl.style.opacity !== on) f.cEl.style.opacity = on;
+          }
+        }
+        var driver = { t: 0 };
+        render(0);
+        tl.fromTo(driver, { t: 0 }, { t: 12, duration: 12, ease: "none", onUpdate: function () { render(driver.t); } }, 0);
+
+        // field focus flashes
+        [["#fi-nom", 3.05, 3.4], ["#fi-mail", 3.35, 3.78], ["#fi-cv", 3.72, 3.95], ["#fi-lettre", 3.95, 4.42], ["#fi-why", 4.42, 4.9]].forEach(function (a) {
+          tl.to(a[0], { borderColor: C.focus, duration: 0.1, ease: "power1.out" }, a[1]);
+          tl.to(a[0], { borderColor: C.line, duration: 0.3, ease: "power1.inOut" }, a[2]);
+        });
+        // CV chip pops 3.80
+        tl.to("#cv-ph", { autoAlpha: 0, duration: 0.1, ease: "power1.in" }, 3.76);
+        tl.fromTo("#cv-chip", { autoAlpha: 0, scale: 0.9 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: "power4.out" }, 3.8);
+        // lettre skeleton line grows
+        tl.fromTo("#lettre-skel", { width: 0 }, { width: 300, duration: 0.18, ease: "power2.out" }, 4.3);
+        // panel ticks
+        [["cv", 3.88], ["lettre", 4.42], ["why", 4.86]].forEach(function (a) {
+          tl.to("#step-" + a[0], { backgroundColor: C.primary, borderColor: C.primary, duration: 0.12, ease: "power2.out" }, a[1]);
+          tl.fromTo("#chk-" + a[0], { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.2, ease: "power2.out" }, a[1] + 0.04);
+        });
+        // cursor (the user) decel-arrives
+        tl.fromTo("#cursor", { autoAlpha: 0, x: 240, y: 260 }, { autoAlpha: 1, x: 0, y: 0, duration: 0.22, ease: "power4.out" }, 4.93);
+        // beat 5.15 — press
+        tl.to(["#send-btn", "#cursor"], { scale: 0.96, duration: 0.07, ease: "power2.in" }, 5.15);
+        tl.to(["#send-btn", "#cursor"], { scale: 1, duration: 0.16, ease: "power2.out" }, 5.23);
+        tl.fromTo("#ripple", { autoAlpha: 0, scale: 0.2 }, { autoAlpha: 1, scale: 0.4, duration: 0.05, ease: "none" }, 5.15);
+        tl.to("#ripple", { autoAlpha: 0, scale: 1.4, duration: 0.4, ease: "circ.out" }, 5.2);
+        // beat 5.45 — success
+        tl.to(["#page-main", "#page-side"], { opacity: 0.35, duration: 0.25, ease: "power1.out" }, 5.45);
+        tl.to("#cursor", { autoAlpha: 0, duration: 0.2, ease: "power1.in" }, 5.45);
+        tl.fromTo("#success", { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: "power3.out" }, 5.45);
+        tl.fromTo("#success-ring", { scale: 0, transformOrigin: "50% 50%" }, { scale: 1, duration: 0.35, ease: "back.out(1.6)" }, 5.47);
+        tl.fromTo("#success-chk", { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out" }, 5.62);
+        // exit 6.35 – 6.6
+        tl.to("#ui-exit", { y: 120, autoAlpha: 0, duration: 0.25, ease: "power2.in" }, 6.35);
+
+        /* ================= S3 one click (6.6 – 8.8) ================= */
+        tl.fromTo("#teaser-root .s3w", { autoAlpha: 0, x: 90 }, { autoAlpha: 1, x: 0, duration: 0.45, ease: "power3.out", stagger: 0.08 }, 6.75);
+        tl.fromTo("#s3-l2", { autoAlpha: 0, scale: 0.92 }, { autoAlpha: 1, scale: 1, duration: 0.4, ease: "power4.out" }, 7.65);
+        tl.fromTo("#s3-ul", { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: "expo.out" }, 7.8);
+        tl.to("#s3-exit", { y: -40, autoAlpha: 0, duration: 0.25, ease: "power2.in" }, 8.55);
+
+        /* ================= S4 trust (8.8 – 10.4) ================= */
+        tl.fromTo("#s4-icon", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3, ease: "sine.out" }, 8.9);
+        tl.fromTo("#lock-shackle", { y: -6 }, { y: 0, duration: 0.25, ease: "power3.out" }, 9.05);
+        tl.fromTo("#teaser-root .s4w", { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.45, ease: "power1.out", stagger: 0.05 }, 8.95);
+        tl.to("#s4-jamais", { color: C.primary, duration: 0.3, ease: "sine.inOut" }, 9.55);
+        tl.to("#s4-jamais", { scale: 1.04, duration: 0.16, ease: "sine.inOut", yoyo: true, repeat: 1 }, 9.55);
+        tl.to("#s4-exit", { autoAlpha: 0, duration: 0.2, ease: "power2.in" }, 10.2);
+
+        /* ================= S5 lockup (10.4 – 12) ================= */
+        tl.fromTo("#s5-atmo", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "sine.out" }, 10.4);
+        tl.fromTo("#s5-atmo .atmo-ring", { scale: 1 }, { scale: 1.03, duration: 1.6, ease: "sine.inOut" }, 10.4);
+        tl.fromTo("#s5-disc", { scale: 0.8, autoAlpha: 0, transformOrigin: "50% 50%" }, { scale: 1, autoAlpha: 1, duration: 0.35, ease: "expo.out" }, 10.4);
+        tl.fromTo("#s5-rings", { scale: 0.5, svgOrigin: "32 32" }, { scale: 1, svgOrigin: "32 32", duration: 0.35, ease: "expo.out" }, 10.42);
+        tl.fromTo(["#s5-ring-l", "#s5-ring-r"], { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.35, ease: "power3.out", stagger: 0.05 }, 10.42);
+        tl.fromTo("#s5-title", { autoAlpha: 0, y: 20, filter: "blur(10px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45, ease: "power3.out" }, 10.55);
+        tl.fromTo("#s5-pill", { autoAlpha: 0, scale: 0.9 }, { autoAlpha: 1, scale: 1, duration: 0.35, ease: "power2.out" }, 10.8);
+        tl.fromTo("#s5-url", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35, ease: "sine.out" }, 10.95);
+        // beat 11.1 — blink
+        tl.to(["#s5-ring-l", "#s5-ring-r"], { scaleY: 0.12, transformOrigin: "50% 50%", duration: 0.11, ease: "sine.inOut" }, 11.1);
+        tl.to(["#s5-ring-l", "#s5-ring-r"], { scaleY: 1, transformOrigin: "50% 50%", duration: 0.11, ease: "sine.inOut" }, 11.21);
+        tl.fromTo("#s5-lockup", { scale: 1 }, { scale: 1.015, duration: 1.2, ease: "sine.inOut" }, 10.8);
+
+        tl.to({}, { duration: 12 }, 0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines[ID] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </div>
+</template>
