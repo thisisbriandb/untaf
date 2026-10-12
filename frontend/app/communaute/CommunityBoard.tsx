@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, MapPin, Search, X, Zap } from "lucide-react";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
+import { API_BASE_URL } from "@/lib/config";
 import {
   applyDestination,
   rememberTargetOffer,
@@ -30,7 +31,24 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-export function CommunityBoard({ data }: { data: CommunityList | null }) {
+export function CommunityBoard({ data: initial }: { data: CommunityList | null }) {
+  // Page générée sans données (API injoignable au moment du rendu) : le
+  // navigateur va chercher la liste lui-même plutôt que d'afficher du vide.
+  const [fetched, setFetched] = useState<CommunityList | null>(null);
+  useEffect(() => {
+    if (initial) return;
+    let alive = true;
+    fetch(`${API_BASE_URL}/api/community/offres`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((list: CommunityList | null) => {
+        if (alive && list) setFetched(list);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [initial]);
+  const data = initial ?? fetched;
   const router = useRouter();
   const offers = useMemo(() => data?.offers ?? [], [data]);
 
