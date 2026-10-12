@@ -240,8 +240,13 @@ class Settings(BaseSettings):
 
     #: Limites, par candidat. Gratuit : de quoi essayer pour de vrai. Abonné :
     #: des plafonds contre les abus, qu'un usage normal n'atteint pas.
-    free_packs_per_week: int = 3
-    free_missions_per_week: int = 1
+    #: La formule gratuite se mesure en candidatures réellement ENVOYÉES par
+    #: Alice : préparer un dossier que personne n'envoie ne devait pas épuiser
+    #: l'essai. Dossiers et missions gardent un plafond (coût du modèle).
+    free_sends_per_week: int = 3
+    paid_sends_per_week: int = 60
+    free_packs_per_week: int = 10
+    free_missions_per_week: int = 3
     free_spontaneous_per_week: int = 0
     free_messages_per_day: int = 30
     paid_packs_per_week: int = 40

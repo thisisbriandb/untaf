@@ -24,9 +24,9 @@ function rememberedSpontaneous(): number {
 /** Le dernier choix d'envoi : on ne repose pas la question à chaque mission. */
 function rememberedSend(): boolean {
   try {
-    return localStorage.getItem(SEND_PREF) === "1";
+    return localStorage.getItem(SEND_PREF) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -176,8 +176,8 @@ export function MissionLauncher({
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { send: false, label: "Montre-le-moi d'abord", detail: "Tu valides d'un clic." },
             { send: true, label: "Envoie-le", detail: "Dans ton quota hebdomadaire." },
+            { send: false, label: "Montre-le-moi d'abord", detail: "Tu valides d'un clic." },
           ].map((opt) => (
             <motion.button
               key={String(opt.send)}

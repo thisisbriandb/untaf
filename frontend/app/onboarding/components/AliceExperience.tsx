@@ -15,6 +15,7 @@ import {
 } from "./CriteriaStep";
 import { ApiUnreachableError, apiFetch, describeApiError } from "@/lib/api";
 import { startRun } from "@/lib/mission-run-client";
+import { updateMission } from "@/lib/mission-client";
 import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
@@ -536,13 +537,23 @@ export function AliceExperience() {
 
       // Première valeur, tout de suite : une mission sur 3 offres démarre
       // dès l'arrivée — l'utilisateur ouvre son espace sur des dossiers qui
-      // se rédigent, pas sur un tableau vide. Rien ne part sans son accord.
+      // se rédigent, pas sur un tableau vide. Elle envoie ce qui peut partir
+      // si (et seulement si) le candidat l'a accepté à l'étape précédente.
+      const autoSend = criteria.autoSend;
+      try {
+        localStorage.setItem("alice_mission_send", autoSend ? "1" : "0");
+      } catch {
+        /* préférence de confort seulement */
+      }
       const firstRun = await startRun(candidate.id, {
         title: "Tes premiers dossiers",
         objective: "apply",
         count: 3,
-        allowed_actions: { send: false },
+        allowed_actions: { send: autoSend },
       }).catch(() => null);
+      // L'accord est aussi gardé côté serveur (autonomie de la mission) : il
+      // suit le candidat sur tous ses appareils.
+      void updateMission(candidate.id, { autonomy: autoSend ? "full" : "propose" });
 
       setShowComponent(false);
       await say("C'est parti.", "happy", 1000);

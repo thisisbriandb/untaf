@@ -168,6 +168,7 @@ export interface NotificationPrefs {
   application_sent: boolean;
   awaiting_approval: boolean;
   followups: boolean;
+  reengagement: boolean;
   digest: DigestPeriod;
 }
 

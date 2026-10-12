@@ -27,6 +27,7 @@ const TOGGLES: { key: keyof NotificationPrefs; label: string; detail: string }[]
   { key: "awaiting_approval", label: "Candidatures à valider", detail: "Quand un envoi attend ton feu vert." },
   { key: "application_sent", label: "Candidature envoyée", detail: "Confirmation de chaque envoi réel." },
   { key: "followups", label: "Relances", detail: "Quand une candidature reste sans réponse." },
+  { key: "reengagement", label: "Si tu ne reviens pas", detail: "Ce que j'ai trouvé pendant ton absence (3 e-mails au plus)." },
 ];
 
 const DIGESTS: { id: DigestPeriod; label: string }[] = [

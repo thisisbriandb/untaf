@@ -42,6 +42,7 @@ DEFAULT_PREFS: dict = {
     "application_sent": True,
     "awaiting_approval": True,
     "followups": True,
+    "reengagement": True,
     "digest": "weekly",  # off | daily | weekly
 }
 
@@ -54,6 +55,7 @@ _PREF_FOR_KIND = {
     NotificationKind.APPLICATION_SENT: "application_sent",
     NotificationKind.AWAITING_APPROVAL: "awaiting_approval",
     NotificationKind.FOLLOWUP_DUE: "followups",
+    NotificationKind.REENGAGEMENT: "reengagement",
 }
 
 
@@ -180,6 +182,13 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
             .where(ApplicationDispatch.status == DispatchStatus.SENT)
             .limit(8)
         )).scalars().all()
+        to_finish = (await session.execute(
+            select(ApplicationDispatch)
+            .where(ApplicationDispatch.run_id == run_id)
+            .where(ApplicationDispatch.status == DispatchStatus.PREPARED)
+            .order_by(ApplicationDispatch.created_at)
+            .limit(8)
+        )).scalars().all()
         prepared = (await session.execute(
             select(MissionEvent)
             .where(MissionEvent.run_id == run_id)
@@ -192,6 +201,8 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
 
     items = [Item(d.job_title, display_company(d.company_name) or "", "à valider") for d in waiting]
     items += [Item(d.job_title, display_company(d.company_name) or "", "envoyée") for d in sent]
+    items += [Item(d.job_title, display_company(d.company_name) or "", "à finir sur le site")
+              for d in to_finish]
     if not items:
         # Mission « préparer » : rien n'est parti, mais chaque dossier est là.
         items = [
@@ -262,6 +273,221 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
     return await _send(
         candidate_id, NotificationKind.APPLICATION_SENT, f"application_sent:{dispatch_id}",
         email, {"dispatch_id": str(dispatch_id)},
+    )
+
+
+# ── Dossiers en attente ────────────────────────────────────────────────────
+
+#: Rappels pour un même lot de dossiers en attente : J+1 puis J+4, puis on se
+#: tait. Au-delà, la relance devient du harcèlement.
+PENDING_REMINDER_DAYS = (1, 4)
+
+
+async def notify_pending(candidate_id: UUID) -> Notification | None:
+    """
+    Des dossiers attendent le candidat : son feu vert, ou un geste sur le site
+    de l'employeur. Sans relance, ils ne partent jamais — et le candidat ne
+    voit jamais Alice postuler pour lui.
+    """
+    from app.models.application import Application, ApplicationStatus
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as session:
+        rows = (await session.execute(
+            select(ApplicationDispatch)
+            .join(Application, Application.id == ApplicationDispatch.application_id)
+            .where(ApplicationDispatch.candidate_id == candidate_id)
+            .where(ApplicationDispatch.status.in_((
+                DispatchStatus.AWAITING_APPROVAL, DispatchStatus.PREPARED,
+            )))
+            .where(Application.status.notin_((
+                ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW,
+                ApplicationStatus.OFFER, ApplicationStatus.REJECTED, ApplicationStatus.CLOSED,
+            )))
+            .order_by(ApplicationDispatch.created_at)
+        )).scalars().all()
+    if not rows:
+        return None
+
+    oldest = rows[0]
+    created = oldest.created_at if oldest.created_at.tzinfo else oldest.created_at.replace(tzinfo=timezone.utc)
+    age = (now - created).days
+    step = sum(1 for d in PENDING_REMINDER_DAYS if age >= d)
+    if step == 0:
+        return None
+
+    waiting = [d for d in rows if d.status == DispatchStatus.AWAITING_APPROVAL]
+    to_finish = [d for d in rows if d.status == DispatchStatus.PREPARED]
+    n_wait, n_finish = len(waiting), len(to_finish)
+
+    parts = []
+    if n_wait:
+        parts.append(f"{n_wait} candidature{'s' if n_wait > 1 else ''} à valider")
+    if n_finish:
+        parts.append(f"{n_finish} à finir sur le site")
+    paragraphs = []
+    if n_wait:
+        paragraphs.append(
+            f"{'Elles sont prêtes' if n_wait > 1 else 'Elle est prête'} : CV adapté, lettre signée. "
+            "Un clic sur « Tout valider » et je les envoie."
+        )
+    if n_finish:
+        paragraphs.append(
+            "Pour les autres, l'employeur a son propre formulaire : ton dossier est prêt, "
+            "« Finir sur le site » le remplit avec toi en un geste."
+        )
+    if step == len(PENDING_REMINDER_DAYS):
+        paragraphs.append("Je ne t'en reparlerai plus : tes dossiers restent dans Candidatures.")
+
+    email = Email(
+        subject=" et ".join(parts).capitalize(),
+        preheader="Tes dossiers sont prêts, il ne manque que toi.",
+        heading="Tes candidatures n'attendent plus que toi.",
+        paragraphs=paragraphs,
+        items=(
+            [Item(d.job_title, display_company(d.company_name) or "", "à valider") for d in waiting[:6]]
+            + [Item(d.job_title, display_company(d.company_name) or "", "à finir sur le site")
+               for d in to_finish[:6]]
+        ),
+        cta_label="Tout valider" if n_wait else "Finir mes candidatures",
+        cta_url=link("candidatures"),
+        footer=FOOTER,
+    )
+    return await _send(
+        candidate_id, NotificationKind.AWAITING_APPROVAL,
+        f"pending:{candidate_id}:{oldest.id}:{step}", email,
+        {"awaiting": n_wait, "to_finish": n_finish, "step": step},
+    )
+
+
+# ── Relance des inactifs ───────────────────────────────────────────────────
+
+#: Jours sans visite avant chaque relance. Trois messages, puis silence :
+#: au-delà, on dérange quelqu'un qui a peut-être trouvé.
+REENGAGEMENT_DAYS = (2, 7, 14)
+
+
+async def last_activity(session, candidate: Candidate) -> datetime:
+    """Dernier signe de vie : visite de l'espace, message à Alice, mission lancée."""
+    from app.models.conversation import Conversation, ConversationMessage
+    from app.models.mission import Mission, MissionRun
+
+    message = (await session.execute(
+        select(func.max(ConversationMessage.created_at))
+        .join(Conversation, Conversation.id == ConversationMessage.conversation_id)
+        .where(Conversation.candidate_id == candidate.id)
+        .where(ConversationMessage.sender == "user")
+    )).scalar()
+    run = (await session.execute(
+        select(func.max(MissionRun.created_at))
+        .join(Mission, Mission.id == MissionRun.mission_id)
+        .where(Mission.candidate_id == candidate.id)
+    )).scalar()
+    moments = [m for m in (candidate.last_seen_at, candidate.created_at, message, run) if m]
+    return max(m if m.tzinfo else m.replace(tzinfo=timezone.utc) for m in moments)
+
+
+async def notify_reengagement(candidate_id: UUID) -> Notification | None:
+    """
+    Le candidat ne revient plus : on lui montre ce qu'Alice a trouvé depuis.
+    J+2, J+7, J+14 après sa dernière visite ; jamais deux fois la même étape,
+    jamais le même jour qu'un autre e-mail d'Alice.
+    """
+    from app.api.optout import reengagement_stop_link
+    from app.models.application import Application, ApplicationStatus
+    from app.models.company import Company
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+    from app.models.job_posting import JobPosting, PostingStatus
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as session:
+        candidate = await session.get(Candidate, candidate_id)
+        if not candidate or not candidate.email:
+            return None
+        since = await last_activity(session, candidate)
+        idle = (now - since).days
+        step = sum(1 for d in REENGAGEMENT_DAYS if idle >= d)
+        if step == 0:
+            return None
+        recent = (await session.execute(
+            select(func.count(Notification.id))
+            .where(Notification.candidate_id == candidate_id)
+            .where(Notification.created_at >= now - timedelta(hours=20))
+        )).scalar() or 0
+        if recent:
+            return None
+        fresh = (await session.execute(
+            select(Application.match_score, JobPosting.title, Company.name)
+            .join(JobPosting, JobPosting.id == Application.job_posting_id)
+            .join(Company, Company.id == JobPosting.company_id)
+            .where(Application.candidate_id == candidate_id)
+            .where(Application.created_at > since)
+            .where(Application.match_score >= settings.match_min_score)
+            .where(Application.status.in_((ApplicationStatus.PENDING, ApplicationStatus.MATCHED)))
+            .where(JobPosting.status == PostingStatus.ACTIVE)
+            .order_by(Application.match_score.desc())
+            .limit(50)
+        )).all()
+        pending = (await session.execute(
+            select(func.count(ApplicationDispatch.id))
+            .where(ApplicationDispatch.candidate_id == candidate_id)
+            .where(ApplicationDispatch.status.in_((
+                DispatchStatus.AWAITING_APPROVAL, DispatchStatus.PREPARED,
+            )))
+        )).scalar() or 0
+        first_name = (candidate.full_name or "").split(" ")[0]
+
+    n = len(fresh)
+    hello = f"Bonjour {first_name}," if first_name else "Bonjour,"
+    offers = f"{n} nouvelle{'s' if n > 1 else ''} offre{'s' if n > 1 else ''}"
+    if step == 1:
+        subject = (f"J'ai trouvé {offers} pour toi" if n
+                   else "Tes dossiers t'attendent" if pending
+                   else "On reprend ta recherche ?")
+        heading = (f"{offers.capitalize()} depuis ta dernière visite." if n
+                   else "Je continue de chercher pour toi.")
+        body = [hello, (
+            "Pendant ton absence, j'ai continué à chercher. Lance une mission : je prépare les "
+            "dossiers et j'envoie ce qui peut partir." if n else
+            "Tes dossiers sont prêts : il ne manque que ton feu vert." if pending else
+            "Une mission prend une minute : je cherche, j'adapte ton CV et je postule."
+        )]
+    elif step == 2:
+        subject = (f"{offers.capitalize()} t'attend{'ent' if n > 1 else ''}" if n
+                   else "Une semaine sans nouvelles")
+        heading = "Ta recherche avance aussi sans toi, mais elle avance mieux avec toi."
+        body = [hello,
+                "Les meilleures offres partent vite : les candidatures envoyées dans les premiers "
+                "jours ont nettement plus de chances d'obtenir une réponse."
+                + (f" Tu as aussi {pending} dossier{'s' if pending > 1 else ''} prêt{'s' if pending > 1 else ''} "
+                   "à envoyer." if pending else "")]
+    else:
+        subject = "Je mets ta recherche en pause ?"
+        heading = "C'est mon dernier message."
+        body = [hello,
+                "Si tu as trouvé, bravo, sincèrement. Sinon, tout est resté en place : ton profil, "
+                "tes dossiers, tes offres. Il suffit de revenir pour que je reprenne.",
+                "Je ne t'écrirai plus pour te relancer."]
+
+    email = Email(
+        subject=subject,
+        preheader=(f"{offers} correspondent à ton profil." if n else heading),
+        heading=heading,
+        paragraphs=body,
+        items_title="Pour toi" if n else "",
+        items=[Item(title, display_company(company) or "", f"{score} %")
+               for score, title, company in fresh[:3]],
+        cta_label="Voir mes offres" if n else "Reprendre avec Alice",
+        cta_url=link(),
+        footer=FOOTER,
+        unsubscribe_label="Ne plus recevoir ces relances",
+        unsubscribe_url=reengagement_stop_link(candidate_id) or link("parametres"),
+    )
+    return await _send(
+        candidate_id, NotificationKind.REENGAGEMENT,
+        f"reengage:{candidate_id}:{since.date().isoformat()}:{step}", email,
+        {"step": step, "idle_days": idle, "fresh": n, "pending": pending},
     )
 
 
@@ -386,7 +612,7 @@ async def send_digest(candidate_id: UUID, period: str) -> Notification | None:
                      f"{'s' if waiting_packs > 1 else ''} pour toi attend{'ent' if waiting_packs > 1 else ''} "
                      f"encore {'leur' if waiting_packs > 1 else 'son'} dossier. " if waiting_packs else "")
                     + f"Avec l'abonnement ({billing.settings.billing_price_label}, sans engagement), je "
-                    f"prépare jusqu'à {billing.settings.paid_packs_per_week} dossiers par semaine et "
+                    f"envoie jusqu'à {billing.settings.paid_sends_per_week} candidatures par semaine et "
                     f"j'écris à {billing.settings.spontaneous_weekly_cap} entreprises qui recrutent sans annonce."
                 )
 

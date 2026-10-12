@@ -8,10 +8,10 @@ import {
 } from "@/lib/billing-client";
 import { useToast } from "./Toaster";
 
-const ORDER: UsageKind[] = ["pack", "mission", "spontaneous", "message"];
+const ORDER: UsageKind[] = ["send", "pack", "mission", "spontaneous", "message"];
 
 const INCLUDED = [
-  "Des missions chaque jour, avec dossier adapté pour chaque offre",
+  "Jusqu'à 60 candidatures envoyées par semaine, CV adapté et lettre à chaque fois",
   "Jusqu'à 15 candidatures spontanées par semaine",
   "Sans engagement : tu arrêtes quand tu as trouvé",
 ];
@@ -261,13 +261,16 @@ export function UpgradeCard({ candidateId }: { candidateId: string | null }) {
   }, [candidateId]);
 
   if (!billing?.enabled || billing.plan !== "free") return null;
-  const packs = billing.usage.pack;
+  // La formule gratuite se compte en candidatures envoyées. L'encart ne pousse
+  // l'abonnement qu'après un premier envoi réussi : avant, rien à prolonger.
+  const sends = billing.usage.send;
+  if (!sends || sends.used === 0) return null;
+  const left = Math.max(0, sends.limit - sends.used);
 
   return (
     <div className="mx-2 mb-2 rounded-xl border border-[#006045]/15 bg-[#006045]/[0.04] px-3 py-2.5 space-y-2">
       <p className="text-[11px] font-normal text-[#1A1918]/65 tracking-tight">
-        Formule gratuite
-        {packs ? ` · ${Math.max(0, packs.limit - packs.used)} dossier${packs.limit - packs.used > 1 ? "s" : ""} restant${packs.limit - packs.used > 1 ? "s" : ""} cette semaine` : ""}
+        Formule gratuite · {left} candidature{left > 1 ? "s" : ""} restante{left > 1 ? "s" : ""} cette semaine
       </p>
       <button
         type="button"

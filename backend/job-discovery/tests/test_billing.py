@@ -93,7 +93,7 @@ def test_checkout_carries_candidate(monkeypatch):
 
 def test_limit_messages():
     free = billing.LimitReached("pack", 3, 3, paid=False)
-    assert "3 dossiers de candidature gratuits cette semaine" in str(free)
+    assert "3 dossiers de candidature de la formule gratuite cette semaine" in str(free)
     assert "abonnement" in str(free)
     assert free.detail()["code"] == "plan_limit"
     assert "font partie de l'abonnement" in str(billing.LimitReached("spontaneous", 0, 0, paid=False))
@@ -168,3 +168,37 @@ def test_sync_keeps_only_alice_variant(monkeypatch):
     monkeypatch.setattr(billing, "apply_event", apply_event)
     assert asyncio.run(billing.sync_from_provider(None, cid, " Ada@B.fr ")) == 1
     assert [e.provider_id for e in seen] == ["123456"] and seen[0].candidate_id == cid
+
+
+# ── La formule gratuite se mesure en candidatures envoyées ────────────────
+
+def test_free_plan_counts_sends_not_prepared_packs():
+    free = billing.free_limits()
+    assert billing.KINDS["send"][0] == "sends_per_week"
+    assert free.sends_per_week == billing.settings.free_sends_per_week
+    # La préparation garde un plafond (coût du modèle), plus large que l'essai.
+    assert free.packs_per_week > free.sends_per_week
+    msg = str(billing.LimitReached("send", 3, 3, paid=False))
+    assert "candidatures envoyées par Alice" in msg and "abonnement" in msg
+
+
+@pytest.mark.parametrize("used,ok", [(2, True), (3, False)])
+def test_send_limit(monkeypatch, used, ok):
+    for key, value in {"lemonsqueezy_api_key": "k", "lemonsqueezy_store_id": "1",
+                       "lemonsqueezy_variant_id": "2", "free_sends_per_week": 3}.items():
+        monkeypatch.setattr(billing.settings, key, value)
+
+    async def limits_for(session, cid):
+        return billing.free_limits(), False
+
+    async def used_(session, cid, kind):
+        assert kind == "send"
+        return used
+
+    monkeypatch.setattr(billing, "limits_for", limits_for)
+    monkeypatch.setattr(billing, "used", used_)
+    if ok:
+        asyncio.run(billing.check(None, uuid4(), "send"))
+    else:
+        with pytest.raises(billing.LimitReached):
+            asyncio.run(billing.check(None, uuid4(), "send"))

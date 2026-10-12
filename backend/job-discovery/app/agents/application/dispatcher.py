@@ -94,18 +94,26 @@ FORM_NOT_RECOGNIZED = (
 )
 
 
+FORM_INCOMPLETE = (
+    "le formulaire de l'employeur demandait des champs que je n'ai pas su remplir : "
+    "rien n'est parti. Ton dossier est prêt, termine sur le site avec l'extension "
+    "Alice ou « Finir sur le site »"
+)
+
+
 def browser_failure(result: dict) -> tuple[str, str | None]:
     """
     Échec du remplissage par navigateur → (statut, incident à signaler).
 
-    Rien de reconnu sur la page, ce n'est pas une panne : c'est une page qu'on
-    ne sait pas lire. Le dossier reste prêt, à finir sur le site — sans alerte.
-    Un remplissage partiel, lui, mérite d'être signalé.
+    Dans les deux cas rien n'est parti et le dossier reste prêt, à finir sur
+    le site : un « échec » sans issue laissait le candidat devant une impasse.
+    Rien de reconnu sur la page n'est pas une panne (pas d'alerte) ; un
+    remplissage partiel, lui, est signalé pour qu'on améliore le remplissage.
     """
     proof = result.get("proof") or {}
     if not proof.get("filled_fields") and not proof.get("uploaded_files"):
         return "prepared", None
-    return "failed", "form_incomplete"
+    return "prepared", "form_incomplete"
 
 
 async def _weekly_sent(session, candidate_id: UUID) -> int:
@@ -393,6 +401,14 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
     )):
         return Hold(DispatchStatus.REJECTED, "candidature déjà envoyée : rien n'est reparti")
 
+    # Formule gratuite épuisée : le dossier attend, prêt. Au feu vert du
+    # candidat, l'API répond 402 et propose l'abonnement (voir `approve`).
+    from app import billing
+    try:
+        await billing.check(session, dispatch.candidate_id, "send")
+    except billing.LimitReached as e:
+        return Hold(DispatchStatus.AWAITING_APPROVAL, str(e))
+
     # Pas de candidature signée « Candidat » : sans nom, rien ne part.
     from app.agents.application.identity import MISSING_NAME_REASON, real_name
     candidate = await session.get(Candidate, dispatch.candidate_id)
@@ -547,6 +563,11 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
                 result.get("error") or "rien n'a été envoyé"
             )
 
+            # Un envoi réel compte dans la formule (la gratuite se mesure là).
+            if result["real"]:
+                from app import billing
+                await billing.record(session, d.candidate_id, "send")
+
             # Le statut de la candidature ne bascule que sur un envoi RÉEL.
             if result["real"] and d.application_id:
                 app = await session.get(Application, d.application_id)
@@ -562,17 +583,18 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             d.status = DispatchStatus.FAILED
             d.error = result.get("error", "échec inconnu")
             if d.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
-                outcome, incident = browser_failure(result)
-                incident = incident or "send_failed"
+                outcome, form_incident = browser_failure(result)
+                incident = form_incident or "send_failed"
                 d.proof = result.get("proof")
                 if outcome == "prepared":
                     d.status = DispatchStatus.PREPARED
-                    d.error = FORM_NOT_RECOGNIZED
+                    d.error = FORM_INCOMPLETE if form_incident else FORM_NOT_RECOGNIZED
+                    incident = form_incident
 
         await session.commit()
         await session.refresh(d)
 
-    if d.status == DispatchStatus.FAILED:
+    if d.status == DispatchStatus.FAILED or incident == "form_incomplete":
         from app.agents.incidents import report_incident
         await report_incident(
             incident, d.candidate_id, d.error or "",

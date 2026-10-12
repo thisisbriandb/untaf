@@ -41,6 +41,9 @@ class Email:
     cta_label: str = ""
     cta_url: str = ""
     footer: str = ""
+    #: Lien d'arrêt en un clic, affiché sous le pied de page.
+    unsubscribe_label: str = ""
+    unsubscribe_url: str = ""
 
 
 def render_html(email: Email) -> str:
@@ -99,6 +102,11 @@ def render_html(email: Email) -> str:
         )
 
     footer = escape(email.footer) if email.footer else ""
+    if email.unsubscribe_url:
+        footer += (
+            f'<br><a href="{escape(email.unsubscribe_url, quote=True)}" '
+            f'style="color:{MUTED}">{escape(email.unsubscribe_label or "Ne plus recevoir ces e-mails")}</a>'
+        )
 
     return f"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
@@ -144,4 +152,6 @@ def render_text(email: Email) -> str:
         lines.append("")
     if email.footer:
         lines.append(email.footer)
+    if email.unsubscribe_url:
+        lines.append(f"{email.unsubscribe_label or 'Ne plus recevoir ces e-mails'} : {email.unsubscribe_url}")
     return "\n".join(lines).strip() + "\n"

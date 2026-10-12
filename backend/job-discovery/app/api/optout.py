@@ -78,3 +78,45 @@ async def optout(e: str, t: str):
         f"Plus aucune candidature spontanée ne sera envoyée par Alice aux adresses {domain}. "
         "Les candidatures en réponse à vos offres publiées ne sont pas concernées.",
     )
+
+
+# ── Relances d'Alice au candidat : arrêt en un clic ─────────────────────────
+
+def _sign_candidate(candidate_id: str) -> str:
+    return _sign(f"relances:{candidate_id}")
+
+
+def reengagement_stop_link(candidate_id) -> str | None:
+    """Lien signé qui coupe les e-mails de relance de ce candidat, sans connexion."""
+    base = public_base()
+    if not base:
+        return None
+    cid = str(candidate_id)
+    return f"{base}/api/optout/relances?c={quote(cid)}&t={_sign_candidate(cid)}"
+
+
+@router.get("/optout/relances", response_class=HTMLResponse)
+async def stop_reengagement(c: str, t: str):
+    from uuid import UUID
+
+    from app.models.candidate import Candidate
+
+    cid = (c or "").strip()
+    if not cid or not hmac.compare_digest(_sign_candidate(cid), t or ""):
+        return _page("Lien invalide", "Ce lien n'est pas valide.")
+    try:
+        candidate_id = UUID(cid)
+    except ValueError:
+        return _page("Lien invalide", "Ce lien n'est pas valide.")
+    async with async_session() as session:
+        candidate = await session.get(Candidate, candidate_id)
+        if candidate:
+            prefs = dict(candidate.notification_prefs or {})
+            prefs["reengagement"] = False
+            candidate.notification_prefs = prefs
+            await session.commit()
+    return _page(
+        "C'est noté",
+        "Alice ne t'écrira plus pour te proposer de reprendre ta recherche. "
+        "Tes autres e-mails (missions, candidatures) se règlent dans Paramètres → Notifications.",
+    )

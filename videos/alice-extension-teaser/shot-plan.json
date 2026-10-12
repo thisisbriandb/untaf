@@ -1,0 +1,173 @@
+{
+  "category": "kinetic-type",
+  "category_note": "Hybrid: kinetic-type backbone wrapping a hand-authored, GENERIC stylized UI demo (no capture, no real site). Not the search-driven `webpage` category: nothing is captured, the browser + job-offer page are invented placeholders built in HTML/CSS.",
+  "duration_s": 12,
+  "fps": 30,
+  "canvas": { "w": 1080, "h": 1920, "aspect": "9:16" },
+  "style": "Premium, mysterious then obvious. Same identity as the Alice launch film: warm cream ground, near-black Geist headlines, ONE green accent (#006045), soft tinted cards (4% fill / 20% border / 12-14px radius), pill chrome, NO shadows (except a very soft drop under the browser window to lift it off the ground, max 0 24px 60px rgba(26,25,24,0.08)). Calm, precise, confident motion: power3/expo outs, no bounce, no glitch. Atmosphere (concentric rings) only on hook and lockup.",
+  "palette": {
+    "bg": "#FAFAF8",
+    "text": "#1A1918",
+    "primary": "#006045",
+    "text-muted": "#004D37",
+    "text-light": "#9A9A9A",
+    "accent-light": "rgba(0, 96, 69, 0.08)",
+    "accent-medium": "rgba(0, 96, 69, 0.15)",
+    "border": "rgba(0, 96, 69, 0.2)",
+    "card-bg": "rgba(0, 96, 69, 0.04)",
+    "eyes-disc": "#ECF4F0",
+    "browser-chrome": "#F1F0EC",
+    "ui-line": "rgba(26, 25, 24, 0.10)",
+    "ui-skeleton": "rgba(26, 25, 24, 0.06)"
+  },
+  "font": "Geist (LOCAL ONLY: assets/fonts/Geist-Regular|Medium|SemiBold|Bold.woff2 via @font-face; weights 400/500/600/700)",
+  "beats": [0.35, 2.3, 2.75, 5.15, 5.45, 6.75, 7.65, 8.95, 10.55, 11.1],
+  "export": "mp4",
+  "asset_needs": [],
+
+  "build_constraints": {
+    "offline_render": "The render browser has NO network. Do NOT reference any CDN or Google Fonts. Replace the scaffold's jsdelivr GSAP <script> with <script src=\"assets/vendor/gsap.min.js\"></script>. Load Geist with @font-face from assets/fonts/*.woff2 (font-display: block). No remote images; every icon is inline SVG.",
+    "index_html": "Rewrite the scaffold index.html for 1080x1920 (viewport meta, html/body and #stage sizes, data-width=1080 data-height=1920, data-duration=12). Background #FAFAF8.",
+    "registry_blocks": "If you `npx hyperframes add` a component, it lands in compositions/; after adding, grep it and replace any remote URL (fonts/CDN) with the local assets before rendering. If add fails offline, hand-author the same move inline — the components below are references, not hard dependencies.",
+    "no_third_party": "No third-party logos, names or UI (no LinkedIn/Indeed/Welcome to the Jungle/Chrome/Safari look-alikes). Browser chrome is generic: three neutral dots, a neutral URL pill reading « emplois.exemple/offre/2481 », one extension slot holding Alice's eyes. Company on the offer page is a neutral placeholder.",
+    "no_dates_no_numbers": "No launch date, no stats. Only « Bientôt ».",
+    "copy_language": "All on-screen copy in French, exactly as written in content (typographic apostrophes ’, non-breaking space before « . » punctuation where relevant: « Bientôt. » has none needed).",
+    "seek_safe": "One paused GSAP timeline on window.__timelines[\"main\"], fromTo with autoAlpha for delayed reveals, typed text via a proxy object + onUpdate writing textContent (deterministic slice), no Math.random / Date.now."
+  },
+
+  "block": null,
+  "blocks_reference": {
+    "browser-device-stage": "generic browser chrome around a slot (S2) — strip any brand look, recolor to tokens",
+    "panel-reveal": "side panel « Dossier prêt » entrance (S2)",
+    "press-ripple": "cursor decel-arrives on « Envoyer », compresses with the button, ring ripple (S2)",
+    "success-check": "ring pop + check path draw for « Candidature envoyée » (S2)",
+    "kinetic-center-build": "words push in and lock centered for « Postule avec ton compte. » (S3)",
+    "per-word-crossfade": "calm keynote word fade for « Tes identifiants… » (S4)",
+    "logo-outro": "lockup grammar only: piece assembly (the two eye rings) + tagline fade + URL pill (S5). No glow bloom beyond a soft 8% green halo."
+  },
+  "customize": {
+    "palette": "tokens above only; green is the single accent",
+    "font": "Geist local",
+    "logo": "assets/brand/alice-eyes.svg (inline it as SVG so the two rings can be animated: circles at cx 22/42, r 7, stroke #006045 3.5 on #ECF4F0 disc)"
+  },
+
+  "shot_brief": "A quiet cream frame; Alice's two green rings draw themselves open like eyes waking up and « Bientôt. » settles beneath them. The eyes shrink and fly into the toolbar of a generic, softly-stylized browser window that rises into frame on a job-offer page. The eyes icon lights up, a « Dossier prêt » side panel slides in, and the application form fills itself line by line — adapted CV attached, cover letter typed, answers written — while the viewer watches. A cursor (the user) presses « Envoyer », a green check pops: « Candidature envoyée ». The window falls away to pure kinetic type — « Postule avec ton compte. En un clic. » — then the reassurance « Tes identifiants ne quittent jamais ton ordinateur. », and resolves on the lockup: eyes, « L’extension Alice », a « Bientôt » pill and alice-agent.fr. Dominant motif: Alice's EYES — they open the film, become the toolbar icon that triggers everything, and close it in the lockup (a single blink at 11.1s).",
+
+  "layout": {
+    "safe_area": "80px side gutter, 220px top, 300px bottom (Reels UI). Key copy stays inside y 260–1560.",
+    "hero_frame_ui": "t≈4.6s. Browser window 960x1260, centered x, top y 330, radius 22px, chrome bar 72px (#F1F0EC) with 3 neutral dots, URL pill « emplois.exemple/offre/2481 » (Geist 22px text-light), and at the right of the chrome an extension slot (52px) holding Alice's eyes icon. Page body: left column 960 wide minus side panel. Side panel 380 wide docked inside the window on the right, full body height, card-tinted with a 1.5px left border, slides over the page.",
+    "hero_frame_type": "Centered column, text block ≤ 900px wide, Geist 700 near-black, 104–128px for 2–4 word lines, 72px for the reassurance line (3 lines max), tracking -0.02em, line-height 1.08."
+  },
+
+  "content": {
+    "scenes": [
+      {
+        "id": "s1-hook",
+        "start": 0,
+        "end": 1.4,
+        "role": "Hook",
+        "text": "Bientôt.",
+        "emphasis_words": ["Bientôt."],
+        "emotion": "mysterious, anticipatory",
+        "visual": "Cream ground with 3 faint concentric rings (accent-light, 1.5px strokes, r 260/420/580) centered at y 820. Alice eyes logo 220px centered at y 820; « Bientôt. » Geist 700 128px near-black centered at y 1080.",
+        "motion": "0.00–0.45 the two eye rings draw on (SVG stroke-dashoffset, expo.out, left ring leads by 0.08s) while the disc scales 0.85→1 (fade_in); 0.35 beat: « Bientôt. » fade_blur up 24px (0.5s, power3.out); rings breathe scale 1→1.04 (sine). 1.15–1.4: text fades out (0.25s) and the eyes logo scales down + translates toward the toolbar slot position of the browser (FLIP-style, to 52px at the extension slot coordinates), crossing into S2.",
+        "beats": [0.35]
+      },
+      {
+        "id": "s2-ui-demo",
+        "start": 1.4,
+        "end": 6.6,
+        "role": "Build",
+        "text": "Generic browser · job offer · « Dossier prêt » · auto-filled form · « Envoyer » · « Candidature envoyée »",
+        "emphasis_words": ["Dossier prêt", "Envoyer", "Candidature envoyée"],
+        "emotion": "precise, effortless, then satisfying",
+        "ui_mock": {
+          "browser": "generic chrome: 3 neutral dots (#D9D7D0), URL pill « emplois.exemple/offre/2481 », extension slot with Alice eyes (grey/desaturated at 40% opacity until lit).",
+          "offer_page": {
+            "eyebrow": "OFFRE D’EMPLOI",
+            "title": "Chargé·e de communication",
+            "meta": ["CDI", "Lyon", "Hybride"],
+            "company_placeholder": "Entreprise — logo replaced by a neutral rounded square (ui-skeleton) and grey skeleton bars, no name",
+            "form_title": "Postuler",
+            "fields": [
+              { "label": "Nom complet", "fill": "Camille Martin", "kind": "typed" },
+              { "label": "E-mail", "fill": "camille.martin@mail.fr", "kind": "typed" },
+              { "label": "CV", "fill": "CV_adapté.pdf", "kind": "file-chip (green tinted pill with a doc icon + small ✓)" },
+              { "label": "Lettre de motivation", "fill": "Madame, Monsieur, votre offre a retenu toute mon attention…", "kind": "typed, 2 lines, then 1 skeleton line growing" },
+              { "label": "Pourquoi ce poste ?", "fill": "J’aime construire des récits clairs pour des marques engagées.", "kind": "typed" }
+            ],
+            "submit_button": "Envoyer (cta-button: solid #006045 pill, cream text, Geist 600 30px, full form width)"
+          },
+          "side_panel": {
+            "header": "Dossier prêt",
+            "eyebrow": "ALICE",
+            "items": ["CV adapté", "Lettre de motivation", "Réponses au formulaire"],
+            "item_style": "card-tinted rows, each with a green ✓ step-circle (32px) that ticks as its field gets filled",
+            "footer_note": "Relis, puis envoie."
+          },
+          "success": "Centered over the form: success-check (green ring pop + check draw, 120px) + « Candidature envoyée » Geist 600 44px near-black in a cream card-tinted pill."
+        },
+        "motion": "1.40–2.00 browser window rises from y+180 with autoAlpha 0→1 and scale 0.96→1 (power3.out) while the eyes icon lands in its extension slot. 2.30 beat: eyes icon LIGHTS UP — desaturated→#006045, disc to #ECF4F0, a single soft halo ring (accent-medium) expands from the icon and fades (0.5s). 2.75 beat: side panel slides in from the window's right edge (x+380→0, 0.45s, expo.out — panel-reveal), its 3 rows stagger in (0.06s). Camera: 2.9–4.9 slow push-in on the form (whole UI layer scale 1→1.08, transformOrigin at the form's centre, sine.inOut). 3.10–4.85 fields fill top→bottom: each field's border flashes accent-medium as a caret enters, text types via proxy slice (≈28 chars/s; Nom 3.10, E-mail 3.40, CV chip pops 3.80 with scale_punch-lite 0.9→1, Lettre 4.00–4.45, Pourquoi 4.45–4.85); the matching side-panel row ticks its ✓ (check path draw 0.2s) as its field completes. 4.95–5.15 a dark neutral arrow cursor (the USER, not Alice) decel-arrives from bottom-right onto « Envoyer » (press-ripple). 5.15 beat: press — button + cursor compress to 0.96 together, ring ripple in accent-medium. 5.45 beat: form dims to 35% (white veil), success-check pops (ring scale 0→1 back.out(1.6) clamped, check draws 0.3s) with « Candidature envoyée » rising 16px. 5.45–6.35 hold (legibility). 6.35–6.60 exit: whole browser drops y+120 and fades (power2.in) — the transition into S3.",
+        "beats": [2.3, 2.75, 5.15, 5.45]
+      },
+      {
+        "id": "s3-one-click",
+        "start": 6.6,
+        "end": 8.8,
+        "role": "Punch",
+        "text": "Postule avec ton compte. / En un clic.",
+        "emphasis_words": ["ton compte", "un clic"],
+        "emotion": "confident, obvious",
+        "visual": "Pure cream, centered type. Line 1 « Postule avec ton compte. » Geist 700 104px on 2 lines (« Postule avec » / « ton compte. »), « ton compte » in #006045 (the only coloured word allowed: accent emphasis on the key phrase). Line 2 « En un clic. » Geist 700 128px below, near-black, with a 60×4 green accent-line underline_sweep under « un clic ».",
+        "motion": "6.75 beat: line 1 words push in from right and lock centered (kinetic-center-build, 0.08s stagger, power3.out); 7.65 beat: « En un clic. » scale_punch-lite (0.92→1, power4.out, no back overshoot) + underline_sweep (scaleX 0→1, 0.35s). Pattern-interrupt vs S2 = the UI vanishes, only type. 8.55–8.80 both lines slide_out up 40px + fade (power2.in).",
+        "beats": [6.75, 7.65]
+      },
+      {
+        "id": "s4-trust",
+        "start": 8.8,
+        "end": 10.4,
+        "role": "Build",
+        "text": "Tes identifiants ne quittent jamais ton ordinateur.",
+        "emphasis_words": ["jamais"],
+        "emotion": "reassuring, calm, trustworthy",
+        "visual": "Centered, Geist 700 76px near-black, 3 lines (« Tes identifiants » / « ne quittent jamais » / « ton ordinateur. »), « jamais » in #006045. Above it a small 96px line icon (inline SVG, 3px #006045 stroke): a generic laptop outline with a padlock in the screen — no brand.",
+        "motion": "8.90 icon fade_in + lock shackle closes (y −6→0, 0.25s, power3.out); 8.95 beat: per-word-crossfade (12px drift, 0.05s stagger, 0.45s each); 9.55 « jamais » color_shift text→#006045 + 1.04 scale_pulse once. Hold to 10.2 (≥0.6s fully legible). 10.20–10.40 fade_out (power2.in).",
+        "beats": [8.95]
+      },
+      {
+        "id": "s5-lockup",
+        "start": 10.4,
+        "end": 12.0,
+        "role": "Resolve",
+        "text": "L’extension Alice · Bientôt · alice-agent.fr",
+        "emphasis_words": ["Alice"],
+        "emotion": "assured, premium, open-ended",
+        "visual": "Closing atmosphere: same 3 faint concentric rings as the hook (bookend), centered y 820. Eyes logo 200px at y 760; « L’extension Alice » Geist 700 96px near-black at y 1000; tag-pill « Bientôt » (accent-light fill, #006045 Geist 600 34px, pill radius, 1.5px border) at y 1110; « alice-agent.fr » Geist 500 34px text-muted at y 1210.",
+        "motion": "10.40–10.75 eye rings assemble (logo-outro piece assembly: the two rings draw on from the disc's centre, disc scale 0.8→1); 10.55 beat: « L’extension Alice » fade_blur up 20px (0.45s); 10.80 « Bientôt » pill scale_grow 0.9→1 + fade; 10.95 URL fade_in. 11.10 beat: the eyes BLINK once (both rings scaleY 1→0.12→1 over 0.22s, sine.inOut) — the signature. Rings atmosphere breathe 1→1.03. Hold to 12.0 with a hold_breath on the whole lockup (scale 1→1.015). No exit fade (sound will close).",
+        "beats": [10.55, 11.1]
+      }
+    ]
+  },
+
+  "audio_cues_for_orchestrator": [
+    { "t": 0.35, "cue": "soft airy swell / 'Bientôt' hit" },
+    { "t": 2.3, "cue": "small bright chime: eyes light up" },
+    { "t": 2.75, "cue": "soft whoosh: panel slides in" },
+    { "t": 3.1, "cue": "light key-tick texture 3.1–4.85 (typing)" },
+    { "t": 5.15, "cue": "click" },
+    { "t": 5.45, "cue": "success ding" },
+    { "t": 6.75, "cue": "music lift / downbeat" },
+    { "t": 7.65, "cue": "punch hit" },
+    { "t": 10.55, "cue": "resolve chord" },
+    { "t": 11.1, "cue": "tiny blink tick" }
+  ],
+
+  "qa_checks": [
+    "scenes partition [0,12] with no gaps",
+    "no network requests at render (GSAP + Geist from assets/)",
+    "no third-party logos/names; URL is emplois.exemple",
+    "single green accent; headlines near-black except the two emphasis phrases (« ton compte », « jamais ») and the Alice eyes",
+    "every key line fully legible ≥0.5s; all copy inside safe area at 1080x1920",
+    "French typography: ’ apostrophes, « Bientôt » with no date"
+  ]
+}

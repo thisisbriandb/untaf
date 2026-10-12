@@ -8,7 +8,7 @@
 import { API_BASE_URL } from "./config";
 import { apiFetch } from "./api";
 
-export type UsageKind = "pack" | "mission" | "spontaneous" | "message";
+export type UsageKind = "send" | "pack" | "mission" | "spontaneous" | "message";
 
 export interface Usage {
   used: number;

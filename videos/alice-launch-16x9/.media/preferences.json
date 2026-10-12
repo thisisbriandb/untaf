@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "preferences": {
+    "destination": {
+      "value": "tiktok",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:49:47.709Z"
+    },
+    "aspect": {
+      "value": "1080x1920",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:49:47.752Z"
+    },
+    "language": {
+      "value": "fr",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:49:47.797Z"
+    },
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:49:47.845Z"
+    },
+    "storyboard": {
+      "value": "no",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:49:47.893Z"
+    },
+    "style_preset.product-launch-video": {
+      "value": "blue-professional",
+      "confirmed_in": [
+        "alice-launch"
+      ],
+      "updated_at": "2026-10-09T18:50:53.971Z"
+    }
+  },
+  "sightings": {}
+}

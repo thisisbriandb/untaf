@@ -1,0 +1,146 @@
+<template>
+  <div id="root" data-composition-id="01-lettre-47" data-start="0" data-duration="3.5" data-width="1080" data-height="1920">
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: "Geist", sans-serif; }
+      #root .clip { position: absolute; inset: 0; }
+      #root #lettre-47-bg { background: #FAFAF8; }
+      #root #lettre-47-stage { transform-origin: 130px 900px; }
+      #root .lettre-47-counter {
+        position: absolute; left: 130px; top: 520px;
+        font-family: "Geist", sans-serif; font-weight: 500; font-size: 34px; letter-spacing: 0.05em;
+        color: #858585; white-space: nowrap; transform-origin: 0% 50%;
+      }
+      #root .lettre-47-line, #root .lettre-47-ghost {
+        position: absolute; left: 130px; top: 840px; width: 880px;
+        font-family: "Geist", sans-serif; font-weight: 600; font-size: 110px; line-height: 1.12;
+        letter-spacing: -0.02em; white-space: pre; margin: 0;
+      }
+      #root .lettre-47-line { color: #1A1918; }
+      #root .lettre-47-ghost { color: #9A9A9A; opacity: 0; }
+      #root .lettre-47-caret {
+        display: inline-block; width: 9px; height: 0.86em; margin-left: 6px;
+        vertical-align: -0.1em; background: #1A1918; border-radius: 2px;
+      }
+    </style>
+
+    <div id="lettre-47-bg" class="clip" data-start="0" data-duration="3.5" data-track-index="0"></div>
+
+    <div id="lettre-47-stage" class="clip" data-start="0" data-duration="3.5" data-track-index="1">
+      <div class="lettre-47-ghost" data-ghost="5">Madame,
+Monsieur,</div>
+      <div class="lettre-47-ghost" data-ghost="4">Madame,
+Monsieur,</div>
+      <div class="lettre-47-ghost" data-ghost="3">Madame,
+Monsieur,</div>
+      <div class="lettre-47-ghost" data-ghost="2">Madame,
+Monsieur,</div>
+      <div class="lettre-47-ghost" data-ghost="1">Madame,
+Monsieur,</div>
+
+      <div id="lettre-47-counter" class="lettre-47-counter">Candidature n°46</div>
+
+      <div class="lettre-47-line"><span id="lettre-47-text"></span><span id="lettre-47-caret" class="lettre-47-caret"></span></div>
+    </div>
+
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script>
+      (function () {
+        var ID = "01-lettre-47";
+        var TOTAL = 3.5;
+        var FULL = "Madame,\nMonsieur,";
+        var N = FULL.length; // 17
+
+        // ---- discrete text sequence: { t, text } states ----
+        var SEQ = [{ t: 0, text: "" }];
+        var i, t;
+        // Scene 2 — brisk first pass, 0.60 -> ~1.35s
+        t = 0.6;
+        for (i = 1; i <= N; i++) {
+          SEQ.push({ t: t, text: FULL.substring(0, i) });
+          t += (i === 7) ? 0.07 : 0.042;
+        }
+        // short hold on the finished line, then fast full backspace 1.62 -> ~1.80s
+        t = 1.62;
+        for (i = N - 1; i >= 0; i--) {
+          SEQ.push({ t: t, text: FULL.substring(0, i) });
+          t += 0.011;
+        }
+        // Scene 3 — caret blinks twice (1.80 -> 2.12), then a slower, tired retype 2.14 -> ~3.05s
+        var RETYPE = [0.075, 0.06, 0.07, 0.055, 0.06, 0.05, 0.16, // "Madame," + sag before the newline
+                      0.07, 0.05, 0.065, 0.05, 0.045, 0.06, 0.05, 0.055, 0.06];
+        t = 2.14;
+        for (i = 1; i <= N; i++) {
+          SEQ.push({ t: t, text: FULL.substring(0, i) });
+          if (i <= RETYPE.length) t += RETYPE[i - 1] * 0.85;
+        }
+        var RETYPE_END = t;
+
+        function textAt(time) {
+          for (var k = SEQ.length - 1; k >= 0; k--) {
+            if (time >= SEQ[k].t) return SEQ[k].text;
+          }
+          return "";
+        }
+
+        // caret: solid while keys are moving, double blink at 1.80-2.12, idle blink otherwise
+        var ACTIVE = [[0.6, 1.36], [1.62, 1.8], [2.14, RETYPE_END + 0.05]];
+        function caretAt(time) {
+          if (time < 0.08) return 0;
+          for (var a = 0; a < ACTIVE.length; a++) {
+            if (time >= ACTIVE[a][0] && time < ACTIVE[a][1]) return 1;
+          }
+          if (time >= 1.8 && time < 2.14) {
+            var p = (time - 1.8) / 0.085; // off,on,off,on
+            return Math.floor(p) % 2 === 0 ? 0 : 1;
+          }
+          // idle square-wave blink, 0.5s period
+          return ((time % 0.5) < 0.27) ? 1 : 0;
+        }
+
+        var textEl = document.getElementById("lettre-47-text");
+        var caretEl = document.getElementById("lettre-47-caret");
+        var counterEl = document.getElementById("lettre-47-counter");
+
+        function render(time) {
+          var s = textAt(time);
+          if (textEl.textContent !== s) textEl.textContent = s;
+          caretEl.style.opacity = String(caretAt(time));
+          var c = time >= 0.6 ? "Candidature n°47" : "Candidature n°46";
+          if (counterEl.textContent !== c) counterEl.textContent = c;
+        }
+
+        var tl = gsap.timeline({ paused: true });
+
+        // single driver — seek-safe discrete states (text, caret, counter hard-cut)
+        var driver = { t: 0 };
+        render(0);
+        tl.fromTo(driver, { t: 0 }, {
+          t: TOTAL, duration: TOTAL, ease: "none",
+          onUpdate: function () { render(driver.t); }
+        }, 0);
+
+        // Scene 1 — counter settles in (visible by 0.2s)
+        tl.fromTo("#lettre-47-counter", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.22, ease: "power2.out" }, 0);
+        // hard cut 46 -> 47 on the first keystroke: a tiny tick to sell the cut
+        tl.fromTo("#lettre-47-counter", { scale: 1.05 }, { scale: 1, duration: 0.18, ease: "power2.out", immediateRender: false }, 0.6);
+
+        // macro push underneath the whole shot (slow, weary drift in)
+        tl.fromTo("#lettre-47-stage", { scale: 1 }, { scale: 1.035, duration: TOTAL, ease: "none" }, 0);
+
+        // Scene 4 — ghost stack of the 46 before fades up behind, offset upward
+        var GHOST_OP = { 1: 0.15, 2: 0.13, 3: 0.11, 4: 0.085, 5: 0.06 };
+        for (var g = 1; g <= 5; g++) {
+          tl.fromTo('#root .lettre-47-ghost[data-ghost="' + g + '"]',
+            { opacity: 0, y: -g * 34 },
+            { opacity: GHOST_OP[g], y: -g * 48, duration: 0.38, ease: "power2.out" },
+            2.82 + (g - 1) * 0.07);
+        }
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines[ID] = tl;
+      })();
+    </script>
+  </div>
+</template>

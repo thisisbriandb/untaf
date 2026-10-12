@@ -1,0 +1,322 @@
+{
+ "bgm": {
+  "path": "assets/audio/bed.wav",
+  "volume": 0.85,
+  "source": "host"
+ },
+ "voices": [],
+ "sfx": [
+  {
+   "frame": 1,
+   "file": "assets/audio/sfx/typing_17_slow.wav",
+   "offset_s": 0.6,
+   "duration_s": 0.85,
+   "volume": 0.55,
+   "source": "host"
+  },
+  {
+   "frame": 1,
+   "file": "assets/audio/sfx/backspace.wav",
+   "offset_s": 1.62,
+   "duration_s": 0.5,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 1,
+   "file": "assets/audio/sfx/typing_17.wav",
+   "offset_s": 2.14,
+   "duration_s": 1.4,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 1,
+   "file": "assets/audio/sfx/thud.wav",
+   "offset_s": 2.95,
+   "duration_s": 0.6,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 2,
+   "file": "assets/audio/sfx/whoosh.wav",
+   "offset_s": 0.0,
+   "duration_s": 0.4,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 2,
+   "file": "assets/audio/sfx/whoosh.wav",
+   "offset_s": 0.8,
+   "duration_s": 0.4,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 2,
+   "file": "assets/audio/sfx/whoosh.wav",
+   "offset_s": 1.6,
+   "duration_s": 0.4,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 2,
+   "file": "assets/audio/sfx/impact.wav",
+   "offset_s": 2.4,
+   "duration_s": 1.6,
+   "volume": 0.9,
+   "source": "host"
+  },
+  {
+   "frame": 3,
+   "file": "assets/audio/sfx/riser.wav",
+   "offset_s": 0.0,
+   "duration_s": 1.25,
+   "volume": 0.55,
+   "source": "host"
+  },
+  {
+   "frame": 3,
+   "file": "assets/audio/sfx/shimmer.wav",
+   "offset_s": 1.2,
+   "duration_s": 1.2,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 3,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 2.82,
+   "duration_s": 0.12,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 3,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 3.16,
+   "duration_s": 0.12,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 3,
+   "file": "assets/audio/sfx/pop_hi.wav",
+   "offset_s": 3.5,
+   "duration_s": 0.12,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/whoosh_up.wav",
+   "offset_s": 0.0,
+   "duration_s": 0.6,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/typing_long.wav",
+   "offset_s": 0.8,
+   "duration_s": 1.3,
+   "volume": 0.4,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/click.wav",
+   "offset_s": 2.0,
+   "duration_s": 0.05,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 2.35,
+   "duration_s": 0.12,
+   "volume": 0.35,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 2.7,
+   "duration_s": 0.12,
+   "volume": 0.35,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 3.05,
+   "duration_s": 0.12,
+   "volume": 0.35,
+   "source": "host"
+  },
+  {
+   "frame": 4,
+   "file": "assets/audio/sfx/pop_hi.wav",
+   "offset_s": 3.4,
+   "duration_s": 0.12,
+   "volume": 0.35,
+   "source": "host"
+  },
+  {
+   "frame": 5,
+   "file": "assets/audio/sfx/counter.wav",
+   "offset_s": 0.1,
+   "duration_s": 1.6,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 5,
+   "file": "assets/audio/sfx/check.wav",
+   "offset_s": 1.7,
+   "duration_s": 0.25,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 5,
+   "file": "assets/audio/sfx/check.wav",
+   "offset_s": 2.7,
+   "duration_s": 0.25,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 5,
+   "file": "assets/audio/sfx/check.wav",
+   "offset_s": 3.7,
+   "duration_s": 0.25,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 5,
+   "file": "assets/audio/sfx/chime.wav",
+   "offset_s": 3.75,
+   "duration_s": 1.6,
+   "volume": 0.4,
+   "source": "host"
+  },
+  {
+   "frame": 6,
+   "file": "assets/audio/sfx/swipe.wav",
+   "offset_s": 0.0,
+   "duration_s": 0.3,
+   "volume": 0.5,
+   "source": "host"
+  },
+  {
+   "frame": 6,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 1.4,
+   "duration_s": 0.12,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 6,
+   "file": "assets/audio/sfx/pop_hi.wav",
+   "offset_s": 1.9,
+   "duration_s": 0.12,
+   "volume": 0.45,
+   "source": "host"
+  },
+  {
+   "frame": 6,
+   "file": "assets/audio/sfx/whoosh.wav",
+   "offset_s": 2.4,
+   "duration_s": 0.4,
+   "volume": 0.3,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/tick.wav",
+   "offset_s": 0.0,
+   "duration_s": 0.06,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/tick.wav",
+   "offset_s": 0.45,
+   "duration_s": 0.06,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/tick.wav",
+   "offset_s": 0.9,
+   "duration_s": 0.06,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/tick.wav",
+   "offset_s": 1.35,
+   "duration_s": 0.06,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/tick.wav",
+   "offset_s": 1.8,
+   "duration_s": 0.06,
+   "volume": 0.6,
+   "source": "host"
+  },
+  {
+   "frame": 7,
+   "file": "assets/audio/sfx/impact_bright.wav",
+   "offset_s": 2.4,
+   "duration_s": 1.2,
+   "volume": 0.8,
+   "source": "host"
+  },
+  {
+   "frame": 8,
+   "file": "assets/audio/sfx/pop.wav",
+   "offset_s": 0.15,
+   "duration_s": 0.12,
+   "volume": 0.4,
+   "source": "host"
+  },
+  {
+   "frame": 8,
+   "file": "assets/audio/sfx/whoosh.wav",
+   "offset_s": 1.2,
+   "duration_s": 0.4,
+   "volume": 0.35,
+   "source": "host"
+  },
+  {
+   "frame": 8,
+   "file": "assets/audio/sfx/click.wav",
+   "offset_s": 2.2,
+   "duration_s": 0.05,
+   "volume": 0.55,
+   "source": "host"
+  },
+  {
+   "frame": 8,
+   "file": "assets/audio/sfx/shimmer.wav",
+   "offset_s": 2.25,
+   "duration_s": 1.2,
+   "volume": 0.45,
+   "source": "host"
+  }
+ ]
+}

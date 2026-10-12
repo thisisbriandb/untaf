@@ -1,0 +1,258 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: "Geist", sans-serif;
+      color: #1A1918;
+    }
+    [id="f05-bg"] {
+      position: absolute;
+      inset: 0;
+      background: #FAFAF8;
+    }
+
+    /* ---------- caption band (y 150–410) ---------- */
+    [id="f05-count-wrap"] {
+      position: absolute;
+      left: 0;
+      top: 160px;
+      width: 1080px;
+      text-align: center;
+    }
+    [id="f05-count"] {
+      display: inline-block;
+      font-size: 150px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: #006045;
+      font-variant-numeric: tabular-nums;
+      transform-origin: 50% 60%;
+    }
+    [id="f05-count-sub"] {
+      margin-top: 20px;
+      font-size: 48px;
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: #1A1918;
+    }
+    [class~="f05-line"] {
+      position: absolute;
+      left: 54px;
+      top: 228px;
+      width: 972px;
+      text-align: center;
+      font-size: 80px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #1A1918;
+      white-space: nowrap;
+    }
+    [class~="f05-w"] {
+      display: inline-block;
+      opacity: 0;
+    }
+    [class~="f05-accent"] { color: #006045; }
+
+    /* ---------- floating phone (x 130–950, y 422–1574) ---------- */
+    [id="f05-phone"] {
+      position: absolute;
+      left: 130px;
+      top: 422px;
+      width: 820px;
+      height: 1152px;
+      border-radius: 64px;
+      border: 1.5px solid rgba(0, 96, 69, 0.2);
+      background: #FAFAF8;
+      overflow: hidden;
+      box-shadow: 0 48px 90px -36px rgba(26, 25, 24, 0.22), 0 14px 28px -14px rgba(26, 25, 24, 0.10);
+    }
+    [id="f05-screen"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 820px;
+      height: 1152px;
+    }
+    /* app chrome cropped from the real screenshot (scale 820/1170) */
+    [class~="f05-crop"] { position: absolute; left: 0; width: 820px; overflow: hidden; }
+    [class~="f05-crop"] img { position: absolute; left: 0; width: 820px; height: 1774.6px; max-width: none; display: block; }
+    [id="f05-top"] { top: 0; height: 150px; }
+    [id="f05-top"] img { top: 0; }
+    [id="f05-bottom"] { top: 975px; height: 177px; }
+    [id="f05-bottom"] img { top: -1598px; }
+    /* rebuilt live mission card */
+    [id="f05-card"] {
+      position: absolute; left: 30px; top: 196px; width: 760px; height: 686px;
+      background: #FFFFFF; border: 1.5px solid #ECEAE5; border-radius: 34px;
+      clip-path: inset(0px 0px 562px 0px round 34px);
+    }
+    [id="f05-head"] {
+      position: absolute; left: 34px; top: 30px; width: 692px; height: 74px;
+      font-size: 22px; line-height: 1.5; color: #66655F;
+    }
+    [id="f05-head-txt"] { position: absolute; left: 34px; top: 0; width: 520px; }
+    [id="f05-head-stop"] { position: absolute; right: 0; top: 16px; color: #6B6A66; }
+    [id="f05-dot"] { position: absolute; left: 4px; top: 13px; width: 12px; height: 12px; border-radius: 50%; background: #006045; }
+    [id="f05-pulse"] { position: absolute; left: -2px; top: 7px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #006045; opacity: 0; }
+    [class~="f05-row"] {
+      position: absolute; left: 34px; width: 692px; height: 92px;
+      font-size: 28px; line-height: 1.55; color: #2A2927; opacity: 0;
+    }
+    [class~="f05-row"] span { position: absolute; left: 52px; top: 0; width: 640px; }
+    [class~="f05-bullet"] { position: absolute; left: 10px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: #C9C8C4; }
+    [class~="f05-badge"] {
+      position: absolute; left: -2px; top: 2px; width: 40px; height: 40px;
+      border-radius: 50%; background: #006045; opacity: 0;
+    }
+    [class~="f05-badge"] svg { position: absolute; left: 0; top: 0; width: 40px; height: 40px; }
+    [class~="f05-badge"] path { fill: none; stroke: #FFFFFF; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+    [id="f05-glow"] {
+      position: absolute; left: -60px; top: -80px; width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,96,69,0.45) 0%, rgba(0,96,69,0.15) 40%, rgba(0,96,69,0) 70%);
+      opacity: 0;
+    }
+  </style>
+
+  <div id="root" data-composition-id="05-elle-travaille" data-width="1080" data-height="1920" data-duration="5.5">
+    <div id="f05-bg" class="clip" data-start="0" data-duration="5.5" data-track-index="0"></div>
+
+    <!-- floating phone, framed on the live mission card -->
+    <div id="f05-phone" class="clip" data-start="0" data-duration="5.5" data-track-index="1">
+      <div id="f05-screen">
+        <div id="f05-top" class="f05-crop"><img src="assets/chat-top.png" alt="" /></div>
+        <div id="f05-card">
+          <div id="f05-head"><div id="f05-pulse"></div><div id="f05-dot"></div><div id="f05-head-txt">Alternance marketing à Lyon — tu peux fermer l’onglet, je t’écris quand c’est fini.</div><div id="f05-head-stop">arrêter</div></div>
+          <div id="f05-r-scan" class="f05-row" style="top:124px"><div class="f05-bullet"></div><span>J’ai passé 1 284 offres en revue : 63 correspondent à ton profil, j’en retiens 5.</span></div>
+          <div id="f05-r-retenue" class="f05-row" style="top:234px"><div class="f05-bullet"></div><span>Retenue : « Chargée de marketing digital (alternance) » chez Decathlon — 94 %.</span></div>
+          <div id="f05-r-cv" class="f05-row" style="top:344px"><div class="f05-bullet"></div><div id="f05-b-cv" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><span>CV adapté pour Decathlon : marketing digital et réseaux sociaux mis en avant.</span></div>
+          <div id="f05-r-lettre" class="f05-row" style="top:454px"><div class="f05-bullet"></div><div id="f05-b-lettre" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><span>Lettre de motivation rédigée pour Decathlon.</span></div>
+          <div id="f05-r-cand" class="f05-row" style="top:564px"><div class="f05-bullet"></div><div id="f05-b-cand" class="f05-badge"><svg viewBox="0 0 40 40"><path d="M12 20.5 L18 26.5 L28.5 15" /></svg></div><div id="f05-glow"></div><span>Candidature envoyée à Decathlon pour « Chargée de marketing digital (alternance) ».</span></div>
+        </div>
+        <div id="f05-bottom" class="f05-crop"><img src="assets/chat-top.png" alt="" /></div>
+      </div>
+    </div>
+
+    <!-- caption band -->
+    <div id="f05-caption" class="clip" data-start="0" data-duration="5.5" data-track-index="2">
+      <div id="f05-count-wrap">
+        <div id="f05-count">0</div>
+        <div id="f05-count-sub">offres passées en revue</div>
+      </div>
+      <div id="f05-l-cv" class="f05-line"><span class="f05-w">CV</span> <span class="f05-w">adapté.</span></div>
+      <div id="f05-l-lettre" class="f05-line"><span class="f05-w">Lettre</span> <span class="f05-w">rédigée.</span></div>
+      <div id="f05-l-cand" class="f05-line"><span class="f05-w">Candidature</span> <span class="f05-w f05-accent">envoyée.</span></div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script>
+    (function () {
+      var FID = "05-elle-travaille";
+      var $ = function (s) { return document.getElementById("f05-" + s); };
+      var words = function (s) { return Array.prototype.slice.call($(s).querySelectorAll('[class~="f05-w"]')); };
+
+      var tl = gsap.timeline({ paused: true });
+      var card = $("card");
+      // card grows row by row: visible height = header (124) + rows * 110 (+ 30 padding)
+      var H = 686;
+      var reveal = function (h, t, d) {
+        tl.to(card, { clipPath: "inset(0px 0px " + (H - h) + "px 0px round 34px)", duration: d || 0.45, ease: "power3.out" }, t);
+      };
+      tl.fromTo(card, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.05);
+
+      // ---- Scene 1 (0.0–1.6s): counter 0 -> 1 284 ----
+      var countEl = $("count");
+      var fmt = function (n) {
+        n = Math.round(n);
+        if (n < 1000) return String(n);
+        var r = String(n % 1000);
+        while (r.length < 3) r = "0" + r;
+        return Math.floor(n / 1000) + "\u00a0" + r;
+      };
+      var state = { v: 0 };
+      countEl.textContent = "0";
+      tl.fromTo($("count-wrap"), { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, 0);
+      tl.fromTo(state, { v: 0 }, { v: 1284, duration: 1.2, ease: "power2.out",
+        onUpdate: function () { countEl.textContent = fmt(state.v); } }, 0.1);
+      tl.fromTo(countEl, { scale: 0.8 }, { scale: 1, duration: 1.2, ease: "power2.out" }, 0.1);
+      tl.fromTo($("count-sub"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.3);
+
+      // working pulse on the live dot (finite)
+      var pulse = $("pulse"), ph = { p: 0 };
+      tl.fromTo(ph, { p: 0 }, { p: 4, duration: 3.6, ease: "none", onUpdate: function () {
+        var f = ph.p % 1; pulse.style.opacity = String(0.6 * (1 - f)); pulse.style.transform = "scale(" + (1 + f * 1.4) + ")"; } }, 0);
+      tl.set(pulse, { opacity: 0 }, 3.6);
+
+      var row = function (k, i, t) {
+        reveal(124 + (i + 1) * 110 + 8, t);
+        tl.fromTo($("r-" + k), { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, t + 0.05);
+      };
+      row("scan", 0, 0.75);
+      row("retenue", 1, 1.2);
+
+      // counter clears up
+      tl.to($("count-wrap"), { y: -90, duration: 0.3, ease: "power4.in" }, 1.32);
+      tl.to($("count-wrap"), { opacity: 0, duration: 0.2, ease: "power1.in" }, 1.42);
+
+      // ---- caption line swaps ----
+      var lineIn = function (key, t, axis) {
+        var ws = words(key), gap = 0.05, at = t;
+        ws.forEach(function (w) {
+          var from = {}; from[axis] = axis === "x" ? 230 : 90;
+          var to = { duration: 0.3, ease: "power4.out" }; to[axis] = 0;
+          var pre = { opacity: 0 }; pre[axis] = from[axis];
+          tl.set(w, pre, 0);
+          tl.set(w, { opacity: 0.35 }, at);
+          tl.fromTo(w, from, to, at);
+          tl.to(w, { opacity: 1, duration: 0.3, ease: "power2.out" }, at);
+          at += gap; gap *= 0.84;
+        });
+      };
+      var lineOut = function (key, cut) {
+        var ws = words(key), n = ws.length;
+        ws.forEach(function (w, i) {
+          var s0 = cut - 0.18 - (n - 1 - i) * 0.022;
+          tl.to(w, { x: -230, duration: 0.34, ease: "power4.in" }, s0);
+          tl.to(w, { opacity: 0, duration: 0.18, ease: "power1.in" }, s0);
+        });
+      };
+      var check = function (k, t) {
+        var b = $("b-" + k), p = b.querySelector("path"), len = p.getTotalLength();
+        p.style.strokeDasharray = String(len);
+        tl.fromTo(b, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, t);
+        tl.fromTo(p, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out" }, t + 0.14);
+      };
+
+      // ---- Scene 2 (1.6–2.6s): CV adapté ----
+      lineIn("l-cv", 1.62, "y");
+      row("cv", 2, 1.62);
+      check("cv", 1.95);
+      // ---- Scene 3 (2.6–3.6s): Lettre rédigée ----
+      lineOut("l-cv", 2.62);
+      lineIn("l-lettre", 2.62, "x");
+      row("lettre", 3, 2.62);
+      check("lettre", 2.92);
+      // ---- Scene 4 (3.6–5.0s): Candidature envoyée + glow, hold ----
+      lineOut("l-lettre", 3.62);
+      lineIn("l-cand", 3.62, "x");
+      row("cand", 4, 3.62);
+      check("cand", 3.92);
+      tl.fromTo($("glow"), { opacity: 0, scale: 0.5 }, { opacity: 0.5, scale: 1, duration: 0.5, ease: "power2.out" }, 3.82);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["05-elle-travaille"] = tl;
+    })();
+  </script>
+</template>
