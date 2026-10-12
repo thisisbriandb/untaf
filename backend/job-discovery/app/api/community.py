@@ -1,5 +1,6 @@
 """
-Alice Community : la liste publique des alternances et des stages.
+Alice Community : la liste publique des alternances, des stages et des
+premiers emplois (CDI et CDD ouverts aux débutants).
 
 Une page ouverte à tous (alice-agent.fr/communaute) et sa version Markdown,
 publiée chaque jour dans un dépôt GitHub, sur le modèle des listes de stages
@@ -21,7 +22,7 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import or_, select
@@ -45,10 +46,13 @@ STALE_AFTER = timedelta(days=10)
 MAX_AGE = timedelta(days=60)
 #: Badge « Nouveau ».
 NEW_WITHIN = timedelta(days=2)
-MAX_ROWS = 2000
+#: Plafond par type d'offre.
+MAX_ROWS = {"alternance": 3000, "stage": 3000, "emploi": 6000}
 CACHE_TTL = 15 * 60
 
-Kind = Literal["alternance", "stage"]
+Kind = Literal["alternance", "stage", "emploi"]
+#: La liste GitHub reste celle des étudiants.
+ListKind = Literal["alternance", "stage"]
 
 _TITLE_RE = r"(alternan|apprenti|contrat pro|stage|stagiaire|intern)"
 
@@ -134,6 +138,38 @@ def source_label(job: JobPosting) -> str:
     return "Site carrière"
 
 
+#: Un poste ouvert aux débutants le dit : « débutant accepté », « jeune
+#: diplômé », « première expérience », « 0 à 2 ans »…
+_JUNIOR_RE = re.compile(
+    r"d[ée]butant\w*|jeunes? dipl[ôo]m\w*|premi[èe]re exp[ée]rience|sans exp[ée]rience|"
+    r"\bjunior\b|\b0 ?(à|a|-) ?[12] ans?\b|moins de (1|2|un|deux) ans? d'exp|\bgraduate\b|sortie? d'[ée]cole",
+    re.I,
+)
+#: … et un poste qui ne l'est pas le dit aussi, dans l'intitulé.
+_SENIOR_RE = re.compile(
+    r"\b(senior|sr\.?|confirm[ée]e?s?|exp[ée]riment[ée]e?s?|expert\w*|lead|principal|head of|"
+    r"directeur|directrice|manager|chef d'[ée]quipe)\b",
+    re.I,
+)
+#: Au-delà, ce n'est plus un premier emploi.
+FIRST_JOB_MAX_YEARS = 2
+
+
+def is_first_job(job: JobPosting) -> bool:
+    """
+    CDI ou CDD accessible à un jeune diplômé. L'expérience exigée par la
+    source (France Travail : « débutant accepté » = 0 an) prime ; sans elle,
+    l'annonce doit dire qu'elle accepte les débutants.
+    """
+    title = job.title or ""
+    if _SENIOR_RE.search(title):
+        return False
+    years = (job.description_parsed or {}).get("experience_years_required")
+    if isinstance(years, (int, float)):
+        return years <= FIRST_JOB_MAX_YEARS
+    return bool(_JUNIOR_RE.search(f"{title} {(job.description_raw or '')[:3000]}"))
+
+
 def offer_kind(job: JobPosting) -> Kind | None:
     """L'intitulé prime sur le champ contrat, peu fiable chez certaines sources."""
     if NOT_STUDENT.search(job.title or ""):
@@ -143,6 +179,8 @@ def offer_kind(job: JobPosting) -> Kind | None:
         return titled
     if job.contract_type in (ContractType.ALTERNANCE, ContractType.STAGE):
         return job.contract_type.value
+    if titled is None and job.contract_type in (ContractType.CDI, ContractType.CDD) and is_first_job(job):
+        return "emploi"
     return None
 
 
@@ -225,11 +263,13 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
             .where(JobPosting.last_seen_at >= now - STALE_AFTER)
             .where(JobPosting.first_seen_at >= now - MAX_AGE)
             .where(or_(
-                JobPosting.contract_type.in_([ContractType.ALTERNANCE, ContractType.STAGE]),
+                JobPosting.contract_type.in_([
+                    ContractType.ALTERNANCE, ContractType.STAGE, ContractType.CDI, ContractType.CDD,
+                ]),
                 JobPosting.title.op("~*")(_TITLE_RE),
             ))
             .order_by(JobPosting.first_seen_at.desc())
-            .limit(MAX_ROWS * 2)
+            .limit(sum(MAX_ROWS.values()) * 2)
         )).all()
 
         listings = (await session.execute(
@@ -240,7 +280,7 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
                 ExternalListing.published_at >= now - MAX_AGE,
             ))
             .order_by(ExternalListing.published_at.desc().nullslast())
-            .limit(MAX_ROWS * 2)
+            .limit(MAX_ROWS["alternance"] + MAX_ROWS["stage"])
         )).scalars().all()
 
     # Les offres d'Alice d'abord : à doublon égal, c'est la version où elle
@@ -253,6 +293,7 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
     #: (employeur, intitulé) → première ligne : une offre déclinée ville par
     #: ville n'occupe qu'une ligne, qui compte les autres villes.
     first: dict[tuple[str, str], CommunityOffer] = {}
+    per_kind: dict[str, int] = {}
     for offer in candidates:
         if not offer:
             continue
@@ -264,10 +305,11 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
         if head:
             head.other_cities += 1
             continue
+        if per_kind.get(offer.kind, 0) >= MAX_ROWS[offer.kind]:
+            continue
+        per_kind[offer.kind] = per_kind.get(offer.kind, 0) + 1
         first[key[:2]] = offer
         offers.append(offer)
-        if len(offers) >= MAX_ROWS:
-            break
     # Plus récentes d'abord ; à date égale, les employeurs directs avant les CFA.
     offers.sort(key=lambda o: (o.published, not o.via_school), reverse=True)
 
@@ -288,22 +330,110 @@ async def cached_offers() -> CommunityList:
     return data
 
 
-def _filter(data: CommunityList, kind: Kind | None) -> CommunityList:
-    if not kind:
-        return data
-    offers = [o for o in data.offers if o.kind == kind]
+def _filter(data: CommunityList, kinds: tuple[str, ...]) -> CommunityList:
+    offers = [o for o in data.offers if o.kind in kinds]
     return CommunityList(
         updated_at=data.updated_at, total=len(offers),
         new_count=sum(o.is_new for o in offers), offers=offers,
     )
 
 
-_public = [Depends(limited("community", anonymous=120, user=240, overall=30000))]
+def _norm(text: str) -> str:
+    t = unicodedata.normalize("NFD", text or "").encode("ascii", "ignore").decode()
+    return re.sub(r"\s+", " ", t.lower()).strip()
+
+
+class Facet(BaseModel):
+    name: str
+    count: int
+
+
+class CommunityPage(BaseModel):
+    """Une page de résultats, avec de quoi afficher les filtres."""
+    updated_at: str
+    kind: Kind
+    #: Offres de ce type, avant filtres.
+    total: int
+    new_count: int
+    alice_count: int
+    #: Métiers présents (avec les autres filtres appliqués), du plus fourni au moins.
+    families: list[Facet]
+    #: Offres qui répondent aux filtres.
+    matched: int
+    page: int
+    per_page: int
+    offers: list[CommunityOffer]
+
+
+def search(
+    data: CommunityList, kind: Kind, *, q: str = "", city: str = "", family: str | None = None,
+    alice: bool = False, new: bool = False, direct: bool = False, page: int = 1, per_page: int = 50,
+) -> CommunityPage:
+    of_kind = [o for o in data.offers if o.kind == kind]
+    nq, nc = _norm(q), _norm(city)
+    narrowed = [
+        o for o in of_kind
+        if (not alice or o.alice_sends) and (not new or o.is_new) and (not direct or not o.via_school)
+        and (not nq or nq in _norm(f"{o.title} {o.company}"))
+        and (not nc or nc in _norm(o.city))
+    ]
+    counts: dict[str, int] = {}
+    for o in narrowed:
+        counts[o.family] = counts.get(o.family, 0) + 1
+    families = sorted(counts.items(), key=lambda kv: (kv[0] == FAMILIES["unknown"], -kv[1]))
+    matched = [o for o in narrowed if not family or o.family == family]
+    start = (page - 1) * per_page
+    return CommunityPage(
+        updated_at=data.updated_at,
+        kind=kind,
+        total=len(of_kind),
+        new_count=sum(o.is_new for o in of_kind),
+        alice_count=sum(o.alice_sends for o in of_kind),
+        families=[Facet(name=n, count=c) for n, c in families],
+        matched=len(matched),
+        page=page,
+        per_page=per_page,
+        offers=matched[start:start + per_page],
+    )
+
+
+_public = [Depends(limited("community", anonymous=600, user=1200, overall=60000))]
+
+
+@router.get("/recherche", response_model=CommunityPage, dependencies=_public)
+async def community_search(
+    kind: Kind = Query(default="alternance"),
+    q: str = Query(default="", max_length=100),
+    city: str = Query(default="", max_length=100),
+    family: str | None = Query(default=None, max_length=100),
+    alice: bool = False,
+    new: bool = False,
+    direct: bool = False,
+    page: int = Query(default=1, ge=1, le=500),
+    per_page: int = Query(default=50, ge=1, le=100),
+):
+    return search(
+        await cached_offers(), kind, q=q, city=city, family=family,
+        alice=alice, new=new, direct=direct, page=page, per_page=per_page,
+    )
+
+
+@router.get("/offres/{offer_id}", response_model=CommunityOffer, dependencies=_public)
+async def community_offer(offer_id: str):
+    """Une offre précise : le lien « Avec Alice » de la liste GitHub."""
+    for o in (await cached_offers()).offers:
+        if o.id == offer_id:
+            return o
+    raise HTTPException(404, "Offre introuvable ou retirée")
 
 
 @router.get("/offres", response_model=CommunityList, dependencies=_public)
 async def community_offers(kind: Kind | None = Query(default=None)):
-    return _filter(await cached_offers(), kind)
+    """
+    Liste complète d'un type d'offre. Sans type : alternances et stages, comme
+    avant l'arrivée des premiers emplois (trop nombreux pour une seule réponse).
+    """
+    return _filter(await cached_offers(), (kind,) if kind else ("alternance", "stage"))
 
 
 # ── Version Markdown (dépôt GitHub) ────────────────────────────────────────
@@ -318,7 +448,7 @@ def site_url() -> str:
     return front if front.startswith("http") and "localhost" not in front else "https://alice-agent.fr"
 
 
-def render_markdown(data: CommunityList, kind: Kind) -> str:
+def render_markdown(data: CommunityList, kind: ListKind) -> str:
     site = site_url()
     label = "Alternances" if kind == "alternance" else "Stages"
     season = _season(datetime.fromisoformat(data.updated_at))
@@ -384,8 +514,8 @@ def _season(now: datetime) -> str:
 
 
 @router.get("/liste.md", response_class=PlainTextResponse, dependencies=_public)
-async def community_markdown(kind: Kind = Query(default="alternance")):
+async def community_markdown(kind: ListKind = Query(default="alternance")):
     return PlainTextResponse(
-        render_markdown(_filter(await cached_offers(), kind), kind),
+        render_markdown(_filter(await cached_offers(), (kind,)), kind),
         media_type="text/markdown; charset=utf-8",
     )

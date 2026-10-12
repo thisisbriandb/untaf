@@ -16,7 +16,7 @@ def job(**kw):
         contract_type=ContractType.UNKNOWN, location="69 - LYON 03", tech_stack=[],
         remote_policy=RemotePolicy.ONSITE, first_seen_at=NOW - timedelta(days=1),
         source_url="https://candidat.francetravail.fr/offres/recherche/detail/123",
-        apply_url=None, apply_channel=ApplyChannel.EXTERNAL_LINK, contact_json=None, description_raw="",
+        apply_url=None, apply_channel=ApplyChannel.EXTERNAL_LINK, contact_json=None, description_raw="", description_parsed=None,
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -64,3 +64,39 @@ def test_markdown_table_and_links():
 def test_season():
     assert _season(datetime(2026, 10, 1)) == "2027"
     assert _season(datetime(2027, 3, 1)) == "2027"
+
+
+def test_first_job_kind():
+    from app.api.community import offer_kind
+    cdi = dict(contract_type=ContractType.CDI)
+    # France Travail : « débutant accepté » = 0 an exigé.
+    assert offer_kind(job(title="Assistant commercial", description_parsed={"experience_years_required": 0.0}, **cdi)) == "emploi"
+    assert offer_kind(job(title="Assistant commercial", description_parsed={"experience_years_required": 5.0}, **cdi)) is None
+    # Sans donnée d'expérience, l'annonce doit le dire.
+    assert offer_kind(job(title="Développeur web junior", **cdi)) == "emploi"
+    assert offer_kind(job(title="Chargé de clientèle", description_raw="Poste ouvert aux jeunes diplômés.", **cdi)) == "emploi"
+    assert offer_kind(job(title="Chargé de clientèle", **cdi)) is None
+    # Un intitulé senior l'emporte sur tout.
+    assert offer_kind(job(title="Comptable confirmé", description_parsed={"experience_years_required": 0.0}, **cdi)) is None
+    assert offer_kind(job(title="Développeur junior", contract_type=ContractType.FREELANCE)) is None
+
+
+def test_search_filters_paginates_and_counts_families():
+    from app.api.community import search
+    offers = [
+        to_offer(job(title=f"Alternance commercial {i}", location="69 - LYON 03"), "Acme", NOW) for i in range(5)
+    ] + [
+        to_offer(job(title="Alternance développeur web", location="75 - PARIS 08"), "Beta", NOW),
+        to_offer(job(title="Développeur junior", contract_type=ContractType.CDI, location="Paris"), "Gamma", NOW),
+    ]
+    data = CommunityList(updated_at=NOW.isoformat(), total=len(offers), new_count=0, offers=offers)
+    p = search(data, "alternance", per_page=2, page=2)
+    assert p.total == 6 and p.matched == 6 and len(p.offers) == 2 and p.page == 2
+    assert {f.name: f.count for f in p.families} == {"Commerce & vente": 5, "Tech & développement": 1}
+    p = search(data, "alternance", city="paris")
+    assert [o.company for o in p.offers] == ["Beta"]
+    p = search(data, "alternance", q="DEVELOPPEUR")  # sans accents ni casse
+    assert p.matched == 1
+    p = search(data, "alternance", family="Commerce & vente")
+    assert p.matched == 5 and len(p.families) == 2  # les métiers ignorent leur propre filtre
+    assert search(data, "emploi").total == 1

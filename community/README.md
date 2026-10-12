@@ -7,7 +7,9 @@ l'annonce d'origine et propose « Postuler avec Alice ».
 ## Ce qui existe
 
 - **API** (publique, sans connexion, cache de 15 min) :
-  - `GET /api/community/offres?kind=alternance|stage` : JSON pour la page ;
+  - `GET /api/community/recherche?kind=alternance|stage|emploi&q=&city=&family=&alice=&new=&direct=&page=` : recherche paginée (50 par page) avec les métiers présents ;
+  - `GET /api/community/offres/{id}` : une offre (lien « Avec Alice » de la liste GitHub) ;
+  - `GET /api/community/offres?kind=…` : liste complète d'un type (sans type : alternances et stages) ;
   - `GET /api/community/liste.md?kind=alternance|stage` : la liste en Markdown.
 - **Page** : `alice-agent.fr/communaute`, statique, régénérée toutes les 15 min,
   filtres par métier, ville, « Alice envoie », nouveautés.
@@ -57,3 +59,11 @@ l'annonce d'origine et propose « Postuler avec Alice ».
   coordonnées de recruteur. La source est citée et l'annonce d'origine liée.
 - Exclu : offres collées par un candidat, employeurs anonymes, offres que la
   source ne liste plus depuis 10 jours ou publiées il y a plus de 60 jours.
+
+## Premier emploi
+
+Onglet des CDI et CDD ouverts aux jeunes diplômés : expérience exigée de
+2 ans au plus selon la source (France Travail : « débutant accepté » = 0),
+ou, sans cette donnée, une annonce qui le dit (« débutant accepté », « jeune
+diplômé », « junior »…). Un intitulé « senior », « confirmé », « manager »…
+l'exclut toujours. La liste GitHub reste celle des alternances et des stages.

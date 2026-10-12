@@ -5,7 +5,9 @@
  * ou de la connexion, puis ouverte dans le tableau de bord.
  */
 
-export type CommunityKind = "alternance" | "stage";
+import { API_BASE_URL } from "./config";
+
+export type CommunityKind = "alternance" | "stage" | "emploi";
 
 export interface CommunityOffer {
   id: string;
@@ -35,6 +37,71 @@ export interface CommunityList {
   total: number;
   new_count: number;
   offers: CommunityOffer[];
+}
+
+/** Une page de résultats, avec de quoi afficher les filtres. */
+export interface CommunityPage {
+  updated_at: string;
+  kind: CommunityKind;
+  /** Offres de ce type, avant filtres. */
+  total: number;
+  new_count: number;
+  alice_count: number;
+  families: { name: string; count: number }[];
+  /** Offres qui répondent aux filtres. */
+  matched: number;
+  page: number;
+  per_page: number;
+  offers: CommunityOffer[];
+}
+
+export interface CommunityFilters {
+  kind: CommunityKind;
+  q: string;
+  city: string;
+  family: string | null;
+  alice: boolean;
+  fresh: boolean;
+  direct: boolean;
+}
+
+export const DEFAULT_FILTERS: CommunityFilters = {
+  kind: "alternance",
+  q: "",
+  city: "",
+  family: null,
+  alice: false,
+  fresh: false,
+  direct: false,
+};
+
+export function searchUrl(f: CommunityFilters, page = 1): string {
+  const p = new URLSearchParams({ kind: f.kind, page: String(page), per_page: "50" });
+  if (f.q.trim()) p.set("q", f.q.trim());
+  if (f.city.trim()) p.set("city", f.city.trim());
+  if (f.family) p.set("family", f.family);
+  if (f.alice) p.set("alice", "true");
+  if (f.fresh) p.set("new", "true");
+  if (f.direct) p.set("direct", "true");
+  return `${API_BASE_URL}/api/community/recherche?${p}`;
+}
+
+export async function fetchCommunityPage(f: CommunityFilters, page = 1): Promise<CommunityPage | null> {
+  try {
+    const res = await fetch(searchUrl(f, page));
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCommunityOffer(id: string): Promise<CommunityOffer | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/community/offres/${encodeURIComponent(id)}`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
 }
 
 const TARGET_KEY = "alice_offre_cible";

@@ -1,98 +1,93 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, MapPin, Search, X, Zap } from "lucide-react";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
-import { API_BASE_URL } from "@/lib/config";
 import {
   applyDestination,
+  DEFAULT_FILTERS,
+  fetchCommunityOffer,
+  fetchCommunityPage,
   rememberTargetOffer,
+  type CommunityFilters,
   type CommunityKind,
-  type CommunityList,
   type CommunityOffer,
+  type CommunityPage,
 } from "@/lib/community";
-
-const PAGE = 60;
 
 const KINDS: { value: CommunityKind; label: string }[] = [
   { value: "alternance", label: "Alternances" },
   { value: "stage", label: "Stages" },
+  { value: "emploi", label: "Premier emploi" },
 ];
+
+const KIND_HINT: Record<CommunityKind, string> = {
+  alternance: "",
+  stage: "",
+  emploi: "CDI et CDD ouverts aux débutants et jeunes diplômés (2 ans d'expérience au plus).",
+};
 
 function formatDate(iso: string): string {
   const d = new Date(`${iso}T12:00:00`);
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-function normalize(text: string): string {
-  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const keyOf = (f: CommunityFilters) => JSON.stringify(f);
+
+interface Results {
+  key: string;
+  pages: CommunityPage[];
+  failed?: boolean;
 }
 
-export function CommunityBoard({ data: initial }: { data: CommunityList | null }) {
-  // Page générée sans données (API injoignable au moment du rendu) : le
-  // navigateur va chercher la liste lui-même plutôt que d'afficher du vide.
-  const [fetched, setFetched] = useState<CommunityList | null>(null);
+export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
+  const router = useRouter();
+  const [filters, setFilters] = useState<CommunityFilters>(DEFAULT_FILTERS);
+  // Le texte tapé n'interroge l'API qu'après une courte pause.
+  const [typed, setTyped] = useState({ q: "", city: "" });
   useEffect(() => {
-    if (initial) return;
+    const t = setTimeout(() => setFilters((f) => ({ ...f, q: typed.q, city: typed.city })), 300);
+    return () => clearTimeout(t);
+  }, [typed]);
+
+  const key = keyOf(filters);
+  // Première page rendue par le serveur ; ensuite, une recherche par jeu de filtres.
+  const [results, setResults] = useState<Results>(() => ({
+    key: initial ? keyOf(DEFAULT_FILTERS) : "",
+    pages: initial ? [initial] : [],
+  }));
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    if (results.key === key) return;
     let alive = true;
-    fetch(`${API_BASE_URL}/api/community/offres`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((list: CommunityList | null) => {
-        if (alive && list) setFetched(list);
-      })
-      .catch(() => {});
+    fetchCommunityPage(filters).then((page) => {
+      if (alive) setResults(page ? { key, pages: [page] } : { key, pages: [], failed: true });
+    });
     return () => {
       alive = false;
     };
-  }, [initial]);
-  const data = initial ?? fetched;
-  const router = useRouter();
-  const offers = useMemo(() => data?.offers ?? [], [data]);
+  }, [key, filters, results.key]);
 
-  const [kind, setKind] = useState<CommunityKind>("alternance");
-  const [family, setFamily] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [city, setCity] = useState("");
-  const [onlyAlice, setOnlyAlice] = useState(false);
-  const [onlyNew, setOnlyNew] = useState(false);
-  const [onlyDirect, setOnlyDirect] = useState(false);
-  const [shown, setShown] = useState(PAGE);
-  /** Un filtre qui change ramène la liste à sa première page. */
-  const refine = <T,>(set: (v: T) => void) => (v: T) => {
-    set(v);
-    setShown(PAGE);
+  const loading = results.key !== key;
+  const head = results.pages[0] ?? null;
+  const offers = results.pages.flatMap((p) => p.offers);
+  const hasMore = head ? offers.length < head.matched : false;
+
+  const loadMore = () => {
+    if (!head || loadingMore) return;
+    setLoadingMore(true);
+    fetchCommunityPage(filters, results.pages.length + 1).then((page) => {
+      setLoadingMore(false);
+      if (page) setResults((r) => (r.key === key ? { ...r, pages: [...r.pages, page] } : r));
+    });
   };
+
+  const set = (patch: Partial<CommunityFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const [chosen, setChosen] = useState<CommunityOffer | null>(null);
-
-  const ofKind = useMemo(() => offers.filter((o) => o.kind === kind), [offers, kind]);
-
-  const families = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const o of ofKind) counts.set(o.family, (counts.get(o.family) ?? 0) + 1);
-    return [...counts.entries()]
-      .sort((a, b) => (a[0] === "Autres métiers" ? 1 : b[0] === "Autres métiers" ? -1 : b[1] - a[1]))
-      .map(([name, count]) => ({ name, count }));
-  }, [ofKind]);
-
-  const filtered = useMemo(() => {
-    const q = normalize(query.trim());
-    const c = normalize(city.trim());
-    return ofKind.filter(
-      (o) =>
-        (!family || o.family === family) &&
-        (!onlyAlice || o.alice_sends) &&
-        (!onlyNew || o.is_new) &&
-        (!onlyDirect || !o.via_school) &&
-        (!q || normalize(`${o.title} ${o.company}`).includes(q)) &&
-        (!c || normalize(o.city).includes(c)),
-    );
-  }, [ofKind, family, onlyAlice, onlyNew, onlyDirect, query, city]);
-
-  const newCount = ofKind.filter((o) => o.is_new).length;
-  const aliceCount = ofKind.filter((o) => o.alice_sends).length;
 
   const applyWithAlice = (offer: CommunityOffer) => {
     rememberTargetOffer({ id: offer.id, title: offer.title, company: offer.company });
@@ -122,30 +117,29 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
       <section className="mx-auto max-w-5xl px-4 pb-6 pt-10 sm:px-6 sm:pt-14">
         <p className="text-[13px] font-medium text-[#006045]">Mise à jour chaque jour</p>
         <h1 className="mt-2 text-[32px] font-semibold leading-[1.1] tracking-tight sm:text-[44px]">
-          Alternances et stages 2027
+          Alternances, stages et premiers emplois
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#1A1918]/65 sm:text-base">
-          Toutes les offres qu&apos;Alice repère en France : France Travail, La bonne alternance, les sites
-          carrière des entreprises et des agrégateurs comme Adzuna. Gratuit, sans inscription. Et si tu veux, Alice adapte ton CV et ta
-          lettre à l&apos;offre et postule pour toi.
+          Toutes les offres qu&apos;Alice repère en France pour les étudiants et jeunes diplômés : France Travail,
+          La bonne alternance, les sites carrière des entreprises et des agrégateurs comme Adzuna. Gratuit, sans
+          inscription. Et si tu veux, Alice adapte ton CV et ta lettre à l&apos;offre et postule pour toi.
         </p>
 
-        {data && (
+        {head && (
           <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#1A1918]/60">
             <span>
-              <strong className="font-semibold text-[#1A1918]">{ofKind.length.toLocaleString("fr-FR")}</strong>{" "}
-              offres
+              <strong className="font-semibold text-[#1A1918]">{head.total.toLocaleString("fr-FR")}</strong> offres
             </span>
             <span>
-              <strong className="font-semibold text-[#1A1918]">{newCount.toLocaleString("fr-FR")}</strong>{" "}
+              <strong className="font-semibold text-[#1A1918]">{head.new_count.toLocaleString("fr-FR")}</strong>{" "}
               nouvelles en 48 h
             </span>
-            {aliceCount > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5 text-[#006045]" aria-hidden />
-              <strong className="font-semibold text-[#1A1918]">{aliceCount.toLocaleString("fr-FR")}</strong>{" "}
-              où Alice envoie elle-même
-            </span>
+            {head.alice_count > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5 text-[#006045]" aria-hidden />
+                <strong className="font-semibold text-[#1A1918]">{head.alice_count.toLocaleString("fr-FR")}</strong>{" "}
+                où Alice envoie elle-même
+              </span>
             )}
           </div>
         )}
@@ -155,29 +149,30 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
       <section className="sticky top-0 z-10 border-y border-[#1A1918]/[0.07] bg-[#FAFAF8]/95 backdrop-blur">
         <div className="mx-auto max-w-5xl space-y-3 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-full bg-[#1A1918]/[0.05] p-1" role="tablist">
-              {KINDS.map((k) => (
-                <button
-                  key={k.value}
-                  role="tab"
-                  aria-selected={kind === k.value}
-                  onClick={() => {
-                    refine(setKind)(k.value);
-                    setFamily(null);
-                  }}
-                  className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
-                    kind === k.value ? "bg-white text-[#1A1918] shadow-sm" : "text-[#1A1918]/55 hover:text-[#1A1918]"
-                  }`}
-                >
-                  {k.label}
-                </button>
-              ))}
+            <div className="-mx-4 flex max-w-[calc(100%+2rem)] overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <div className="flex shrink-0 rounded-full bg-[#1A1918]/[0.05] p-1" role="tablist">
+                {KINDS.map((k) => (
+                  <button
+                    key={k.value}
+                    role="tab"
+                    aria-selected={filters.kind === k.value}
+                    onClick={() => set({ kind: k.value, family: null })}
+                    className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
+                      filters.kind === k.value
+                        ? "bg-white text-[#1A1918] shadow-sm"
+                        : "text-[#1A1918]/55 hover:text-[#1A1918]"
+                    }`}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <label className="relative min-w-0 flex-1 basis-40">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1A1918]/35" />
               <input
-                value={query}
-                onChange={(e) => refine(setQuery)(e.target.value)}
+                value={typed.q}
+                onChange={(e) => setTyped((t) => ({ ...t, q: e.target.value }))}
                 placeholder="Poste ou entreprise"
                 aria-label="Rechercher un poste ou une entreprise"
                 className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#1A1918]/35 focus:border-[#006045]/50"
@@ -186,8 +181,8 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
             <label className="relative min-w-0 flex-1 basis-32">
               <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1A1918]/35" />
               <input
-                value={city}
-                onChange={(e) => refine(setCity)(e.target.value)}
+                value={typed.city}
+                onChange={(e) => setTyped((t) => ({ ...t, city: e.target.value }))}
                 placeholder="Ville"
                 aria-label="Filtrer par ville"
                 className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#1A1918]/35 focus:border-[#006045]/50"
@@ -195,18 +190,22 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
             </label>
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-            <Chip active={onlyAlice} onClick={() => refine(setOnlyAlice)(!onlyAlice)}>
+            <Chip active={filters.alice} onClick={() => set({ alice: !filters.alice })}>
               <Zap className="h-3.5 w-3.5" aria-hidden /> Alice envoie
             </Chip>
-            <Chip active={onlyNew} onClick={() => refine(setOnlyNew)(!onlyNew)}>
+            <Chip active={filters.fresh} onClick={() => set({ fresh: !filters.fresh })}>
               Nouvelles
             </Chip>
-            <Chip active={onlyDirect} onClick={() => refine(setOnlyDirect)(!onlyDirect)}>
+            <Chip active={filters.direct} onClick={() => set({ direct: !filters.direct })}>
               Employeurs directs
             </Chip>
             <span className="mx-1 w-px shrink-0 bg-[#1A1918]/10" aria-hidden />
-            {families.map((f) => (
-              <Chip key={f.name} active={family === f.name} onClick={() => refine(setFamily)(family === f.name ? null : f.name)}>
+            {(head?.families ?? []).map((f) => (
+              <Chip
+                key={f.name}
+                active={filters.family === f.name}
+                onClick={() => set({ family: filters.family === f.name ? null : f.name })}
+              >
                 {f.name} <span className="opacity-50">{f.count}</span>
               </Chip>
             ))}
@@ -216,31 +215,37 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
 
       {/* Liste */}
       <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        {!data ? (
-          <Empty title="La liste se met à jour" text="Reviens dans quelques minutes : Alice rassemble les offres du jour." />
-        ) : filtered.length === 0 ? (
+        {KIND_HINT[filters.kind] && <p className="mb-3 text-[13px] text-[#1A1918]/55">{KIND_HINT[filters.kind]}</p>}
+        {!head ? (
+          results.failed ? (
+            <Empty title="La liste ne répond pas" text="Réessaie dans un instant : Alice rassemble les offres du jour." />
+          ) : (
+            <Empty title="Chargement des offres…" text="Alice rassemble les offres du jour." />
+          )
+        ) : head.matched === 0 ? (
           <Empty title="Aucune offre avec ces filtres" text="Élargis la ville ou le métier, de nouvelles offres arrivent chaque jour." />
         ) : (
-          <>
+          <div className={loading ? "opacity-50 transition-opacity" : "transition-opacity"} aria-busy={loading}>
             <p className="mb-3 text-[13px] text-[#1A1918]/50">
-              {filtered.length.toLocaleString("fr-FR")} offre{filtered.length > 1 ? "s" : ""}
+              {head.matched.toLocaleString("fr-FR")} offre{head.matched > 1 ? "s" : ""}
             </p>
             <ul className="divide-y divide-[#1A1918]/[0.07] overflow-hidden rounded-2xl border border-[#1A1918]/[0.08] bg-white">
-              {filtered.slice(0, shown).map((o) => (
+              {offers.map((o) => (
                 <OfferRow key={o.id} offer={o} onApply={() => setChosen(o)} />
               ))}
             </ul>
-            {shown < filtered.length && (
+            {hasMore && (
               <div className="mt-5 flex justify-center">
                 <button
-                  onClick={() => setShown((n) => n + PAGE)}
-                  className="rounded-full border border-[#1A1918]/12 bg-white px-5 py-2.5 text-[13px] font-medium transition hover:border-[#1A1918]/30"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="rounded-full border border-[#1A1918]/12 bg-white px-5 py-2.5 text-[13px] font-medium transition hover:border-[#1A1918]/30 disabled:opacity-60"
                 >
-                  Voir plus d&apos;offres
+                  {loadingMore ? "Chargement…" : "Voir plus d'offres"}
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </section>
 
@@ -260,10 +265,10 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
             Commencer <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        {data && (
+        {head && (
           <p className="mt-6 text-center text-[12px] text-[#1A1918]/40">
             Mise à jour le{" "}
-            {new Date(data.updated_at).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}{" "}
+            {new Date(head.updated_at).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}{" "}
             · La source de chaque offre est indiquée, l&apos;annonce d&apos;origine fait foi.
           </p>
         )}
@@ -276,16 +281,26 @@ export function CommunityBoard({ data: initial }: { data: CommunityList | null }
       {/* Lien « Avec Alice » de la liste GitHub : /communaute?offre=<id>.
           Isolé sous Suspense : lire l'adresse ne prive pas la liste du rendu statique. */}
       <Suspense fallback={null}>
-        <LinkedOffer offers={offers} onApply={applyWithAlice} />
+        <LinkedOffer onApply={applyWithAlice} />
       </Suspense>
     </main>
   );
 }
 
-function LinkedOffer({ offers, onApply }: { offers: CommunityOffer[]; onApply: (o: CommunityOffer) => void }) {
+function LinkedOffer({ onApply }: { onApply: (o: CommunityOffer) => void }) {
   const id = useSearchParams().get("offre");
+  const [offer, setOffer] = useState<CommunityOffer | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const offer = id ? offers.find((o) => o.id === id) : undefined;
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    fetchCommunityOffer(id).then((o) => {
+      if (alive) setOffer(o);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
   return (
     <AnimatePresence>
       {offer && !dismissed && (
