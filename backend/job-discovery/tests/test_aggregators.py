@@ -28,13 +28,16 @@ def test_listing_kind():
     # Un CDI qui cite un stage dans son texte n'est pas un stage.
     assert listing_kind("Comptable", "après un premier stage réussi", "alternance") is None
     assert listing_kind("Développeur freelance", "stage", "stage") is None
+    assert listing_kind("Comptable confirmé H/F", "Contrat d'apprentissage", "alternance") is None
+    assert listing_kind("Orthophoniste", "Nous accueillons des stagiaires.", "stage") is None
+    assert listing_kind("Assistant RH", "Stage de 6 mois à partir de janvier", "stage") == "stage"
 
 
 def test_parse_adzuna_keeps_only_matching_contracts_and_strips_html():
     out = parse_adzuna({"results": [
         adzuna_result(1, "Stage Marketing digital"),
         adzuna_result(2, "Comptable confirmé", "10 ans d'expérience"),
-        adzuna_result(3, "Commercial", "Poste en alternance, rythme 3 semaines / 1 semaine"),
+        adzuna_result(3, "Commercial", "Poste en alternance, rythme 3 semaines / 1 semaine"),  # alternance, pas stage
         {**adzuna_result(4, "Stage sans lien"), "redirect_url": ""},
     ]}, "stage")
     assert [(l.external_id, l.kind) for l in out] == [("1", "stage")]
@@ -55,7 +58,7 @@ def listing(**kw):
     base = dict(
         id=uuid4(), source="adzuna", title="Stage Marketing digital H/F", company="ACME FRANCE",
         location="Lyon, Rhône", kind="stage", url="https://www.adzuna.fr/land/ad/1",
-        published_at=NOW - timedelta(hours=5), first_seen_at=NOW,
+        published_at=NOW - timedelta(hours=5), first_seen_at=NOW, snippet="",
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -71,8 +74,8 @@ def test_listing_offer_carries_attribution():
 
 
 def test_dedup_ignores_gender_marks_and_accents():
-    a = listing_to_offer(listing(title="Chargé(e) de marketing H/F"), NOW)
-    b = listing_to_offer(listing(title="Chargé de marketing", company="Acme France"), NOW)
+    a = listing_to_offer(listing(title="Stage Chargé(e) de marketing H/F"), NOW)
+    b = listing_to_offer(listing(title="Stage Chargé de marketing", company="Acme France"), NOW)
     assert dedup_key(a) == dedup_key(b)
 
 
@@ -116,3 +119,36 @@ def test_errors_never_carry_the_key(monkeypatch):
         assert "TOPSECRET" not in str(e) and "500" in str(e)
     else:
         raise AssertionError("une erreur était attendue")
+
+
+def test_regulated_statuses_out_cfa_offers_flagged():
+    assert listing_kind("Expert-comptable stagiaire en cabinet - H/F", "", "stage") is None
+    cfa = listing_to_offer(listing(
+        company="FORMAZOT", title="Magasinier en alternance", kind="alternance",
+        snippet="centre de formation de proximité, recrute pour l'une de ses entreprises partenaires",
+    ), NOW)
+    direct = listing_to_offer(listing(company="Leroy Merlin", title="Vendeur en alternance", kind="alternance"), NOW)
+    assert cfa.via_school and not direct.via_school
+    assert listing_to_offer(listing(company="RUNAPP", title="Employé polyvalent en alternance H/F RUN12862", kind="alternance"), NOW).via_school
+    md = render_markdown(CommunityList(updated_at=NOW.isoformat(), total=1, new_count=1, offers=[cfa]), "stage")
+    assert "_via un CFA_" in md
+
+
+def test_same_offer_in_many_cities_is_one_line(monkeypatch):
+    from app.api import community
+
+    rows = [listing(location=city) for city in ("Reims", "Troyes", "Soissons")]
+
+    class FakeSession:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def execute(self, stmt):
+            entity = stmt.column_descriptions[0]["entity"].__name__
+            data = rows if entity == "ExternalListing" else []
+            return SimpleNamespace(all=lambda: data, scalars=lambda: SimpleNamespace(all=lambda: data))
+
+    monkeypatch.setattr(community, "async_session", FakeSession)
+    d = asyncio.run(community.load_offers(NOW))
+    assert d.total == 1 and d.offers[0].other_cities == 2
+    md = render_markdown(d, "stage")
+    assert "(+2 villes)" in md

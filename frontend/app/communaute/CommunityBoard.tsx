@@ -40,6 +40,7 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
   const [city, setCity] = useState("");
   const [onlyAlice, setOnlyAlice] = useState(false);
   const [onlyNew, setOnlyNew] = useState(false);
+  const [onlyDirect, setOnlyDirect] = useState(false);
   const [shown, setShown] = useState(PAGE);
   /** Un filtre qui change ramène la liste à sa première page. */
   const refine = <T,>(set: (v: T) => void) => (v: T) => {
@@ -66,10 +67,11 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
         (!family || o.family === family) &&
         (!onlyAlice || o.alice_sends) &&
         (!onlyNew || o.is_new) &&
+        (!onlyDirect || !o.via_school) &&
         (!q || normalize(`${o.title} ${o.company}`).includes(q)) &&
         (!c || normalize(o.city).includes(c)),
     );
-  }, [ofKind, family, onlyAlice, onlyNew, query, city]);
+  }, [ofKind, family, onlyAlice, onlyNew, onlyDirect, query, city]);
 
   const newCount = ofKind.filter((o) => o.is_new).length;
   const aliceCount = ofKind.filter((o) => o.alice_sends).length;
@@ -180,6 +182,9 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
             </Chip>
             <Chip active={onlyNew} onClick={() => refine(setOnlyNew)(!onlyNew)}>
               Nouvelles
+            </Chip>
+            <Chip active={onlyDirect} onClick={() => refine(setOnlyDirect)(!onlyDirect)}>
+              Employeurs directs
             </Chip>
             <span className="mx-1 w-px shrink-0 bg-[#1A1918]/10" aria-hidden />
             {families.map((f) => (
@@ -297,6 +302,14 @@ function OfferRow({ offer, onApply }: { offer: CommunityOffer; onApply: () => vo
           {offer.is_new && (
             <span className="rounded-full bg-[#006045]/10 px-2 py-0.5 text-[11px] font-medium text-[#006045]">Nouveau</span>
           )}
+          {offer.via_school && (
+            <span
+              className="rounded-full bg-[#1A1918]/[0.06] px-2 py-0.5 text-[11px] font-medium text-[#1A1918]/60"
+              title="Une école ou un CFA recrute pour une entreprise partenaire : tu t'inscris à sa formation."
+            >
+              Via un CFA
+            </span>
+          )}
           {offer.alice_sends && (
             <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-[#006045]" title="Alice peut envoyer cette candidature pour toi">
               <Zap className="h-3 w-3" aria-hidden /> Alice envoie
@@ -307,6 +320,7 @@ function OfferRow({ offer, onApply }: { offer: CommunityOffer; onApply: () => vo
         <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-[#1A1918]/50">
           <span>
             {offer.city}
+            {offer.other_cities ? ` et ${offer.other_cities} autre${offer.other_cities > 1 ? "s" : ""} ville${offer.other_cities > 1 ? "s" : ""}` : ""}
             {offer.remote === "remote" ? " · télétravail" : offer.remote === "hybrid" ? " · hybride" : ""} ·{" "}
             {formatDate(offer.published)}
             {offer.attribution_label ? " · via" : ` · ${offer.source}`}

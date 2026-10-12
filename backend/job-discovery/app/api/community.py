@@ -27,7 +27,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 
 from app.agents.application.feasibility import apply_mode
-from app.agents.discovery.aggregators import ATTRIBUTION
+from app.agents.discovery.aggregators import ATTRIBUTION, NOT_STUDENT, listing_kind, via_school
 from app.agents.company_name import display_company
 from app.agents.discovery.signals import contract_from_title, detect_job_family
 from app.config import settings
@@ -89,6 +89,10 @@ class CommunityOffer(BaseModel):
     #: Mention exigée par l'agrégateur qui relaie l'offre (« Adzuna » → adzuna.fr).
     attribution_label: str | None = None
     attribution_url: str | None = None
+    #: La même offre publiée dans d'autres villes : une seule ligne, « +N villes ».
+    other_cities: int = 0
+    #: Recrutement par une école ou un CFA pour une entreprise partenaire.
+    via_school: bool = False
 
 
 class CommunityList(BaseModel):
@@ -132,6 +136,8 @@ def source_label(job: JobPosting) -> str:
 
 def offer_kind(job: JobPosting) -> Kind | None:
     """L'intitulé prime sur le champ contrat, peu fiable chez certaines sources."""
+    if NOT_STUDENT.search(job.title or ""):
+        return None
     titled = contract_from_title(job.title)
     if titled in ("alternance", "stage"):
         return titled
@@ -159,6 +165,7 @@ def to_offer(job: JobPosting, company_name: str, now: datetime) -> CommunityOffe
         alice_sends=apply_mode(job) == "auto",
         source=source_label(job),
         url=job.apply_url or job.source_url,
+        via_school=via_school(company_name, (job.description_raw or "")[:4000], job.title),
     )
 
 
@@ -168,7 +175,7 @@ LISTING_PREFIX = "x:"
 
 def listing_to_offer(listing: ExternalListing, now: datetime) -> CommunityOffer | None:
     company = display_company(listing.company)
-    if not company or listing.kind not in ("alternance", "stage"):
+    if not company or listing_kind(listing.title, listing.snippet or "", listing.kind) != listing.kind:
         return None
     seen = listing.published_at or listing.first_seen_at or now
     label, link = ATTRIBUTION.get(listing.source, (listing.source.capitalize(), listing.url))
@@ -187,6 +194,7 @@ def listing_to_offer(listing: ExternalListing, now: datetime) -> CommunityOffer 
         url=listing.url,
         attribution_label=label,
         attribution_url=link,
+        via_school=via_school(listing.company, listing.snippet or "", listing.title),
     )
 
 
@@ -242,6 +250,9 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
 
     offers: list[CommunityOffer] = []
     seen: set[tuple[str, str, str]] = set()
+    #: (employeur, intitulé) → première ligne : une offre déclinée ville par
+    #: ville n'occupe qu'une ligne, qui compte les autres villes.
+    first: dict[tuple[str, str], CommunityOffer] = {}
     for offer in candidates:
         if not offer:
             continue
@@ -249,10 +260,16 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
         if key in seen:
             continue
         seen.add(key)
+        head = first.get(key[:2])
+        if head:
+            head.other_cities += 1
+            continue
+        first[key[:2]] = offer
         offers.append(offer)
         if len(offers) >= MAX_ROWS:
             break
-    offers.sort(key=lambda o: o.published, reverse=True)
+    # Plus récentes d'abord ; à date égale, les employeurs directs avant les CFA.
+    offers.sort(key=lambda o: (o.published, not o.via_school), reverse=True)
 
     return CommunityList(
         updated_at=now.isoformat(timespec="minutes"),
@@ -338,6 +355,7 @@ def render_markdown(data: CommunityList, kind: Kind) -> str:
         lines += [f"## {fam}", "", "| Entreprise | Poste | Lieu | Postuler | Publiée |", "|---|---|---|---|---|"]
         for o in by_family[fam]:
             new = "🆕 " if o.is_new else ""
+            school = " · _via un CFA_" if o.via_school else ""
             bolt = " ⚡" if o.alice_sends else ""
             via = f" via [{o.attribution_label}]({o.attribution_url})" if o.attribution_label else ""
             apply = (
@@ -345,8 +363,9 @@ def render_markdown(data: CommunityList, kind: Kind) -> str:
                 f"[Avec Alice{bolt}]({site}/communaute?offre={o.id}&utm_source=github&utm_medium=liste)"
             )
             date = datetime.fromisoformat(o.published).strftime("%d/%m")
+            more = f" (+{o.other_cities} villes)" if o.other_cities > 1 else (" (+1 ville)" if o.other_cities else "")
             lines.append(
-                f"| **{_cell(o.company)}** | {new}{_cell(o.title)} | {_cell(o.city)} | {apply} | {date} |"
+                f"| **{_cell(o.company)}** | {new}{_cell(o.title)}{school} | {_cell(o.city)}{more} | {apply} | {date} |"
             )
         lines.append("")
     lines += [

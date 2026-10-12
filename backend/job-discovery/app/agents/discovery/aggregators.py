@@ -26,7 +26,7 @@ import httpx
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.agents.discovery.signals import contract_from_title
+from app.agents.discovery.signals import contract_from_title, training_org_evidence
 from app.config import settings
 from app.database import async_session
 from app.models.external_listing import ExternalListing
@@ -56,11 +56,53 @@ ADZUNA_PAUSE_S = 3.0
 #: Gardée au-delà, une offre que l'agrégateur ne renvoie plus est retirée.
 KEEP_FOR = timedelta(days=30)
 
+#: Quand l'intitulé ne dit rien, l'extrait doit le dire sans ambiguïté : un
+#: « premier stage réussi » ou une « formation en alternance » de l'équipe ne
+#: font pas d'un CDI une alternance.
 _KIND_RE = {
-    "alternance": re.compile(r"\b(alternan\w*|apprenti\w*|contrat\s+pro\w*)\b", re.I),
-    "stage": re.compile(r"\b(stage|stagiaire|internship)\b", re.I),
+    "alternance": re.compile(
+        r"contrat (d'|en )?(apprentissage|alternance|de professionnalisation)|"
+        r"(poste|offre|recrutement|recrute\w*|propos\w+|cherch\w+) (un |une )?(\w+ )?en (alternance|apprentissage)|"
+        r"\balternance (de|d'une durée de) \d+ (mois|ans?)|rythme (d'alternance|\d)",
+        re.I,
+    ),
+    "stage": re.compile(
+        r"convention de stage|stage (de|d'une durée de) \d+ (à \d+ )?(mois|semaines)|"
+        r"stage (conventionn|de fin d'[ée]tudes|de c[ée]sure)|(offre|propos\w+|recherch\w+) (un |une )?stage",
+        re.I,
+    ),
 }
+#: Signes d'un poste qui n'est ni un stage ni une alternance, quoi qu'en dise l'extrait.
+_NOT_FOR_STUDENTS = re.compile(r"\b(confirm[ée]e?|senior|exp[ée]riment[ée]e?|int[ée]rim|cdi|cdd)\b", re.I)
 _TAGS = re.compile(r"<[^>]+>")
+#: Statuts salariés réglementés qui portent le mot « stagiaire » sans être des
+#: stages étudiants (stage d'expertise comptable : trois ans, salarié).
+NOT_STUDENT = re.compile(
+    r"\b(expert[\s-]*comptable|commissaire\s+aux\s+comptes|avocat|notaire|huissier)\w*\s+stagiaire", re.I,
+)
+
+
+#: CFA ou école qui recrute pour une entreprise partenaire. Ce sont de vraies
+#: alternances (l'élève s'inscrit à l'école et travaille chez le partenaire) :
+#: la liste les garde et le dit, comme le matching qui prévient sans exclure.
+_VIA_SCHOOL = re.compile(
+    r"\b(cfa|centre de formation|organisme de formation|[ée]cole)\b|"
+    r"recrute\w* pour (l'une? de )?(nos|ses|des) (entreprises? )?partenaires?|"
+    r"pour (le compte de )?l'une? de (nos|ses) (entreprises? )?partenaires?",
+    re.I,
+)
+
+
+#: Code d'offre en fin d'intitulé (« … H/F DIS14956 », « … lau14991 ») : la
+#: signature des logiciels de gestion des CFA qui diffusent leurs offres.
+_CFA_REF = re.compile(r"\b[A-Za-z]{2,4}\d{4,6}\s*$")
+
+
+def via_school(company: str, text: str, title: str = "") -> bool:
+    """L'annonce passe par une école ou un CFA plutôt que par l'employeur."""
+    verdict, _ = training_org_evidence(company, text)
+    return (verdict is not None or bool(_VIA_SCHOOL.search(f"{company} {text or ''}"))
+            or bool(_CFA_REF.search(title or "")))
 
 
 @dataclass
@@ -86,10 +128,12 @@ def listing_kind(title: str, snippet: str, wanted: str) -> str | None:
     recherche « stage » renvoie aussi des CDI qui citent un stage : ceux-là
     ne passent pas.
     """
+    if NOT_STUDENT.search(title):
+        return None
     titled = contract_from_title(title)
     if titled in ("alternance", "stage"):
         return titled
-    if titled:  # freelance, etc.
+    if titled or _NOT_FOR_STUDENTS.search(title):  # freelance, CDI confirmé, intérim…
         return None
     return wanted if _KIND_RE[wanted].search(snippet or "") else None
 

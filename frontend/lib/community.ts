@@ -24,6 +24,10 @@ export interface CommunityOffer {
   /** Mention exigée par l'agrégateur qui relaie l'offre, avec son lien. */
   attribution_label?: string | null;
   attribution_url?: string | null;
+  /** La même offre publiée dans d'autres villes. */
+  other_cities?: number;
+  /** Recrutement par une école ou un CFA pour une entreprise partenaire. */
+  via_school?: boolean;
 }
 
 export interface CommunityList {

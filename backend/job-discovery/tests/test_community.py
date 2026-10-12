@@ -16,7 +16,7 @@ def job(**kw):
         contract_type=ContractType.UNKNOWN, location="69 - LYON 03", tech_stack=[],
         remote_policy=RemotePolicy.ONSITE, first_seen_at=NOW - timedelta(days=1),
         source_url="https://candidat.francetravail.fr/offres/recherche/detail/123",
-        apply_url=None, apply_channel=ApplyChannel.EXTERNAL_LINK, contact_json=None,
+        apply_url=None, apply_channel=ApplyChannel.EXTERNAL_LINK, contact_json=None, description_raw="",
     )
     base.update(kw)
     return SimpleNamespace(**base)
