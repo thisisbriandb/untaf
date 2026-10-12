@@ -22,6 +22,8 @@ import { NextAction } from "./NextAction";
 import { ConversationMenu } from "./ConversationMenu";
 import { fetchPipeline, type Pipeline } from "@/lib/pipeline-client";
 import { chez, companyOf } from "@/lib/company";
+import { takeTargetOffer } from "@/lib/community";
+import { adoptJob } from "@/lib/tailor-client";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -348,6 +350,31 @@ export function AliceView({
     window.addEventListener("untaf:alice-home", newConversation);
     return () => window.removeEventListener("untaf:alice-home", newConversation);
   }, [newConversation]);
+
+  // Offre choisie sur la liste publique (Alice Community) avant l'inscription
+  // ou la connexion : elle rejoint la liste du candidat et s'ouvre ici.
+  useEffect(() => {
+    if (!candidateId) return;
+    const target = takeTargetOffer();
+    if (!target) return;
+    adoptJob(candidateId, target.id).then((job) => {
+      if (!job) {
+        sayAsAlice(
+          `Je n'ai pas retrouvé l'offre « ${target.title} »${chez(target.company)} : ` +
+          "elle a sans doute été pourvue entre-temps. Je peux t'en chercher d'autres comme elle.",
+        );
+        return;
+      }
+      const canvasRef: CanvasPayload = { mode: "job_detail", job };
+      sayAsAlice(
+        `Voici « ${job.title} »${chez(job.company_name)}, l'offre que tu as choisie ` +
+        `(${job.match_score}% de correspondance avec ton profil). ` +
+        "J'adapte ton CV et ta lettre à cette offre quand tu veux.",
+        canvasRef,
+      );
+      openCanvas(canvasRef);
+    });
+  }, [candidateId, openCanvas, sayAsAlice]);
 
   // Alice peut ouvrir elle-même l'assistant de mission depuis la conversation.
   useEffect(() => {
