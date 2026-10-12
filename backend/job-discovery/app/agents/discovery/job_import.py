@@ -221,3 +221,83 @@ async def import_posting(
         await session.refresh(job)
         await session.refresh(application)
         return job, company.name, application
+
+
+async def import_listing(
+    candidate_id: uuid.UUID, listing_id: uuid.UUID,
+) -> tuple[JobPosting, str, Application] | None:
+    """
+    Une offre d'agrégateur choisie sur Alice Community rejoint la liste du
+    candidat, comme une offre collée : privée, avec son score. L'agrégateur
+    ne donne qu'un extrait ; Alice prépare CV et lettre à partir de lui, et
+    la candidature se finit sur le site (le lien mène à l'annonce).
+    None si le candidat ou l'offre est introuvable.
+    """
+    from app.agents.discovery.aggregators import ATTRIBUTION
+    from app.models.external_listing import ExternalListing
+
+    async with async_session() as session:
+        candidate = await session.get(Candidate, candidate_id)
+        listing = await session.get(ExternalListing, listing_id)
+        if not candidate or not listing:
+            return None
+
+        label = ATTRIBUTION.get(listing.source, (listing.source.capitalize(), ""))[0]
+        text = f"{listing.title}\n\n{listing.snippet or ''}".strip()
+        parsed = {k: v for k, v in heuristic_qualify(listing.title, text).items()
+                  if k in QualifiedJobResponse.model_fields}
+        company = await _get_or_create_company(session, listing.company)
+        fingerprint = compute_fingerprint(
+            f"{company.domain}#{candidate_id}", listing.title, listing.location,
+        )
+        job = (await session.execute(
+            select(JobPosting).where(JobPosting.fingerprint == fingerprint)
+        )).scalars().first()
+        if job is None:
+            job = JobPosting(
+                company_id=company.id,
+                external_id=f"{IMPORT_PREFIX}{candidate_id}:{listing.source}:{listing.external_id}"[:255],
+                fingerprint=fingerprint,
+                status=PostingStatus.ACTIVE,
+                title=listing.title,
+                description_raw=f"{text}\n\nOffre relayée par {label}.",
+                description_parsed=parsed,
+                location=listing.location,
+                source_url=listing.url,
+                apply_url=listing.url,
+                apply_channel=ApplyChannel.WEB_FORM,
+                apply_complexity=ApplyComplexity.MEDIUM,
+                contact_json={"apply_url": listing.url},
+                contract_type=_CONTRACTS.get(listing.kind, ContractType.UNKNOWN),
+                remote_policy=RemotePolicy.UNKNOWN,
+                tech_stack=parsed.get("tech_stack") or [],
+            )
+            session.add(job)
+            await session.flush()
+
+        application = (await session.execute(
+            select(Application)
+            .where(Application.candidate_id == candidate_id)
+            .where(Application.job_posting_id == job.id)
+        )).scalars().first()
+        if application is None:
+            match = evaluate_match(candidate, job, parsed, company_name=company.name)
+            job.match_score = match.score
+            application = Application(
+                candidate_id=candidate_id,
+                job_posting_id=job.id,
+                status=ApplicationStatus.MATCHED,
+                match_score=match.score,
+                metadata_json={
+                    "source": f"community:{listing.source}",
+                    "qualification": parsed,
+                    "match": match.to_metadata(),
+                    "matched_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+            session.add(application)
+
+        await session.commit()
+        await session.refresh(job)
+        await session.refresh(application)
+        return job, company.name, application

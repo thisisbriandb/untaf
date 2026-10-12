@@ -748,3 +748,15 @@ def sweep_stale_missions():
         return {"closed": closed}
     finally:
         _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_aggregators")
+def collect_aggregators():
+    """Quotidien : offres d'alternance et de stage des agrégateurs (Alice Community)."""
+    from app.agents.discovery.aggregators import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)

@@ -112,6 +112,11 @@ celery_app.conf.beat_schedule = {
     # ouvre sa messagerie, et une seule fois par jour au plus.
     # Relance des inactifs : en fin de journée, quand on a le temps de lire,
     # loin des e-mails du matin (dossiers en attente, relances).
+    # Alice Community : offres des agrégateurs (Adzuna, Jooble), une fois par jour.
+    "daily-collect-aggregators": {
+        "task": "app.agents.discovery.tasks.collect_aggregators",
+        "schedule": crontab(hour=4, minute=40),
+    },
     "daily-reengage": {
         "task": "app.agents.notifications.tasks.reengage",
         "schedule": crontab(hour=16, minute=50),

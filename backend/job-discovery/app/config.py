@@ -135,6 +135,26 @@ class Settings(BaseSettings):
     def lba_configured(self) -> bool:
         return bool(self.lba_api_key.strip())
 
+    # ── Agrégateurs d'offres (Alice Community) ───────────
+    # Adzuna : clé gratuite sur developer.adzuna.com. Conditions : chaque offre
+    # affichée porte la mention « Adzuna » liée à adzuna.fr ; 250 appels/jour.
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    #: Pages de 50 offres par recherche (3 recherches par jour).
+    adzuna_pages_per_query: int = 10
+    # Jooble : clé sur demande (jooble.org/api/about). Ne la renseigner qu'après
+    # avoir lu leurs conditions de réutilisation.
+    jooble_api_key: str = ""
+    jooble_pages_per_query: int = 5
+
+    @property
+    def adzuna_configured(self) -> bool:
+        return bool(self.adzuna_app_id.strip() and self.adzuna_app_key.strip())
+
+    @property
+    def jooble_configured(self) -> bool:
+        return bool(self.jooble_api_key.strip())
+
     # ── Gemini API (LLM) ─────────────────────────────────
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"

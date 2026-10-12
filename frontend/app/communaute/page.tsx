@@ -20,12 +20,17 @@ export const metadata: Metadata = {
 };
 
 async function loadOffers(): Promise<CommunityList | null> {
+  const url = `${API_BASE_URL}/api/community/offres`;
   try {
-    const res = await fetch(`${API_BASE_URL}/api/community/offres`, { next: { revalidate: 900 } });
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
+    const res = await fetch(url, { next: { revalidate: 900 } });
+    if (res.ok) return await res.json();
+    // Visible dans les journaux de l'hébergeur : sans cela, la page restait
+    // vide sans que rien ne dise pourquoi.
+    console.error(`Alice Community : ${url} a répondu ${res.status}`);
+  } catch (err) {
+    console.error(`Alice Community : ${url} injoignable`, err);
   }
+  return null;
 }
 
 export default async function CommunityPage() {

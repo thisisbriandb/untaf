@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, MapPin, Search, X, Zap } from "lucide-react";
 import { AliceAvatar } from "@/app/onboarding/components/AliceSilhouette";
+import { API_BASE_URL } from "@/lib/config";
 import {
   applyDestination,
   rememberTargetOffer,
@@ -30,7 +31,24 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-export function CommunityBoard({ data }: { data: CommunityList | null }) {
+export function CommunityBoard({ data: initial }: { data: CommunityList | null }) {
+  // Page générée sans données (API injoignable au moment du rendu) : le
+  // navigateur va chercher la liste lui-même plutôt que d'afficher du vide.
+  const [fetched, setFetched] = useState<CommunityList | null>(null);
+  useEffect(() => {
+    if (initial) return;
+    let alive = true;
+    fetch(`${API_BASE_URL}/api/community/offres`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((list: CommunityList | null) => {
+        if (alive && list) setFetched(list);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [initial]);
+  const data = initial ?? fetched;
   const router = useRouter();
   const offers = useMemo(() => data?.offers ?? [], [data]);
 
@@ -40,6 +58,7 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
   const [city, setCity] = useState("");
   const [onlyAlice, setOnlyAlice] = useState(false);
   const [onlyNew, setOnlyNew] = useState(false);
+  const [onlyDirect, setOnlyDirect] = useState(false);
   const [shown, setShown] = useState(PAGE);
   /** Un filtre qui change ramène la liste à sa première page. */
   const refine = <T,>(set: (v: T) => void) => (v: T) => {
@@ -66,10 +85,11 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
         (!family || o.family === family) &&
         (!onlyAlice || o.alice_sends) &&
         (!onlyNew || o.is_new) &&
+        (!onlyDirect || !o.via_school) &&
         (!q || normalize(`${o.title} ${o.company}`).includes(q)) &&
         (!c || normalize(o.city).includes(c)),
     );
-  }, [ofKind, family, onlyAlice, onlyNew, query, city]);
+  }, [ofKind, family, onlyAlice, onlyNew, onlyDirect, query, city]);
 
   const newCount = ofKind.filter((o) => o.is_new).length;
   const aliceCount = ofKind.filter((o) => o.alice_sends).length;
@@ -105,8 +125,8 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
           Alternances et stages 2027
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#1A1918]/65 sm:text-base">
-          Toutes les offres qu&apos;Alice repère en France, chez France Travail, La bonne alternance et sur les
-          sites carrière des entreprises. Gratuit, sans inscription. Et si tu veux, Alice adapte ton CV et ta
+          Toutes les offres qu&apos;Alice repère en France : France Travail, La bonne alternance, les sites
+          carrière des entreprises et des agrégateurs comme Adzuna. Gratuit, sans inscription. Et si tu veux, Alice adapte ton CV et ta
           lettre à l&apos;offre et postule pour toi.
         </p>
 
@@ -180,6 +200,9 @@ export function CommunityBoard({ data }: { data: CommunityList | null }) {
             </Chip>
             <Chip active={onlyNew} onClick={() => refine(setOnlyNew)(!onlyNew)}>
               Nouvelles
+            </Chip>
+            <Chip active={onlyDirect} onClick={() => refine(setOnlyDirect)(!onlyDirect)}>
+              Employeurs directs
             </Chip>
             <span className="mx-1 w-px shrink-0 bg-[#1A1918]/10" aria-hidden />
             {families.map((f) => (
@@ -297,6 +320,14 @@ function OfferRow({ offer, onApply }: { offer: CommunityOffer; onApply: () => vo
           {offer.is_new && (
             <span className="rounded-full bg-[#006045]/10 px-2 py-0.5 text-[11px] font-medium text-[#006045]">Nouveau</span>
           )}
+          {offer.via_school && (
+            <span
+              className="rounded-full bg-[#1A1918]/[0.06] px-2 py-0.5 text-[11px] font-medium text-[#1A1918]/60"
+              title="Une école ou un CFA recrute pour une entreprise partenaire : tu t'inscris à sa formation."
+            >
+              Via un CFA
+            </span>
+          )}
           {offer.alice_sends && (
             <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-[#006045]" title="Alice peut envoyer cette candidature pour toi">
               <Zap className="h-3 w-3" aria-hidden /> Alice envoie
@@ -304,10 +335,25 @@ function OfferRow({ offer, onApply }: { offer: CommunityOffer; onApply: () => vo
           )}
         </div>
         <p className="mt-0.5 text-[15px] leading-snug text-[#1A1918]">{offer.title}</p>
-        <p className="mt-1 text-[12.5px] text-[#1A1918]/50">
-          {offer.city}
-          {offer.remote === "remote" ? " · télétravail" : offer.remote === "hybrid" ? " · hybride" : ""} ·{" "}
-          {formatDate(offer.published)} · {offer.source}
+        <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-[#1A1918]/50">
+          <span>
+            {offer.city}
+            {offer.other_cities ? ` et ${offer.other_cities} autre${offer.other_cities > 1 ? "s" : ""} ville${offer.other_cities > 1 ? "s" : ""}` : ""}
+            {offer.remote === "remote" ? " · télétravail" : offer.remote === "hybrid" ? " · hybride" : ""} ·{" "}
+            {formatDate(offer.published)}
+            {offer.attribution_label ? " · via" : ` · ${offer.source}`}
+          </span>
+          {offer.attribution_label && offer.attribution_url && (
+            // Mention exigée par l'agrégateur : son nom, lié à son site, 116 × 23 px au moins.
+            <a
+              href={offer.attribution_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-[23px] min-w-[116px] items-center justify-center rounded-md border border-[#1A1918]/12 bg-[#FAFAF8] px-2 text-[12px] font-semibold text-[#1A1918]/70 hover:text-[#1A1918]"
+            >
+              {offer.attribution_label}
+            </a>
+          )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -360,7 +406,22 @@ function ApplySheet({ offer, onClose, onApply }: { offer: CommunityOffer; onClos
           <X className="h-4 w-4" />
         </button>
         <AliceAvatar size={36} />
-        <p className="mt-4 text-[13px] text-[#1A1918]/50">{offer.company} · {offer.city}</p>
+        <p className="mt-4 flex flex-wrap items-center gap-1 text-[13px] text-[#1A1918]/50">
+          <span>{offer.company} · {offer.city}</span>
+          {offer.attribution_label && offer.attribution_url && (
+            <>
+              <span>· via</span>
+              <a
+                href={offer.attribution_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-[23px] min-w-[116px] items-center justify-center rounded-md border border-[#1A1918]/12 px-2 text-[12px] font-semibold text-[#1A1918]/70"
+              >
+                {offer.attribution_label}
+              </a>
+            </>
+          )}
+        </p>
         <h2 className="mt-1 text-lg font-semibold leading-snug tracking-tight">{offer.title}</h2>
         <ul className="mt-4 space-y-2 text-[14px] text-[#1A1918]/75">
           <li>Je lis l&apos;offre et j&apos;adapte ton CV à ce poste.</li>
