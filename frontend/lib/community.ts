@@ -21,6 +21,9 @@ export interface CommunityOffer {
   alice_sends: boolean;
   source: string;
   url: string;
+  /** Mention exigée par l'agrégateur qui relaie l'offre, avec son lien. */
+  attribution_label?: string | null;
+  attribution_url?: string | null;
 }
 
 export interface CommunityList {

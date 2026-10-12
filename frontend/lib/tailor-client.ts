@@ -66,7 +66,11 @@ export async function importJob(
  */
 export async function adoptJob(candidateId: string, jobId: string): Promise<ImportedJob | null> {
   try {
-    const res = await apiFetch(`${base(candidateId)}/${encodeURIComponent(jobId)}/adopt`, { method: "POST" });
+    // « x:<id> » : offre relayée par un agrégateur (Adzuna…), table à part.
+    const path = jobId.startsWith("x:")
+      ? `listing/${encodeURIComponent(jobId.slice(2))}/adopt`
+      : `${encodeURIComponent(jobId)}/adopt`;
+    const res = await apiFetch(`${base(candidateId)}/${path}`, { method: "POST" });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

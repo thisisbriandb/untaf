@@ -21,6 +21,7 @@ from app.models.inbound_email import InboundAttachment, InboundEmail
 from app.models.email_optout import EmailOptout
 from app.models.billing import Subscription, UsageEvent
 from app.models.signature_session import SignatureSession
+from app.models.external_listing import ExternalListing
 from app.models.mission import (
     Mission,
     MissionEvent,

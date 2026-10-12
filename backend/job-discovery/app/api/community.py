@@ -17,6 +17,7 @@ dit rien à qui parcourt la liste.
 
 import re
 import time
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -26,11 +27,13 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 
 from app.agents.application.feasibility import apply_mode
+from app.agents.discovery.aggregators import ATTRIBUTION
 from app.agents.company_name import display_company
 from app.agents.discovery.signals import contract_from_title, detect_job_family
 from app.config import settings
 from app.database import async_session
 from app.models.company import Company
+from app.models.external_listing import ExternalListing
 from app.models.job_posting import IMPORT_PREFIX, ContractType, JobPosting, PostingStatus
 from app.ratelimit import limited
 
@@ -83,6 +86,9 @@ class CommunityOffer(BaseModel):
     alice_sends: bool
     source: str
     url: str
+    #: Mention exigée par l'agrégateur qui relaie l'offre (« Adzuna » → adzuna.fr).
+    attribution_label: str | None = None
+    attribution_url: str | None = None
 
 
 class CommunityList(BaseModel):
@@ -156,6 +162,45 @@ def to_offer(job: JobPosting, company_name: str, now: datetime) -> CommunityOffe
     )
 
 
+#: Préfixe d'identifiant des offres d'agrégateurs (table external_listings).
+LISTING_PREFIX = "x:"
+
+
+def listing_to_offer(listing: ExternalListing, now: datetime) -> CommunityOffer | None:
+    company = display_company(listing.company)
+    if not company or listing.kind not in ("alternance", "stage"):
+        return None
+    seen = listing.published_at or listing.first_seen_at or now
+    label, link = ATTRIBUTION.get(listing.source, (listing.source.capitalize(), listing.url))
+    return CommunityOffer(
+        id=f"{LISTING_PREFIX}{listing.id}",
+        title=listing.title.strip(),
+        company=company,
+        city=clean_city(listing.location),
+        kind=listing.kind,
+        family=FAMILIES.get(detect_job_family(listing.title), FAMILIES["unknown"]),
+        remote="unknown",
+        published=seen.date().isoformat(),
+        is_new=now - seen <= NEW_WITHIN,
+        alice_sends=False,
+        source=label,
+        url=listing.url,
+        attribution_label=label,
+        attribution_url=link,
+    )
+
+
+_GENDER = re.compile(r"\(?\b[hf]\s*/\s*[hf]\b\)?|\(e\)|\(ne\)|\(se\)", re.I)
+
+
+def dedup_key(offer: CommunityOffer) -> tuple[str, str, str]:
+    """« Chargé(e) marketing H/F » et « Chargé marketing » chez le même employeur : une offre."""
+    def norm(text: str) -> str:
+        t = unicodedata.normalize("NFD", _GENDER.sub(" ", text)).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
+    return norm(offer.company), norm(offer.title), norm(offer.city)
+
+
 # ── Lecture, mise en cache ─────────────────────────────────────────────────
 
 _cache: dict[str, tuple[float, CommunityList]] = {}
@@ -179,20 +224,35 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
             .limit(MAX_ROWS * 2)
         )).all()
 
+        listings = (await session.execute(
+            select(ExternalListing)
+            .where(ExternalListing.last_seen_at >= now - STALE_AFTER)
+            .where(or_(
+                ExternalListing.published_at.is_(None),
+                ExternalListing.published_at >= now - MAX_AGE,
+            ))
+            .order_by(ExternalListing.published_at.desc().nullslast())
+            .limit(MAX_ROWS * 2)
+        )).scalars().all()
+
+    # Les offres d'Alice d'abord : à doublon égal, c'est la version où elle
+    # sait postuler (ou dont la source d'origine est connue) qui reste.
+    candidates = [to_offer(job, name, now) for job, name in rows]
+    candidates += [listing_to_offer(l, now) for l in listings]
+
     offers: list[CommunityOffer] = []
     seen: set[tuple[str, str, str]] = set()
-    for job, company_name in rows:
-        offer = to_offer(job, company_name, now)
+    for offer in candidates:
         if not offer:
             continue
-        # Une même offre relayée par deux sources n'apparaît qu'une fois.
-        key = (offer.company.lower(), offer.title.lower(), offer.city.lower())
+        key = dedup_key(offer)
         if key in seen:
             continue
         seen.add(key)
         offers.append(offer)
         if len(offers) >= MAX_ROWS:
             break
+    offers.sort(key=lambda o: o.published, reverse=True)
 
     return CommunityList(
         updated_at=now.isoformat(timespec="minutes"),
@@ -251,7 +311,8 @@ def render_markdown(data: CommunityList, kind: Kind) -> str:
         "",
         f"Les offres d'{'alternance' if kind == 'alternance' else 'stage'} en France, "
         "rassemblées chaque jour par [Alice](" + site + "?utm_source=github&utm_medium=liste) "
-        "depuis France Travail, La bonne alternance et les sites carrière des entreprises.",
+        "depuis France Travail, La bonne alternance, les sites carrière des entreprises "
+        "et des agrégateurs comme Adzuna.",
         "",
         f"**{data.total} offres** · **{data.new_count} nouvelles** ces deux derniers jours "
         f"· mise à jour le {updated}",
@@ -278,8 +339,9 @@ def render_markdown(data: CommunityList, kind: Kind) -> str:
         for o in by_family[fam]:
             new = "🆕 " if o.is_new else ""
             bolt = " ⚡" if o.alice_sends else ""
+            via = f" via [{o.attribution_label}]({o.attribution_url})" if o.attribution_label else ""
             apply = (
-                f"[Annonce]({o.url}) · "
+                f"[Annonce]({o.url}){via} · "
                 f"[Avec Alice{bolt}]({site}/communaute?offre={o.id}&utm_source=github&utm_medium=liste)"
             )
             date = datetime.fromisoformat(o.published).strftime("%d/%m")

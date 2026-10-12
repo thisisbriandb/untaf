@@ -240,6 +240,29 @@ async def adopt_job(candidate_id: UUID, job_id: UUID):
         )
 
 
+@router.post("/listing/{listing_id}/adopt", response_model=JobCardOut)
+async def adopt_listing(candidate_id: UUID, listing_id: UUID):
+    """Même chose pour une offre relayée par un agrégateur (Adzuna, Jooble)."""
+    from app.agents.discovery.job_import import import_listing
+
+    result = await import_listing(candidate_id, listing_id)
+    if not result:
+        raise HTTPException(404, "Offre introuvable")
+    job, company_name, application = result
+    return JobCardOut(
+        id=job.id,
+        title=job.title,
+        company_name=company_name,
+        location=job.location or "",
+        match_score=application.match_score or 0,
+        contract_type=job.contract_type.value,
+        remote_policy=job.remote_policy.value,
+        source_url=job.source_url,
+        status=application.status.value,
+        rejections=(application.metadata_json or {}).get("match", {}).get("rejections", []),
+    )
+
+
 # ── CV et lettre adaptés à une offre ───────────────────────────────────────
 
 
