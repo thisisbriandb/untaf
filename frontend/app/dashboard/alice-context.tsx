@@ -286,7 +286,13 @@ export function AliceProvider({
         if (!alive) return;
         if (past.length) setConversationId(latest.id);
       }
-      setMessages((prev) => (prev.some((m) => m.sender === "user") ? prev : [...past, greet]));
+      // Ce qu'Alice a dit entre-temps (l'offre choisie sur Alice Community,
+      // par exemple) reste après le compte rendu, au lieu d'être écrasé.
+      setMessages((prev) => {
+        if (prev.some((m) => m.sender === "user")) return prev;
+        const said = prev.filter((m) => !INITIAL_MESSAGES.some((i) => i.id === m.id));
+        return [...past, greet, ...said];
+      });
     });
 
     return () => {

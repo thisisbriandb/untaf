@@ -185,6 +185,61 @@ async def import_job(candidate_id: UUID, data: ImportIn):
     )
 
 
+@router.post("/{job_id}/adopt", response_model=JobCardOut)
+async def adopt_job(candidate_id: UUID, job_id: UUID):
+    """
+    Ajoute à la liste du candidat une offre qu'Alice connaît déjà : celle
+    qu'il a choisie sur la liste publique (Alice Community). Comme pour une
+    offre collée, elle y entre quel que soit son score, avec ses motifs.
+    """
+    from datetime import datetime, timezone
+
+    from app.agents.discovery.matching import evaluate_match
+    from app.models.application import ApplicationStatus
+    from app.models.job_posting import IMPORT_PREFIX
+
+    async with async_session() as session:
+        candidate = await session.get(Candidate, candidate_id)
+        job = await session.get(JobPosting, job_id)
+        if not candidate or not job or job.external_id.startswith(IMPORT_PREFIX):
+            raise HTTPException(404, "Offre introuvable")
+        company = await session.get(Company, job.company_id)
+        application = (await session.execute(
+            select(Application)
+            .where(Application.candidate_id == candidate_id)
+            .where(Application.job_posting_id == job_id)
+        )).scalars().first()
+        if application is None:
+            match = evaluate_match(candidate, job, company_name=company.name if company else None)
+            application = Application(
+                candidate_id=candidate_id,
+                job_posting_id=job_id,
+                status=ApplicationStatus.MATCHED,
+                match_score=match.score,
+                metadata_json={
+                    "source": "community",
+                    "match": match.to_metadata(),
+                    "matched_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+            session.add(application)
+            await session.commit()
+            await session.refresh(application)
+
+        return JobCardOut(
+            id=job.id,
+            title=job.title,
+            company_name=company.name if company else "",
+            location=job.location or "",
+            match_score=application.match_score or 0,
+            contract_type=job.contract_type.value,
+            remote_policy=job.remote_policy.value,
+            source_url=job.source_url,
+            status=application.status.value,
+            rejections=(application.metadata_json or {}).get("match", {}).get("rejections", []),
+        )
+
+
 # ── CV et lettre adaptés à une offre ───────────────────────────────────────
 
 

@@ -30,6 +30,7 @@ from app.api.inbox import router as inbox_router
 from app.api.optout import router as optout_router
 from app.api.billing import router as billing_router
 from app.api.signature_sessions import router as signature_sessions_router
+from app.api.community import router as community_router
 from app.billing import LimitReached
 
 logging.basicConfig(
@@ -162,6 +163,7 @@ app.include_router(inbox_router, prefix="/api")
 app.include_router(optout_router, prefix="/api")
 app.include_router(billing_router, prefix="/api")
 app.include_router(signature_sessions_router, prefix="/api")
+app.include_router(community_router, prefix="/api")
 
 
 @app.get("/health")

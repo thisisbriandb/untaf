@@ -60,6 +60,19 @@ export async function importJob(
   }
 }
 
+/**
+ * Ajoute à la liste du candidat une offre qu'Alice connaît déjà : celle
+ * choisie sur la liste publique (Alice Community).
+ */
+export async function adoptJob(candidateId: string, jobId: string): Promise<ImportedJob | null> {
+  try {
+    const res = await apiFetch(`${base(candidateId)}/${encodeURIComponent(jobId)}/adopt`, { method: "POST" });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function tailorDocuments(
   candidateId: string,
   jobId: string,
