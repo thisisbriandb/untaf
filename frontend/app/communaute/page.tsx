@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { API_BASE_URL } from "@/lib/config";
-import type { CommunityList } from "@/lib/community";
+import { DEFAULT_FILTERS, searchUrl, type CommunityPage } from "@/lib/community";
 import { CommunityBoard } from "./CommunityBoard";
 
 // La liste est régénérée au plus toutes les 15 minutes : page statique pour
@@ -8,19 +7,21 @@ import { CommunityBoard } from "./CommunityBoard";
 export const revalidate = 900;
 
 export const metadata: Metadata = {
-  title: "Alternances et stages 2027 en France · Alice Community",
+  title: "Alternances, stages et premiers emplois en France · Alice Community",
   description:
-    "Toutes les offres d'alternance et de stage en France, mises à jour chaque jour. " +
+    "Les offres d'alternance, de stage et de premier emploi en France, mises à jour chaque jour. " +
     "Filtre par métier et par ville, et postule avec Alice : CV et lettre adaptés à chaque offre.",
   openGraph: {
-    title: "Alternances et stages 2027 · Alice Community",
-    description: "Les offres d'alternance et de stage en France, mises à jour chaque jour.",
+    title: "Alternances, stages et premiers emplois · Alice Community",
+    description: "Les offres d'alternance, de stage et de premier emploi en France, mises à jour chaque jour.",
     type: "website",
   },
 };
 
-async function loadOffers(): Promise<CommunityList | null> {
-  const url = `${API_BASE_URL}/api/community/offres`;
+async function loadOffers(): Promise<CommunityPage | null> {
+  // Première page des alternances, rendue côté serveur (moteurs de recherche) ;
+  // les filtres et les pages suivantes sont demandés par le navigateur.
+  const url = searchUrl(DEFAULT_FILTERS);
   try {
     const res = await fetch(url, { next: { revalidate: 900 } });
     if (res.ok) return await res.json();
@@ -35,5 +36,5 @@ async function loadOffers(): Promise<CommunityList | null> {
 
 export default async function CommunityPage() {
   const data = await loadOffers();
-  return <CommunityBoard data={data} />;
+  return <CommunityBoard initial={data} />;
 }
