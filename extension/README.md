@@ -1,4 +1,4 @@
-# Extension navigateur Alice (prototype)
+# Extension navigateur Alice
 
 Alice agit **dans ton navigateur, sur ta session** : elle ajoute à ta liste
 l'offre que tu regardes, et remplit le formulaire de candidature que tu as sous
@@ -49,10 +49,16 @@ les yeux (identité, lettre, CV adapté joint, réponses tirées de ton parcours
 | `content.js` | détection d'offre, pastille, remplissage par cadre, suivi de l'envoi |
 | `popup.html/js` | état de connexion et les deux gestes sur l'onglet ouvert |
 
-## Limites du prototype
+## Publication
 
-- Permission `<all_urls>` : nécessaire pour remplir sur n'importe quel ATS ;
-  à justifier lors d'une publication sur le Chrome Web Store.
+`./build.sh` produit le paquet du Chrome Web Store (sans `localhost`) ; la
+marche à suivre, les textes de la fiche et les justifications des permissions
+sont dans `STORE.md`.
+
+## Limites
+
+- Permission `<all_urls>` : nécessaire pour remplir sur n'importe quel ATS
+  (justification dans `STORE.md`).
 - Formulaires en plusieurs étapes (Workday, Taleo) : remplir étape par étape
   (relancer « Remplir » sur chaque page). Listes déroulantes « maison »
   (non `<select>`) : laissées en orange.
