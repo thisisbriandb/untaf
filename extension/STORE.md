@@ -87,8 +87,10 @@ Aider le candidat à postuler aux offres d'emploi : ajouter l'offre consultée �
   identifiants des sites d'emploi).
 - ☑ Contenu du site Web (texte de l'annonce et intitulés des champs, envoyés à
   Alice sur un clic de l'utilisateur ; adresse de la page d'offre).
-- ☐ Tout le reste (santé, finances, localisation, historique de navigation,
-  activité utilisateur, communications) : non.
+- ☑ Historique Web (l'adresse d'une page qui ressemble à une offre est envoyée
+  automatiquement pour savoir si l'offre est déjà dans la liste).
+- ☐ Tout le reste (santé, finances, localisation, activité utilisateur,
+  communications) : non. Le clic sur « Envoyer » n'est remarqué que localement.
 
 Puis cocher les trois engagements (pas de vente à des tiers, pas d'usage sans
 rapport avec l'objectif unique, pas d'usage pour évaluer la solvabilité).
