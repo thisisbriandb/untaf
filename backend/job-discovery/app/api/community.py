@@ -109,16 +109,18 @@ class CommunityList(BaseModel):
 # ── Mise en forme ──────────────────────────────────────────────────────────
 
 _DEPT = re.compile(r"^\s*\d{2,3}\s*-\s*")
+#: « 33610 Cestas » → « Cestas ».
+_POSTCODE = re.compile(r"^\s*\d{5}\s+")
 _SMALL = {"de", "du", "des", "la", "le", "les", "sur", "en", "sous", "lès", "d", "l"}
 _ARRDT = re.compile(r"\s+(\d{1,2})\s*(e|er|ème)?(\s+arrondissement)?\s*$", re.I)
 
 
 def clean_city(location: str | None) -> str:
     """« 75 - PARIS 08 » → « Paris », « 69 - Lyon 3e Arrondissement » → « Lyon »."""
-    loc = _DEPT.sub("", (location or "").strip())
+    loc = _POSTCODE.sub("", _DEPT.sub("", (location or "").strip()))
     loc = loc.split(",")[0].split("·")[0].strip()
     loc = _ARRDT.sub("", loc)
-    if loc.isupper():
+    if loc.isupper() or loc.islower():
         parts = re.split(r"([\s\-'])", loc.lower())
         loc = "".join(
             w if (i > 0 and w in _SMALL) else w[:1].upper() + w[1:]
@@ -133,6 +135,8 @@ def source_label(job: JobPosting) -> str:
         return "La bonne alternance"
     if "francetravail" in url or "pole-emploi" in url:
         return "France Travail"
+    if job.external_id.startswith("inrae:"):
+        return "INRAE"
     if "welcometothejungle" in url:
         return "Welcome to the Jungle"
     return "Site carrière"

@@ -117,6 +117,11 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.collect_aggregators",
         "schedule": crontab(hour=4, minute=40),
     },
+    # INRAE : offres de stage et de recherche, candidature par e-mail au chercheur.
+    "daily-collect-inrae": {
+        "task": "app.agents.discovery.tasks.collect_inrae",
+        "schedule": crontab(hour=5, minute=10),
+    },
     "daily-reengage": {
         "task": "app.agents.notifications.tasks.reengage",
         "schedule": crontab(hour=16, minute=50),

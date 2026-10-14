@@ -23,6 +23,13 @@ l'annonce d'origine et propose « Postuler avec Alice ».
 - Offres d'Alice : France Travail, La bonne alternance, sites carrière
   (Greenhouse, Lever, Ashby, Workable, Recruitee). Prioritaires en cas de
   doublon : ce sont celles où Alice sait postuler.
+- **INRAE** (jobs.inrae.fr, tâche `collect_inrae`, chaque jour à 5 h 10 UTC) :
+  ~200 offres (stages M2 surtout, CDD, apprentissage) avec l'e-mail du
+  chercheur qui recrute : Alice postule elle-même. Contenus sous Licence
+  Ouverte Etalab 2.0 (CGU du site) ; source citée, lien vers l'offre. Les
+  adresses ne servent qu'à la candidature de l'offre concernée (jamais
+  affichées, jamais pour une candidature spontanée). Politesse : sitemap,
+  seules les offres nouvelles ou modifiées sont relues, une par seconde.
 - **Agrégateurs** (table `external_listings`, collecte quotidienne à 4 h 40 UTC,
   tâche `collect_aggregators`) :
   - **Adzuna** : renseigner `ADZUNA_APP_ID` et `ADZUNA_APP_KEY` dans Railway
