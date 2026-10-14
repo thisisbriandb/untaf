@@ -559,6 +559,35 @@ async def get_plan(
     )
 
 
+#: Candidatures en cours : gardées en vie même si la page qui les a lancées
+#: se ferme (une tâche sans référence peut être ramassée en route).
+_RUNNING: set[asyncio.Task] = set()
+
+
+async def _detached(events):
+    """
+    Déroule la candidature dans une tâche à part et relaie ses étapes.
+
+    Cliquer sur « Postuler » puis fermer l'onglet ne doit pas laisser une
+    candidature à moitié faite : si le navigateur part, seul le relais
+    s'arrête, la tâche va au bout (et l'envoi réel est notifié).
+    """
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def pump():
+        try:
+            async for item in events:
+                await queue.put(item)
+        finally:
+            await queue.put(None)
+
+    task = asyncio.create_task(pump())
+    _RUNNING.add(task)
+    task.add_done_callback(_RUNNING.discard)
+    while (item := await queue.get()) is not None:
+        yield item
+
+
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -723,7 +752,11 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
             })
 
             from app.agents.application.dispatcher import prepare_dispatch, send_dispatch
-            dispatch = await prepare_dispatch(candidate_id, app_id)
+            # Le clic sur « Postuler » pour cette offre est l'accord du
+            # candidat : pas de seconde validation en file d'attente. Les
+            # autres garde-fous (doublon, entreprise bloquée, quota, nom et
+            # signature manquants) restent.
+            dispatch = await prepare_dispatch(candidate_id, app_id, run_authorized=True)
             if not dispatch:
                 yield _sse("error", {"message": "Préparation impossible"})
                 return
@@ -760,6 +793,9 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
                 "real": bool(real),
                 "message": (
                     f"Candidature envoyée à {company_name}."
+                    + (" Confirme-la depuis l'e-mail de Taleez que je vais te transférer : "
+                       "sans ce clic, l'employeur ne la reçoit pas."
+                       if (sent.destination or "").startswith("taleez:") else "")
                     if real
                     else (sent.error if sent else "Envoi non abouti.")
                 ),
@@ -776,7 +812,7 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
             })
 
     return StreamingResponse(
-        steps(),
+        _detached(steps()),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
