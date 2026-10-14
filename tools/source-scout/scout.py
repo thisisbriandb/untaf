@@ -47,22 +47,44 @@ PAUSE_S = 1.0
 #: Point de départ : établissements publics et de recherche (candidature
 #: souvent par e-mail au recruteur). Une adresse erronée sort en « erreur ».
 DEFAULT_SITES = [
+    # Organismes publics de recherche
     ("INRAE", "https://jobs.inrae.fr"),
     ("Inria", "https://jobs.inria.fr"),
     ("CNRS", "https://emploi.cnrs.fr"),
     ("CEA", "https://www.emploi.cea.fr"),
-    ("Ifremer", "https://recrutement.ifremer.fr"),
-    ("IRD", "https://www.ird.fr/offres-demploi"),
-    ("Cirad", "https://www.cirad.fr/nous-rejoindre"),
-    ("Inserm", "https://www.inserm.fr/nous-rejoindre"),
-    ("Anses", "https://www.anses.fr/fr/content/offres-demploi"),
-    ("BRGM", "https://www.brgm.fr/fr/offres-emploi"),
-    ("IFP Énergies nouvelles", "https://www.ifpenergiesnouvelles.fr/carrieres"),
-    ("Institut Pasteur", "https://www.pasteur.fr/fr/institut-pasteur/emplois"),
-    ("Muséum national d'histoire naturelle", "https://www.mnhn.fr/fr/offres-d-emploi"),
+    ("Inserm (Softy)", "https://inserm.softy.pro/offers"),
+    ("IRD (Talent-soft)", "https://emploi-recrutement.ird.fr/offre-de-emploi/liste-offres.aspx"),
+    ("Cirad (Talent-soft)", "https://recrutement.cirad.fr/offre-de-emploi/liste-offres.aspx"),
+    ("Anses (emplois)", "https://www.anses.fr/fr/liste-offre-d-emploi"),
+    ("Anses (stages)", "https://www.anses.fr/fr/liste-stages"),
+    ("BRGM (Talent-soft)", "https://brgm-recrute.talent-soft.com/offre-de-emploi/liste-offres.aspx"),
+    ("IFPEN (stages)", "https://stages.ifpenergiesnouvelles.fr/"),
+    ("IFPEN (thèses)", "https://theses.ifpen.fr/"),
+    ("Institut Pasteur (Talent-soft)", "https://emploi.pasteur.fr/offre-de-emploi/liste-offres.aspx"),
+    ("Institut Pasteur (recherche)", "https://research.pasteur.fr/fr/job/"),
+    ("ASNR (Talent-soft)", "https://asnr-career.talent-soft.com/offre-de-emploi/liste-offres.aspx"),
+    ("CNES", "https://recrutement.cnes.fr/fr/annonces"),
+    ("ONERA (emplois)", "https://rejoindre.onera.fr/"),
+    ("ONERA (stages)", "https://w3.onera.fr/stages/fr"),
+    ("INERIS (Taleez)", "https://ineris.taleez.com/"),
+    ("Météo-France", "https://meteofrance.fr/travailler-meteo-france/meteo-recrute/offres-demplois-de-contrats-dapprentissage-et-de-stages"),
+    ("IGN", "https://www.ign.fr/nous-rejoindre/offres-emploi"),
     ("Choisir le service public", "https://choisirleservicepublic.gouv.fr/nos-offres/"),
-    ("Université Paris-Saclay", "https://www.universite-paris-saclay.fr/universite/travailler-luniversite"),
-    ("Sorbonne Université", "https://www.sorbonne-universite.fr/universite/recrutement"),
+    # Universités et écoles
+    ("Sorbonne Université (Talent-soft)", "https://jobs.sorbonne-universite.fr/offre-de-emploi/liste-toutes-offres.aspx"),
+    ("Lyon 1 (Beetween)", "https://recrutement.univ-lyon1.fr/offres-emploi/"),
+    ("Université de Bordeaux", "https://www.u-bordeaux.fr/universite/travailler-a-l-universite/offres-demploi"),
+    ("Université de Strasbourg", "https://www.unistra.fr/fr/universite/recrutement/les-offres-demploi"),
+    ("Aix-Marseille Université", "https://recrutement.univ-amu.fr/"),
+    ("INSA Lyon (Beetween)", "https://insalyon.nous-recrutons.fr/"),
+    # Entreprises, un exemple par logiciel de recrutement
+    ("Swile (Teamtailor)", "https://swile.teamtailor.com/jobs"),
+    ("PayFit (Teamtailor)", "https://careers.payfit.com/jobs"),
+    ("Ubisoft (SmartRecruiters)", "https://careers.smartrecruiters.com/Ubisoft2"),
+    ("Sodexo (SmartRecruiters)", "https://careers.smartrecruiters.com/Sodexo"),
+    ("Flatchr (Flatchr)", "https://careers.flatchr.io/fr/company/flatchr/"),
+    ("Autovision (Taleez)", "https://autovision.taleez.com/"),
+    ("Mailinblack (Taleez)", "https://carriere.mailinblack.com/"),
 ]
 
 OFFER_HINT = re.compile(
@@ -78,8 +100,15 @@ LISTING = re.compile(
 #: Une offre précise a presque toujours un identifiant dans son adresse.
 OFFER_ID = re.compile(r"(\d{3,}|ot-\d+|[?&](id|ref|offre|job)=)", re.I)
 
+#: Une adresse d'offre parle d'offre, de poste, de stage… (pas « /people/ » ni « /concours-carto »).
+JOBISH = re.compile(
+    r"(offre|job|emploi|poste|stage|stagiaire|alternan|apprenti|these|thèse|doctor|postdoc|recrut|"
+    r"career|carriere|vacanc|position|annonce|/ot-\d|/o/|/jobs?/\d)",
+    re.I,
+)
+
 NOT_OFFER = re.compile(
-    r"(actualit|news|blog|agenda|evenement|event|contact|mentions|cgu|cookies|login|connexion|"
+    r"(/people/|/team/|/equipe/|actualit|news|blog|agenda|evenement|event|contact|mentions|cgu|cookies|login|connexion|"
     r"\.pdf$|\.jpg$|\.png$|linkedin|facebook|twitter|instagram|youtube|mailto:|tel:|#)",
     re.I,
 )
@@ -87,9 +116,12 @@ CAPTCHA = re.compile(
     r"recaptcha|hcaptcha\.com|challenges\.cloudflare\.com|turnstile|arkoselabs|funcaptcha|captcha-delivery|geetest",
     re.I,
 )
+#: Un compte est exigé : champ mot de passe, ou phrase qui lie la candidature à la connexion.
+#: (« Espace candidat » ou « Se connecter » dans le menu ne suffisent pas : souvent facultatifs.)
 LOGIN = re.compile(
-    r"type=\"password\"|se connecter|créer (un|mon|votre) compte|creer (un|mon|votre) compte|"
-    r"mon espace candidat|espace candidat|sign in|log in|create an account",
+    r"(connecte[zr]?[- ]vous|identifiez[- ]vous|cr[ée]e[zr] (un|votre) compte|log in|sign in|create an account)"
+    r"[^<]{0,40}(pour|to|afin de) (postuler|candidater|apply)|"
+    r"(postuler|candidater|apply)[^<]{0,40}(n[ée]cessite|requires?) (un|a|an) (compte|account)",
     re.I,
 )
 APPLY_LINK = re.compile(
@@ -142,6 +174,8 @@ class OfferCheck:
     login: bool = False
     captcha: bool = False
     apply_link: str | None = None
+    #: Le bouton « Postuler » mène à un formulaire ou un compte : l'e-mail affiché sert aux questions.
+    emails_are_contacts: bool = False
     text_chars: int = 0
 
 
@@ -197,6 +231,7 @@ def sitemap_offers(xml: str) -> list[str]:
         l for l in locs
         if not NOT_OFFER.search(l) and not LISTING.search(urlparse(l).path)
         and OFFER_ID.search(urlparse(l).path + "?" + urlparse(l).query)
+        and JOBISH.search(urlparse(l).path)
     ]
 
 
@@ -219,7 +254,8 @@ def check_offer(url: str, status: int, page: str) -> OfferCheck:
                 emails.append(e)
     c.emails = emails
     c.file_input = bool(re.search(r"<input[^>]+type=\"file\"", page, re.I))
-    c.login = bool(LOGIN.search(page))
+    password = bool(re.search(r"<input[^>]+type=\"password\"", page, re.I))
+    c.login = password or bool(LOGIN.search(page))
     c.captcha = bool(CAPTCHA.search(page))
     m = APPLY_LINK.search(page)
     if m:
@@ -240,7 +276,8 @@ def verdict(r: SiteReport) -> tuple[str, str]:
             return "inconnu", "aucun lien d'offre trouvé sans navigateur (rendu JS ou page d'accueil sans offres)"
         return "inconnu", "offres trouvées mais illisibles"
     n = len(r.checks)
-    with_email = sum(1 for c in r.checks if c.emails)
+    with_email = sum(1 for c in r.checks if c.emails and not c.emails_are_contacts)
+    contacts = any(c.emails for c in r.checks)
     forms = sum(1 for c in r.checks if c.file_input)
     login = sum(1 for c in r.checks if c.login)
     captcha = sum(1 for c in r.checks if c.captcha)
@@ -248,10 +285,11 @@ def verdict(r: SiteReport) -> tuple[str, str]:
     if with_email >= max(1, n // 2) and not login:
         return "e-mail direct", f"{with_email}/{n} offres avec un e-mail de candidature"
     if forms and not login and not captcha:
-        return "formulaire sans compte", f"{forms}/{n} offres avec dépôt de CV, sans compte ni captcha visibles"
+        extra = " ; un e-mail de contact est affiché (questions, pas candidature)" if contacts else ""
+        return "formulaire sans compte", f"{forms}/{n} offres avec dépôt de CV, sans compte ni captcha visibles{extra}"
     if login or captcha:
         what = " et ".join(x for x, k in (("compte", login), ("captcha", captcha)) if k)
-        extra = " ; un e-mail de contact est affiché (questions, pas candidature)" if with_email else ""
+        extra = " ; un e-mail de contact est affiché (questions, pas candidature)" if contacts else ""
         return "compte obligatoire", f"{what} sur {max(login, captcha)}/{n} offres{extra}"
     if thin == n:
         return "rendu JS", "pages presque vides sans navigateur : à passer à la sonde"
@@ -338,12 +376,14 @@ async def scout(client: httpx.AsyncClient, name: str, base: str, sample: int) ->
                 r.checks.append(OfferCheck(url=url, status=0))
                 continue
             c = check_offer(str(page.url), page.status_code, page.text)
-            # Bouton « Postuler » vers une autre page sans e-mail ni formulaire : on la lit aussi.
-            if c.apply_link and not c.emails and not c.file_input and c.apply_link.startswith("http"):
+            # Bouton « Postuler » vers une autre page : on la lit aussi. Si elle demande
+            # un compte ou un dépôt de CV, l'e-mail de l'offre n'est qu'un contact.
+            if c.apply_link and not c.file_input and c.apply_link.startswith("http"):
                 await asyncio.sleep(PAUSE_S)
                 try:
                     ap = await client.get(c.apply_link)
                     ac = check_offer(str(ap.url), ap.status_code, ap.text)
+                    c.emails_are_contacts = bool(c.emails) and (ac.file_input or ac.login or ac.captcha)
                     c.emails = c.emails or ac.emails
                     c.file_input = ac.file_input
                     c.login = c.login or ac.login
