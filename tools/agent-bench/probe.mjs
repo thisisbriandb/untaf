@@ -43,7 +43,7 @@ const COOKIE_REFUSE = /^(tout refuser|refuser|continuer sans accepter|reject all
 const COOKIE_ACCEPT = /^(tout accepter|accepter|j'accepte|accept all|accept|ok|j'ai compris|autoriser)/i;
 const COOKIE_LABEL = /cookie|statistiques|marketing|n[ée]cessaires|analytics|publicit|consent/i;
 //: Requêtes qui ne sont pas un envoi : mesure d'audience, consentement, journaux.
-const NOISE = /matomo|piwik|analytics|googletagmanager|google\.|doubleclick|hotjar|clarity|segment|sentry|datadog|mixpanel|amplitude|facebook|linkedin|bing|axeptio|didomi|onetrust|tarteaucitron|cookiebot|pageview|cookie|consent|\/track|\/collect|\/log\b|beacon|metrics|\/events?\b|rum\b|newrelic|intercom|crisp|hubspot/i;
+const NOISE = /matomo|piwik|analytics|googletagmanager|google\.|doubleclick|hotjar|clarity|segment|sentry|datadog|mixpanel|amplitude|facebook|linkedin|bing|axeptio|didomi|onetrust|tarteaucitron|cookiebot|pageview|cookie|consent|\/track|\/collect|\/log\b|beacon|metrics|\/events?\b|rum\b|newrelic|intercom|crisp|hubspot|ziggeo|vimeo|youtube|wistia/i;
 
 function ensureTestCv() {
   if (fs.existsSync(CV_PATH)) return;
