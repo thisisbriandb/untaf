@@ -243,6 +243,11 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
 # ── Candidature partie ─────────────────────────────────────────────────────
 
 
+#: Taleez ne transmet la candidature qu'après le clic du candidat.
+TALEEZ_CONFIRM = ("Dernière étape : Taleez va t'écrire (je te transfère son e-mail). Clique sur "
+                  "« Confirmer ma candidature » : sans ce clic, l'employeur ne la reçoit pas.")
+
+
 async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Notification | None:
     """Confirmation d'un envoi RÉEL — jamais d'une répétition."""
     from app.models.dispatch import ApplicationDispatch, DispatchStatus
@@ -263,6 +268,7 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
         paragraphs=[
             f"J'ai envoyé ta candidature pour « {title} » {via}, avec ton CV adapté "
             f"et ta lettre.",
+            *([TALEEZ_CONFIRM] if (destination or "").startswith("taleez:") else []),
             f"Si rien ne bouge d'ici {settings.followup_after_days} jours, je te "
             f"proposerai une relance déjà rédigée.",
         ],
