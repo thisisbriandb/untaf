@@ -265,3 +265,12 @@ def test_dispatcher_explains_refusals(monkeypatch):
     # Offre dont le jeton a changé depuis la préparation : on n'envoie pas à l'aveugle.
     d = _dispatcher_with(monkeypatch, {"taleez": {**TARGET, "token": "autre"}}, never)
     assert "introuvable" in asyncio.run(d._send_via_taleez(_dispatch(), _candidate()))["error"]
+
+
+def test_pasted_links():
+    assert taleez.pasted_code("https://taleez.com/apply/fmudc") == "fmudc"
+    assert taleez.pasted_code(" https://taleez.com/apply/vendeur-h-f-lyon-cdi/?utm_source=x ") == "vendeur-h-f-lyon-cdi"
+    assert taleez.pasted_code("https://taleez.com/apply/confirm/abc") is None
+    assert taleez.pasted_code("https://taleez.com/apply/thanks") is None
+    assert taleez.pasted_code("https://evil.example/taleez.com/apply/x") is None
+    assert taleez.pasted_code(None) is None

@@ -6,6 +6,8 @@ import { ArrowRight, Loader2, X } from "lucide-react";
 import { AlicePresence } from "@/app/onboarding/components/AlicePresence";
 import { importJob, MIN_OFFER_LENGTH, type ImportedJob } from "@/lib/tailor-client";
 
+const TALEEZ_LINK = /^https:\/\/(www\.)?taleez\.com\/apply\/[A-Za-z0-9-]+\/?$/;
+
 /**
  * Coller une offre trouvée ailleurs.
  *
@@ -26,7 +28,9 @@ export function ImportJobDialog({
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const tooShort = text.trim().length < MIN_OFFER_LENGTH;
+  // Un lien Taleez suffit : Alice lit l'offre et son formulaire elle-même.
+  const taleezLink = [url, text].some((v) => TALEEZ_LINK.test(v.trim()));
+  const tooShort = !taleezLink && text.trim().length < MIN_OFFER_LENGTH;
 
   const submit = async () => {
     if (tooShort || isImporting) return;

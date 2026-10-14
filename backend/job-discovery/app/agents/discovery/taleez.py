@@ -41,7 +41,9 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.agents.discovery.deduplicator import compute_fingerprint
-from app.agents.discovery.france_travail_task import _get_or_create_company
+from app.agents.discovery.france_travail_task import (
+    ANONYMOUS_NAME, _get_or_create_company, _slugify,
+)
 from app.agents.discovery.qualification import heuristic_qualify
 from app.database import async_session
 from app.models.job_posting import (
@@ -97,6 +99,7 @@ class TaleezForm:
 
 @dataclass
 class TaleezOffer:
+    #: Code court du sitemap (« fmudc »), ou jeton de l'offre si elle a été collée.
     code: str
     url: str
     title: str
@@ -106,6 +109,8 @@ class TaleezOffer:
     description: str
     posted: datetime | None
     form: TaleezForm
+    #: Identifiant Taleez de l'offre : le même quel que soit le lien suivi.
+    job_id: int | None = None
 
 
 def _text(fragment: str | None) -> str:
@@ -192,6 +197,7 @@ def parse_offer(code: str, url: str, page: str) -> TaleezOffer | None:
         description=description[:12000],
         posted=posted,
         form=read_form(job),
+        job_id=job.get("id"),
     )
 
 
@@ -222,7 +228,12 @@ def _channel(o: TaleezOffer) -> tuple[ApplyChannel, ApplyComplexity, dict]:
     }
 
 
-async def persist(offers: list[TaleezOffer]) -> int:
+def _fingerprint(domain: str, o: TaleezOffer) -> str:
+    return compute_fingerprint(domain, o.title, o.location,
+                               external_id=f"{PREFIX}{o.job_id}" if o.job_id else PREFIX + o.code)
+
+
+async def persist(offers: list[TaleezOffer], from_sitemap: bool = True) -> int:
     saved = 0
     now = datetime.now(UTC)
     async with async_session() as session:
@@ -252,13 +263,15 @@ async def persist(offers: list[TaleezOffer]) -> int:
                 pg_insert(JobPosting).values(
                     company_id=company.id,
                     external_id=PREFIX + o.code,
-                    fingerprint=compute_fingerprint(company.domain, o.title, o.location,
-                                                    external_id=PREFIX + o.code),
+                    fingerprint=_fingerprint(company.domain, o),
                     source_url=o.url,
                     **values,
                 ).on_conflict_do_update(
                     index_elements=["fingerprint"],
-                    set_={**values, "last_seen_at": now},
+                    # Une offre collée par un candidat puis trouvée dans le
+                    # sitemap ne fait qu'une : elle prend le code du sitemap.
+                    set_={**values, "last_seen_at": now,
+                          **({"external_id": PREFIX + o.code} if from_sitemap else {})},
                 )
             )
             saved += 1
@@ -321,6 +334,8 @@ async def collect(client: httpx.AsyncClient | None = None, limit: int | None = M
                 .where(JobPosting.external_id.like(f"{PREFIX}%"))
                 .where(JobPosting.status == PostingStatus.ACTIVE)
                 .where(JobPosting.external_id.not_in([PREFIX + c for c in listed]))
+                # Une offre collée il y a peu peut ne pas être encore au sitemap.
+                .where(JobPosting.first_seen_at < now - timedelta(days=3))
                 .values(status=PostingStatus.CLOSED)
             )
             await session.commit()
@@ -335,6 +350,43 @@ async def collect(client: httpx.AsyncClient | None = None, limit: int | None = M
     finally:
         if own:
             await client.aclose()
+
+
+# ── Offre collée par un candidat ──────────────────────────────────────────
+
+#: Lien d'offre Taleez : taleez.com/apply/<code ou jeton>, ou un site carrière
+#: <entreprise>.taleez.com/… qui renvoie au même formulaire.
+PASTED_URL = re.compile(r"^https://(?:www\.)?taleez\.com/apply/([A-Za-z0-9-]+)/?(?:[?#].*)?$")
+
+
+def pasted_code(url: str | None) -> str | None:
+    m = PASTED_URL.match((url or "").strip())
+    return m.group(1) if m and m.group(1) not in ("confirm", "thanks") else None
+
+
+async def import_url(url: str) -> JobPosting | None:
+    """Lit l'offre Taleez collée et l'enregistre comme les autres. None si illisible."""
+    code = pasted_code(url)
+    if not code:
+        return None
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True,
+                                 headers={"User-Agent": USER_AGENT}) as client:
+        try:
+            page = await client.get(f"{BASE}/apply/{code}")
+        except httpx.HTTPError:
+            return None
+    if page.status_code != 200:
+        return None
+    offer = parse_offer(code, str(page.url), page.text)
+    if not offer:
+        return None
+    await persist([offer], from_sitemap=False)
+    # Même domaine fictif que celui donné à l'employeur à l'enregistrement.
+    domain = f"{_slugify((offer.company or '').strip() or ANONYMOUS_NAME)}{DOMAIN_SUFFIX}"
+    async with async_session() as session:
+        return (await session.execute(
+            select(JobPosting).where(JobPosting.fingerprint == _fingerprint(domain, offer))
+        )).scalars().first()
 
 
 # ── Envoi ──────────────────────────────────────────────────────────────────

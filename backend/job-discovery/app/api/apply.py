@@ -133,7 +133,8 @@ def _tailoring(application: Application | None) -> dict | None:
 
 
 class ImportIn(BaseModel):
-    text: str = Field(min_length=80, max_length=30000, description="Texte de l'annonce.")
+    #: Facultatif pour un lien Taleez : Alice lit l'offre elle-même.
+    text: str = Field(default="", max_length=30000, description="Texte de l'annonce.")
     url: str | None = Field(default=None, max_length=2000)
 
 
@@ -161,12 +162,26 @@ async def import_job(candidate_id: UUID, data: ImportIn):
     score et ses motifs sont renvoyés, pour qu'il sache à quoi s'en tenir.
     """
     from app import billing
+    from app.agents.discovery import taleez
     from app.agents.discovery.job_import import import_posting
+
+    url = (data.url or "").strip() or None
+    pasted = data.text.strip()
+    # Lien Taleez (collé seul ou dans le champ lien) : l'offre est lue sur sa
+    # page, avec son formulaire — Alice peut alors postuler elle-même.
+    taleez_url = next((u for u in (url, pasted) if taleez.pasted_code(u)), None)
+    if taleez_url:
+        job = await taleez.import_url(taleez_url)
+        if job:
+            return await _adopt(candidate_id, job.id, source="taleez_link")
+        if len(pasted) < 80:
+            raise HTTPException(422, "Je n'ai pas pu lire cette offre Taleez : colle aussi son texte.")
+    if len(pasted) < 80:
+        raise HTTPException(422, "Colle le texte complet de l'annonce.")
 
     # La lecture de l'annonce passe par le modèle : comptée comme un message.
     await billing.consume(candidate_id, "message")
-    url = (data.url or "").strip() or None
-    result = await import_posting(candidate_id, data.text.strip(), url)
+    result = await import_posting(candidate_id, pasted, url)
     if not result:
         raise HTTPException(404, "Candidat introuvable")
     job, company_name, application = result
@@ -192,6 +207,10 @@ async def adopt_job(candidate_id: UUID, job_id: UUID):
     qu'il a choisie sur la liste publique (Alice Community). Comme pour une
     offre collée, elle y entre quel que soit son score, avec ses motifs.
     """
+    return await _adopt(candidate_id, job_id, source="community")
+
+
+async def _adopt(candidate_id: UUID, job_id: UUID, source: str) -> JobCardOut:
     from datetime import datetime, timezone
 
     from app.agents.discovery.matching import evaluate_match
@@ -217,7 +236,7 @@ async def adopt_job(candidate_id: UUID, job_id: UUID):
                 status=ApplicationStatus.MATCHED,
                 match_score=match.score,
                 metadata_json={
-                    "source": "community",
+                    "source": source,
                     "match": match.to_metadata(),
                     "matched_at": datetime.now(timezone.utc).isoformat(),
                 },
