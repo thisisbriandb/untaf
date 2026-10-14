@@ -42,6 +42,8 @@ MISSING_SIGNATURE_REASON = (
 LBA_PREFIX = "lba:"
 #: Destination d'un envoi Recruitee : `recruitee:<entreprise>/<offre>`.
 RECRUITEE_PREFIX = "recruitee:"
+#: Destination d'un envoi Taleez : `taleez:<jeton de l'offre>`.
+TALEEZ_PREFIX = "taleez:"
 
 CHANNEL_MAP = {
     ApplyChannel.EMAIL: DispatchChannel.EMAIL,
@@ -53,6 +55,9 @@ CHANNEL_MAP = {
     ApplyChannel.LBA_API: DispatchChannel.ATS_API,
     # Recruitee : dépôt par l'API publique du site carrière, sans navigateur.
     ApplyChannel.RECRUITEE_API: DispatchChannel.ATS_API,
+    # Taleez : formulaire public rejoué sans navigateur ; le candidat valide
+    # ensuite par le lien que Taleez lui envoie.
+    ApplyChannel.TALEEZ_API: DispatchChannel.ATS_API,
     ApplyChannel.WEB_FORM: DispatchChannel.WEB_FORM,
     # Absent de la table, EXTERNAL_LINK retombait sur MANUAL et produisait le
     # message « canal manual pas encore automatisable » — incompréhensible.
@@ -154,6 +159,10 @@ async def decide(
             f"{RECRUITEE_PREFIX}{target['company']}/{target['offer']}"
             if target.get("company") and target.get("offer") else None
         )
+
+    if job.apply_channel == ApplyChannel.TALEEZ_API:
+        token = (contact.get("taleez") or {}).get("token")
+        destination = f"{TALEEZ_PREFIX}{token}" if token else None
 
     if mission.status != MissionStatus.ACTIVE:
         return Decision(False, "mission en pause", channel, destination)
@@ -532,6 +541,8 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
         result = await _send_via_lba(dispatch, candidate)
     elif (dispatch.destination or "").startswith(RECRUITEE_PREFIX):
         result = await _send_via_recruitee(dispatch, candidate)
+    elif (dispatch.destination or "").startswith(TALEEZ_PREFIX):
+        result = await _send_via_taleez(dispatch, candidate)
     elif dispatch.channel in (DispatchChannel.WEB_FORM, DispatchChannel.ATS_API):
         # Formulaire public : on le remplit dans un navigateur, guidé par le
         # schéma que l'ATS publie quand il en publie un.
@@ -577,6 +588,8 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
                     dest = d.destination or ""
                     via = ("La bonne alternance" if dest.startswith(LBA_PREFIX)
                            else "Recruitee" if dest.startswith(RECRUITEE_PREFIX)
+                           else "Taleez (à confirmer par le lien reçu par e-mail)"
+                           if dest.startswith(TALEEZ_PREFIX)
                            else d.channel.value)
                     record_status(app, ApplicationStatus.APPLIED, f"envoyée via {via}")
         else:
@@ -688,3 +701,52 @@ async def _send_via_recruitee(dispatch: ApplicationDispatch, candidate: Candidat
         return {"ok": False, "real": False, "error": "site carrière injoignable"}
     candidate_id = ((answer or {}).get("candidate") or {}).get("id")
     return {"ok": True, "real": True, "proof": {**proof, "recruitee_candidate_id": candidate_id}}
+
+
+async def _send_via_taleez(dispatch: ApplicationDispatch, candidate: Candidate) -> dict:
+    """
+    Remplit le formulaire public Taleez de l'offre : CV adapté figé à la
+    préparation, lettre dans le message quand l'employeur en demande un.
+    Taleez écrit ensuite à l'adresse de suivi pour faire confirmer la
+    candidature ; Alice transfère ce lien au candidat, qui valide lui-même.
+    """
+    from app.agents.discovery.taleez import TaleezError, send_application
+
+    token = (dispatch.destination or "")[len(TALEEZ_PREFIX):]
+    proof = {"via": "Taleez", "offer": token, "confirmation": "par e-mail, par le candidat",
+             "attachments": [dispatch.resume_name] if dispatch.resume_blob else []}
+    if not dispatch.resume_blob:
+        return {"ok": False, "real": False, "error": "CV adapté absent : rien n'est parti"}
+    if not candidate.phone:
+        return {"ok": False, "real": False,
+                "error": "l'employeur demande un numéro de téléphone : ajoute-le à ton profil"}
+    # Les numéros de questions du formulaire sont gardés avec l'offre.
+    target = None
+    async with async_session() as session:
+        application = await session.get(Application, dispatch.application_id) if dispatch.application_id else None
+        job = await session.get(JobPosting, application.job_posting_id) if application else None
+        target = ((job.contact_json or {}).get("taleez") if job else None) or None
+    if not target or target.get("token") != token:
+        return {"ok": False, "real": False, "error": "offre Taleez introuvable : termine sur le site"}
+    try:
+        await send_application(
+            target=target, full_name=candidate.full_name or "", email=contact_of(candidate),
+            phone=candidate.phone, resume=dispatch.resume_blob,
+            resume_name=dispatch.resume_name or "CV.pdf", message=dispatch.letter_body,
+        )
+    except TaleezError as e:
+        reasons = {
+            "ALREADY_APPLIED": "tu as déjà postulé à cette offre avec cette adresse",
+            "NOT_FOUND": "l'offre n'est plus en ligne",
+            "MAIL_DOMAIN_ERROR": "le site refuse l'adresse de candidature — termine sur le site, "
+                                 "ton dossier est prêt",
+            "MESSAGE_REQUIRED": "l'employeur demande un message et la lettre est vide",
+        }
+        return {"ok": False, "real": False,
+                "error": reasons.get(e.code) or "le site carrière n'a pas accepté l'envoi — "
+                                                 "termine sur le site, ton dossier est prêt",
+                "proof": {**proof, "status": e.status, "code": e.code, "detail": e.detail}}
+    except Exception as e:  # noqa: BLE001
+        logger.error("Envoi Taleez impossible : %s", e, exc_info=True)
+        return {"ok": False, "real": False, "error": "site carrière injoignable"}
+    return {"ok": True, "real": True, "proof": proof}

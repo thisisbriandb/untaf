@@ -526,6 +526,36 @@ def classify_by_rules(subject: str, text: str) -> str:
     return "other"
 
 
+# ── Confirmation demandée par l'ATS ────────────────────────────────────────
+
+#: Taleez ne transmet la candidature qu'après un clic du candidat sur le lien
+#: envoyé à l'adresse de candidature (ici, l'adresse de suivi d'Alice).
+_CONFIRM_TEXT = re.compile(r"confirm|valider|finaliser", re.I)
+_ANCHOR = re.compile(r'<a\b[^>]*href="(https://[^"]+)"[^>]*>(.*?)</a>', re.I | re.S)
+
+
+def confirmation_link(msg: Incoming) -> str | None:
+    """Le lien de confirmation d'une candidature Taleez, s'il y en a un."""
+    from app.agents.discovery.taleez import CONFIRM_LINK
+
+    if "taleez" not in msg.from_email.lower():
+        return None
+    for source in (msg.html or "", msg.text or ""):
+        m = CONFIRM_LINK.search(source)
+        if m:
+            return m.group(0)
+    # Lien réécrit par le service d'envoi (suivi des clics) : le bouton se
+    # reconnaît à son texte.
+    for href, label in _ANCHOR.findall(msg.html or ""):
+        if _CONFIRM_TEXT.search(re.sub(r"<[^>]+>", " ", label)):
+            return href.replace("&amp;", "&")
+    return None
+
+
+CONFIRM_STEP = ("Clique sur « Confirmer ma candidature » : sans ce clic, Taleez ne transmet pas "
+                "ta candidature à l'employeur.")
+
+
 class Reading(BaseModel):
     kind: str
     summary: str
@@ -717,6 +747,12 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
         to_link = not sure and bool(candidacies)
 
         meta: dict = {"read_by": "rules" if reading.by_rules else "ai"}
+        confirm_url = confirmation_link(msg)
+        if confirm_url:
+            # Pas une réponse de l'employeur : une étape que seul le candidat fait.
+            meta["confirm_url"] = confirm_url
+            reading.kind = "request"
+            reading.next_step = CONFIRM_STEP
         if msg.attachments:
             meta["attachments"] = [p.filename for p in msg.kept]
         if msg.skipped:
@@ -816,10 +852,13 @@ async def forward(record: InboundEmail, recipient: str | None, name: str | None,
             notes.append("Trop lourdes pour être gardées, demande-les au recruteur : "
                          + ", ".join(f"{p.filename}" + (f" ({_size(p.size)})" if p.size else "") for p in skipped)
                          + ".")
+        confirm_url = (record.meta or {}).get("confirm_url")
         email = Email(
-            subject=f"{who} t'a répondu : {label}",
+            subject=(f"Confirme ta candidature{about}" if confirm_url
+                     else f"{who} t'a répondu : {label}"),
             preheader=record.summary[:140],
-            heading=f"{who} t'a répondu{about}.",
+            heading=(f"Un clic pour valider ta candidature{about}." if confirm_url
+                     else f"{who} t'a répondu{about}."),
             paragraphs=[p for p in [
                 record.summary,
                 f"À faire : {record.next_step}" if record.next_step else "",
@@ -831,8 +870,8 @@ async def forward(record: InboundEmail, recipient: str | None, name: str | None,
                 f"Objet : {record.subject}",
                 *[p for p in re.split(r"\n{2,}", record.text[:8000]) if p.strip()],
             ] if p],
-            cta_label="Voir dans Alice",
-            cta_url=link("messages"),
+            cta_label="Confirmer ma candidature" if confirm_url else "Voir dans Alice",
+            cta_url=confirm_url or link("messages"),
             footer="Alice lit les réponses arrivées sur ton adresse de candidature et te les transfère.",
         )
         return Mail(

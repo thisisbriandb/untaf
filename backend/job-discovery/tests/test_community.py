@@ -29,6 +29,8 @@ def test_clean_city():
     assert clean_city("33 - SAINT-ANDRE-DE-CUBZAC") == "Saint-Andre-de-Cubzac"
     assert clean_city("Bordeaux, France") == "Bordeaux"
     assert clean_city(None) == "France"
+    assert clean_city("33610 Cestas") == "Cestas"
+    assert clean_city("75007 paris") == "Paris"
 
 
 def test_kind_from_title_beats_contract_field():
