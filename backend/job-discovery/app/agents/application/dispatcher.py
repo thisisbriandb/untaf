@@ -76,6 +76,14 @@ IMPLEMENTED_CHANNELS = {
 }
 
 
+#: Envoi hors d'une mission « Postule pour moi » : le candidat valide lui-même.
+APPROVAL_REASONS = {
+    DispatchChannel.EMAIL: "j'attends ton accord pour envoyer cette candidature par e-mail",
+    DispatchChannel.ATS_API: "j'attends ton accord pour déposer cette candidature sur le site de l'employeur",
+    DispatchChannel.WEB_FORM: "j'attends ton accord pour remplir le formulaire de l'employeur",
+}
+
+
 @dataclass
 class Decision:
     """Verdict du dispatcher, toujours motivé."""
@@ -205,7 +213,7 @@ async def decide(
     allowed_channels = mission.allowed_channels or []
     if not run_authorized and channel.value not in allowed_channels:
         return Decision(
-            False, f"canal « {channel.value} » non autorisé par ton mandat",
+            False, APPROVAL_REASONS.get(channel, "j'attends ton accord pour cet envoi"),
             channel, destination, needs_approval=True,
         )
 
