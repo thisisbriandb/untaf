@@ -38,6 +38,12 @@ const CAPTCHA_FIELD = /g-recaptcha-response|h-captcha-response|cf-turnstile-resp
 const LOGIN_TEXT = /se connecter|connexion|sign in|log in|create (an )?account|créer (un|mon) compte|mot de passe oublié/i;
 const APPLY_TEXT = /^(postuler|apply|candidater|je postule|apply now|apply for this job|postuler maintenant)\b/i;
 const SUBMIT_TEXT = /envoyer|soumettre|submit|send|postuler|apply|valider|candidater/i;
+//: Bandeau cookies : on le ferme d'abord (en refusant quand c'est possible), sans compter ce clic.
+const COOKIE_REFUSE = /^(tout refuser|refuser|continuer sans accepter|reject all|decline|refuser tout|non merci)/i;
+const COOKIE_ACCEPT = /^(tout accepter|accepter|j'accepte|accept all|accept|ok|j'ai compris|autoriser)/i;
+const COOKIE_LABEL = /cookie|statistiques|marketing|n[ée]cessaires|analytics|publicit|consent/i;
+//: Requêtes qui ne sont pas un envoi : mesure d'audience, consentement, journaux.
+const NOISE = /matomo|piwik|analytics|googletagmanager|google\.|doubleclick|hotjar|clarity|segment|sentry|datadog|mixpanel|amplitude|facebook|linkedin|bing|axeptio|didomi|onetrust|tarteaucitron|cookiebot|pageview|cookie|consent|\/track|\/collect|\/log\b|beacon|metrics|\/events?\b|rum\b|newrelic|intercom|crisp|hubspot/i;
 
 function ensureTestCv() {
   if (fs.existsSync(CV_PATH)) return;
@@ -186,6 +192,7 @@ async function clickByText(page, re, { submit = false } = {}) {
     for (const h of handles) {
       const label = (await h.evaluate((e) => (e.innerText || e.value || e.getAttribute("aria-label") || "").trim())).slice(0, 60);
       const isSubmit = await h.evaluate((e) => e.type === "submit");
+      if (submit && /cookie|accepter|refuser/i.test(label)) continue;
       if ((submit && (isSubmit || re.test(label))) || (!submit && re.test(label))) {
         if (!(await h.isVisible().catch(() => false))) continue;
         await h.scrollIntoViewIfNeeded().catch(() => {});
@@ -208,6 +215,7 @@ async function probe(browser, url) {
       try { scriptHosts.add(new URL(req.url()).hostname + new URL(req.url()).pathname.slice(0, 40)); } catch { /* url */ }
     }
     const m = req.method();
+    if (!["GET", "HEAD", "OPTIONS"].includes(m) && NOISE.test(req.url())) return route.abort();
     if (!["GET", "HEAD", "OPTIONS"].includes(m)) {
       const headers = req.headers();
       const body = req.postData() || "";
@@ -238,16 +246,21 @@ async function probe(browser, url) {
 
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    result.cookie_banner = (await clickByText(page, COOKIE_REFUSE)) || (await clickByText(page, COOKIE_ACCEPT));
+    if (result.cookie_banner) await page.waitForTimeout(800);
+    writes.length = 0;
 
-    let fields = (await readFields(page)).filter((f) => !["submit", "button", "image", "reset"].includes(f.type));
-    const visibleInputs = fields.filter((f) => f.type !== "hidden");
+    const keep = (f) => !["submit", "button", "image", "reset"].includes(f.type) && !COOKIE_LABEL.test(`${f.label} ${f.id}`);
+    let fields = (await readFields(page)).filter(keep);
+    let visibleInputs = fields.filter((f) => f.type !== "hidden");
     if (visibleInputs.length < 2) {
       const clicked = await clickByText(page, APPLY_TEXT);
       if (clicked) {
         result.opened_with = clicked;
         await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(1500);
-        fields = (await readFields(page)).filter((f) => !["submit", "button", "image", "reset"].includes(f.type));
+        fields = (await readFields(page)).filter(keep);
+        visibleInputs = fields.filter((f) => f.type !== "hidden");
       }
     }
     result.final_url = page.url();

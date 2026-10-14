@@ -189,6 +189,8 @@ class SiteReport:
     via: str = ""
     ats: list[str] = field(default_factory=list)
     robots_ok: bool | None = None
+    #: Content-Signal du robots.txt (ex. {"search": "no", "ai-input": "no"}) : à respecter.
+    content_signal: dict[str, str] = field(default_factory=dict)
     open_licence: bool = False
     checks: list[OfferCheck] = field(default_factory=list)
     error: str | None = None
@@ -314,6 +316,12 @@ async def scout(client: httpx.AsyncClient, name: str, base: str, sample: int) ->
         try:
             rob = await client.get(root + "/robots.txt")
             rp.parse(rob.text.splitlines() if rob.status_code == 200 else [])
+            if rob.status_code == 200:
+                for m in re.finditer(r"^\s*content-signal\s*:\s*(.+)$", rob.text, re.I | re.M):
+                    for part in m.group(1).split(","):
+                        k, _, v = part.partition("=")
+                        if k.strip() and v.strip():
+                            r.content_signal[k.strip().lower()] = v.strip().lower()
         except httpx.HTTPError:
             rp.parse([])
 
@@ -414,20 +422,24 @@ def to_markdown(reports: list[SiteReport]) -> str:
     lines = [
         f"# Repérage de sources · {datetime.now():%d/%m/%Y %H:%M}",
         "",
-        "| Site | Verdict | Détail | Offres trouvées | ATS | robots.txt | Licence ouverte |",
-        "|---|---|---|---|---|---|---|",
+        "| Site | Verdict | Détail | Offres trouvées | ATS | robots.txt | Content-Signal | Licence ouverte |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
         robots = "—" if r.robots_ok is None else ("ok" if r.robots_ok else "interdit")
         lines.append(
             f"| [{r.name}]({r.url}) | **{r.verdict}** | {r.detail} | {r.offers_found} ({r.via or '—'}) "
-            f"| {', '.join(r.ats) or '—'} | {robots} | {'oui' if r.open_licence else '—'} |"
+            f"| {', '.join(r.ats) or '—'} | {robots} "
+            f"| {', '.join(f'{k}={v}' for k, v in r.content_signal.items()) or '—'} "
+            f"| {'oui' if r.open_licence else '—'} |"
         )
     lines += [
         "",
         "Lecture : « e-mail direct » = Alice peut postuler seule (vérifier la réutilisation "
         "des offres avant de brancher) ; « formulaire sans compte » et « rendu JS » = à "
-        "passer à la sonde `tools/agent-bench/probe.mjs` ; « compte obligatoire » = extension.",
+        "passer à la sonde `tools/agent-bench/probe.mjs` ; « compte obligatoire » = extension. "
+        "Content-Signal « ai-input=no » : l'offre ne doit pas être donnée à une IA (pas de "
+        "collecte par Alice) ; « search=no » : pas de republication (Community).",
         "",
     ]
     return "\n".join(lines)
