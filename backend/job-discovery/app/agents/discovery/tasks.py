@@ -772,3 +772,15 @@ def collect_inrae():
         return loop.run_until_complete(collect())
     finally:
         _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_taleez")
+def collect_taleez():
+    """Quotidien : offres Taleez nouvelles (PME), au plus 1 500 pages par passage."""
+    from app.agents.discovery.taleez import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)

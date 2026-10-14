@@ -253,6 +253,9 @@ def dedup_key(offer: CommunityOffer) -> tuple[str, str, str]:
 
 # ── Lecture, mise en cache ─────────────────────────────────────────────────
 
+#: Taleez : mentions légales qui interdisent la reproduction sans accord écrit.
+NOT_REPUBLISHED = ("taleez:",)
+
 _cache: dict[str, tuple[float, CommunityList]] = {}
 
 
@@ -264,6 +267,9 @@ async def load_offers(now: datetime | None = None) -> CommunityList:
             .join(Company, JobPosting.company_id == Company.id)
             .where(JobPosting.status == PostingStatus.ACTIVE)
             .where(JobPosting.external_id.not_like(f"{IMPORT_PREFIX}%"))
+            # Sources dont la réutilisation publique n'est pas permise : Alice
+            # s'en sert pour ses candidats, la liste publique ne les reprend pas.
+            .where(*(JobPosting.external_id.not_like(f"{p}%") for p in NOT_REPUBLISHED))
             .where(JobPosting.last_seen_at >= now - STALE_AFTER)
             .where(JobPosting.first_seen_at >= now - MAX_AGE)
             .where(or_(

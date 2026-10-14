@@ -46,6 +46,8 @@ class ApplyChannel(str, enum.Enum):
     LBA_API = "lba_api"
     #: Recruitee : l'API publique du site carrière accepte la candidature.
     RECRUITEE_API = "recruitee_api"
+    #: Taleez : formulaire public, candidature validée par le candidat (lien e-mail).
+    TALEEZ_API = "taleez_api"
     WEB_FORM = "web_form"
     EMAIL = "email"
     EXTERNAL_LINK = "external_link"

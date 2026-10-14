@@ -122,6 +122,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.collect_inrae",
         "schedule": crontab(hour=5, minute=10),
     },
+    # Taleez : offres de PME ; ~10 000 au premier passage, lues sur plusieurs
+    # jours (1 500 pages par passage, une par seconde : ~25 minutes).
+    "daily-collect-taleez": {
+        "task": "app.agents.discovery.tasks.collect_taleez",
+        "schedule": crontab(hour=2, minute=35),
+    },
     "daily-reengage": {
         "task": "app.agents.notifications.tasks.reengage",
         "schedule": crontab(hour=16, minute=50),

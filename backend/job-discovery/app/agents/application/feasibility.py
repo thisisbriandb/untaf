@@ -41,7 +41,8 @@ class Feasibility:
 #: Ce qui est réellement implémenté aujourd'hui. Distinct de ce qui serait
 #: techniquement possible : promettre l'un pour l'autre serait mentir.
 IMPLEMENTED = {"email", "web_form", "greenhouse_api", "lever_api",
-               "ashby_api", "workable_api", "lba_api", "recruitee_api"}
+               "ashby_api", "workable_api", "lba_api", "recruitee_api",
+               "taleez_api"}
 
 #: Plateformes dont le formulaire est public et dont les champs sont connus :
 #: l'extension les remplit très bien. Mais leur envoi est protégé (reCAPTCHA
@@ -98,6 +99,15 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
             "simple", not blockers,
             "Je dépose ta candidature sur le site carrière de l'employeur "
             "(Recruitee) : CV adapté et lettre.",
+            blockers, link, channel,
+        )
+
+    # ── Taleez : formulaire public, puis confirmation par le candidat ──
+    if channel == "taleez_api":
+        return Feasibility(
+            "simple", not blockers,
+            "Je remplis le formulaire de l'employeur (Taleez) : CV adapté et lettre. "
+            "Taleez t'enverra ensuite un e-mail : un clic sur son lien valide ta candidature.",
             blockers, link, channel,
         )
 
@@ -177,7 +187,7 @@ def apply_mode(job: JobPosting) -> str:
     contact = job.contact_json or {}
     if channel == "lba_api":
         return "auto" if settings.lba_configured else "manual"
-    if channel == "recruitee_api":
+    if channel in ("recruitee_api", "taleez_api"):
         return "auto"
     if is_valid_email(contact.get("email")):
         return "auto" if settings.can_send_email else "assisted"
