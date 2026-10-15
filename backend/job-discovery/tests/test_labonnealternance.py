@@ -67,10 +67,10 @@ def test_cv_trop_lourd_refuse():
 
 
 def test_alice_ne_postule_plus_via_lba_meme_avec_une_cle(monkeypatch):
-    """Désactivé : La bonne alternance refuse la reprise et l'envoi par un service payant."""
+    """Les offres restent lisibles, l'envoi par l'API est désactivé : extension."""
     job = SimpleNamespace(apply_channel=ApplyChannel.LBA_API, contact_json={})
     monkeypatch.setattr(settings, "lba_api_key", "k")
-    assert not settings.lba_configured
+    assert settings.lba_configured and not settings.lba_apply_enabled
     assert apply_mode(job) == "manual"
 
 

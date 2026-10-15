@@ -157,7 +157,7 @@ async def decide(
         # L'API ne connaît que le destinataire qu'elle a publié.
         recipient = contact.get("lba_recipient_id")
         destination = f"{LBA_PREFIX}{recipient}" if recipient else None
-        if not settings.lba_configured:
+        if not settings.lba_apply_enabled:
             return Decision(False, "Alice ne passe plus par La bonne alternance : termine "
                                    "sur leur site, ton dossier est prêt", channel, destination)
 

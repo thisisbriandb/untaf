@@ -1,4 +1,4 @@
-"""La bonne alternance : offres fermées (ni reprise ni envoi autorisés)
+"""La bonne alternance : plus d'envoi par l'API, les offres passent à l'extension
 
 Revision ID: f4b8d2a6c3e1
 Revises: e3a7c1f9b5d2
@@ -15,12 +15,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Les offres restent : le candidat postule sur le site avec l'extension.
     op.execute(
-        "UPDATE job_postings SET status = 'CLOSED' "
-        "WHERE external_id LIKE 'lba:%' AND status = 'ACTIVE'"
+        "UPDATE job_postings SET apply_channel = 'WEB_FORM', apply_complexity = 'MEDIUM' "
+        "WHERE external_id LIKE 'lba:%' AND apply_channel = 'LBA_API'"
     )
 
 
 def downgrade() -> None:
-    # Fermées volontairement : on ne les rouvre pas.
     pass

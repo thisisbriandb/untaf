@@ -248,6 +248,9 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
 # ── Candidature partie ─────────────────────────────────────────────────────
 
 
+#: Taleez fait confirmer l'adresse : Alice le fait quand son e-mail lui arrive.
+TALEEZ_CONFIRMED_BY_ALICE = ("Taleez demande de confirmer l'adresse e-mail de la candidature : je m'en "
+                             "occupe dès que leur e-mail arrive, et je te préviens.")
 #: Taleez ne transmet la candidature qu'après le clic du candidat.
 TALEEZ_CONFIRM = ("Dernière étape : Taleez va t'écrire (je te transfère son e-mail). Clique sur "
                   "« Confirmer ma candidature » : sans ce clic, l'employeur ne la reçoit pas.")
@@ -275,7 +278,8 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
         paragraphs=[
             f"J'ai envoyé ta candidature pour « {title} » {via}, avec ton CV adapté "
             f"et ta lettre.",
-            *([TALEEZ_CONFIRM] if (destination or "").startswith("taleez:") else []),
+            *([TALEEZ_CONFIRMED_BY_ALICE if settings.inbound_configured else TALEEZ_CONFIRM]
+              if (destination or "").startswith("taleez:") else []),
             f"Si rien ne bouge d'ici {settings.followup_after_days} jours, je te "
             f"proposerai une relance déjà rédigée.",
             # Sa copie : exactement ce que le recruteur a reçu.

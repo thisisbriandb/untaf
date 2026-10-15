@@ -552,6 +552,26 @@ def confirmation_link(msg: Incoming) -> str | None:
     return None
 
 
+CONFIRMED_SUMMARY = ("J'ai confirmé ta candidature auprès de Taleez : elle est bien transmise "
+                     "à l'employeur.")
+
+
+async def _sent_to_taleez_recently(session: AsyncSession, candidate_id: UUID) -> bool:
+    """Une candidature Taleez est partie pour lui ces trois derniers jours."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.dispatch import ApplicationDispatch, DispatchStatus
+
+    return bool((await session.execute(
+        select(ApplicationDispatch.id)
+        .where(ApplicationDispatch.candidate_id == candidate_id)
+        .where(ApplicationDispatch.status == DispatchStatus.SENT)
+        .where(ApplicationDispatch.destination.like("taleez:%"))
+        .where(ApplicationDispatch.sent_at >= datetime.now(timezone.utc) - timedelta(days=3))
+        .limit(1)
+    )).scalar_one_or_none())
+
+
 CONFIRM_STEP = ("Clique sur « Confirmer ma candidature » : sans ce clic, Taleez ne transmet pas "
                 "ta candidature à l'employeur.")
 
@@ -749,10 +769,21 @@ async def process_incoming(msg: Incoming) -> InboundEmail | None:
         meta: dict = {"read_by": "rules" if reading.by_rules else "ai"}
         confirm_url = confirmation_link(msg)
         if confirm_url:
-            # Pas une réponse de l'employeur : une étape que seul le candidat fait.
             meta["confirm_url"] = confirm_url
-            reading.kind = "request"
-            reading.next_step = CONFIRM_STEP
+            # Le candidat a déjà dit oui (« Postuler », ou mission « Postule
+            # pour moi ») : Alice valide elle-même, de bout en bout. À défaut
+            # d'envoi récent de sa part, ou si la validation échoue, le lien
+            # lui revient en bouton.
+            if await _sent_to_taleez_recently(session, candidate.id):
+                from app.agents.discovery import taleez
+                meta["confirmed_by_alice"] = await taleez.confirm(confirm_url)
+            if meta.get("confirmed_by_alice"):
+                reading.kind = "acknowledgement"
+                reading.summary = CONFIRMED_SUMMARY
+                reading.next_step = None
+            else:
+                reading.kind = "request"
+                reading.next_step = CONFIRM_STEP
         if msg.attachments:
             meta["attachments"] = [p.filename for p in msg.kept]
         if msg.skipped:
@@ -852,9 +883,12 @@ async def forward(record: InboundEmail, recipient: str | None, name: str | None,
             notes.append("Trop lourdes pour être gardées, demande-les au recruteur : "
                          + ", ".join(f"{p.filename}" + (f" ({_size(p.size)})" if p.size else "") for p in skipped)
                          + ".")
-        confirm_url = (record.meta or {}).get("confirm_url")
+        meta = record.meta or {}
+        # Déjà validée par Alice : plus de bouton, une simple information.
+        confirm_url = None if meta.get("confirmed_by_alice") else meta.get("confirm_url")
         email = Email(
             subject=(f"Confirme ta candidature{about}" if confirm_url
+                     else f"Candidature confirmée{about}" if meta.get("confirmed_by_alice")
                      else f"{who} t'a répondu : {label}"),
             preheader=record.summary[:140],
             heading=(f"Un clic pour valider ta candidature{about}." if confirm_url

@@ -133,9 +133,14 @@ class Settings(BaseSettings):
 
     @property
     def lba_configured(self) -> bool:
-        # Désactivé (octobre 2026) : La bonne alternance n'autorise ni la
-        # reprise de ses offres ni l'envoi de candidatures par un service en
-        # partie payant. Ni collecte, ni envoi, quelle que soit la clé.
+        """La clé est là : Alice peut lire les offres d'alternance."""
+        return bool(self.lba_api_key.strip())
+
+    @property
+    def lba_apply_enabled(self) -> bool:
+        # Désactivé (octobre 2026) : La bonne alternance n'autorise pas l'envoi
+        # de candidatures par un service en partie payant. Les offres restent,
+        # le candidat postule sur leur site avec l'extension.
         return False
 
     # ── Agrégateurs d'offres (Alice Community) ───────────

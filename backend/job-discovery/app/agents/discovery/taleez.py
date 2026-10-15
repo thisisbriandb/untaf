@@ -476,3 +476,51 @@ async def send_application(
 
 #: Le lien que Taleez envoie au candidat pour valider sa candidature.
 CONFIRM_LINK = re.compile(r"https://(?:www\.)?taleez\.com/apply/confirm/[A-Za-z0-9._~-]+")
+CONFIRM_URL = f"{BASE}/api/public/confirm-apply"
+_CONFIRM_TOKEN = re.compile(r"^https://(?:www\.)?taleez\.com/apply/confirm/([A-Za-z0-9._~-]+)")
+
+
+def _public_https(url: str) -> bool:
+    """Un lien reçu par e-mail : https, nom de domaine public, jamais une IP ni un nom interne."""
+    import ipaddress
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url or "")
+    host = (parts.hostname or "").lower()
+    if parts.scheme != "https" or "." not in host or host.endswith((".local", ".internal")):
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        return True
+
+
+async def confirm(link: str, client: httpx.AsyncClient | None = None) -> bool:
+    """
+    Valide la candidature comme le ferait la page du lien : on suit le lien
+    (il peut passer par un suivi de clics), on lit le jeton dans l'adresse
+    d'arrivée, puis on fait l'appel que la page fait elle-même. Ne lève pas.
+    """
+    if not _public_https(link):
+        logger.warning("Taleez : lien de confirmation refusé (%s)", link[:80])
+        return False
+    own = client is None
+    client = client or httpx.AsyncClient(timeout=30, follow_redirects=True,
+                                         headers={"User-Agent": USER_AGENT})
+    try:
+        page = await client.get(link)
+        m = _CONFIRM_TOKEN.match(str(page.url))
+        if not m:
+            logger.warning("Taleez : lien de confirmation inattendu (%s)", str(page.url)[:120])
+            return False
+        res = await client.post(CONFIRM_URL, json={"token": m.group(1)})
+        if res.status_code >= 300:
+            logger.warning("Taleez : confirmation refusée (%s)", res.status_code)
+        return res.status_code < 300
+    except httpx.HTTPError as e:
+        logger.warning("Taleez : confirmation impossible (%s)", type(e).__name__)
+        return False
+    finally:
+        if own:
+            await client.aclose()

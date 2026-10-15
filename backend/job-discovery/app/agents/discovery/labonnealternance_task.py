@@ -42,9 +42,11 @@ async def persist(jobs: list[ScrapedJob]) -> int:
             values = dict(
                 description_raw=job.description_raw,
                 apply_url=job.apply_url,
-                apply_channel=ApplyChannel.LBA_API,
-                apply_complexity=ApplyComplexity.SIMPLE,
-                contact_json=contact or None,
+                # Pas d'envoi par l'API (refusé pour un service en partie
+                # payant) : le candidat finit sur le site avec l'extension.
+                apply_channel=ApplyChannel.WEB_FORM,
+                apply_complexity=ApplyComplexity.MEDIUM,
+                contact_json={**contact, "apply_url": job.apply_url} if job.apply_url else (contact or None),
                 description_parsed=parsed or None,
                 remote_policy=_REMOTE.get(parsed.get("remote_policy"), RemotePolicy.UNKNOWN),
                 contract_type=ContractType.ALTERNANCE,
