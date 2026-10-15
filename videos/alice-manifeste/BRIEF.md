@@ -60,6 +60,23 @@ en quatre actes écrits par Briand :
   sur le texte et le floute, écrans de verre (envoi, réponse, Chrome), texte « Alice » en verre.
 - Seule couleur : une lumière verte d'Alice derrière le verre. Esprit luxe, hyper-minimal (Apple, Nothing).
 
+## Sound design (v2)
+
+« Hyper-texturé mais très aéré » : l'image est minimale, le son crée l'espace et la profondeur.
+Synthèse déterministe : `assets/audio/sound_design.py` → `bed.mp3` (nappe, creusée sous les voix)
+et `sfx.mp3` (calés sur l'image). Chaque son est sec au premier plan puis envoyé dans une grande
+réverbération stéréo décorrélée.
+
+- Acte 1 : tics d'horloge gauche/droite qui accélèrent, claquement à chaque mot, drone étroit qui
+  s'ouvre, poussière de micro-craquements ; la plaque de verre monte (souffle) et se pose (verre).
+- 10,5 s : tout se coupe, une sub-basse tombe, seule la réverbération reste.
+- Actes 2 à 5 : nappe en ré (Dmaj9 → Bm9 → Gmaj9 → ré), air, grains de verre dispersés dans
+  l'espace ; verre frappé à chaque apparition du disque, souffles qui suivent ses mouvements,
+  micro-données sous le compteur, deux coups feutrés « frappe aux portes », impact profond sur
+  « Directement. », carillons de verre pour les trois écrans, accord de verre sur le logo.
+- Mix : voix à environ −16 LUFS (gain par voix), nappe creusée (force 0,6), master avec
+  compression douce et plafond de crête vraie à −1,5 dBTP.
+
 ## Notes
 
 - Identité Alice : vert #006045, fond clair #FAFAF8, encre #1A1918, police Geist.
