@@ -1,0 +1,39 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #FAFAF8; font-family: "Geist", sans-serif; color: #1A1918; }
+    .s5-halo { position: absolute; left: 140px; top: 360px; width: 800px; height: 800px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,96,69,0.14) 0%, rgba(0,96,69,0.06) 40%, rgba(0,96,69,0) 70%); }
+    .s5-logo { position: absolute; left: 270px; top: 610px; width: 540px; height: 300px; }
+    .s5-name { position: absolute; left: 0; width: 1080px; top: 1010px; text-align: center;
+      font-size: 120px; font-weight: 700; letter-spacing: -0.04em; color: #006045; line-height: 1; }
+    .s5-line { position: absolute; left: 90px; width: 900px; top: 1170px; text-align: center;
+      font-size: 54px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    .s5-url { position: absolute; left: 0; width: 1080px; top: 1440px; display: flex; justify-content: center; }
+    .s5-pill { padding: 26px 56px; border-radius: 100px; background: #006045; color: #FAFAF8;
+      font-size: 52px; font-weight: 600; letter-spacing: -0.01em; }
+    .s5-small { position: absolute; left: 0; width: 1080px; top: 1600px; text-align: center;
+      font-size: 34px; font-weight: 500; color: #4E4C47; }
+  </style>
+
+  <div id="root" data-composition-id="05-resolution" data-width="1080" data-height="1920">
+    <div class="s5-halo"></div>
+    <!-- Le logo : deux anneaux, comme sur le site. -->
+    <svg class="s5-logo" viewBox="0 0 540 300" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="152" cy="150" r="100" fill="none" stroke="#006045" stroke-width="40" />
+      <circle cx="388" cy="150" r="100" fill="none" stroke="#006045" stroke-width="40" />
+    </svg>
+    <div class="s5-name">Alice</div>
+    <div class="s5-line">Ton agent de carrière personnel.</div>
+    <div class="s5-url"><div class="s5-pill">alice-agent.fr</div></div>
+    <div class="s5-small">Gratuit pour commencer · Aussi sur Chrome</div>
+  </div>
+
+  <script>
+    window.__timelines["05-resolution"] = gsap.timeline({ paused: true });
+  </script>
+</template>

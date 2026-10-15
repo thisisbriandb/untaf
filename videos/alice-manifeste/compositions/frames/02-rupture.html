@@ -1,0 +1,58 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #1A1918; font-family: "Geist", sans-serif; color: #FAFAF8; }
+    .r2-stage { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+    .r2-glow { position: absolute; left: 140px; top: 510px; width: 800px; height: 800px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,150,105,0.42) 0%, rgba(0,96,69,0.22) 34%, rgba(0,96,69,0) 68%); }
+    .r2-sphere { position: absolute; left: 380px; top: 750px; width: 320px; height: 320px; border-radius: 50%;
+      background: radial-gradient(circle at 38% 34%, #6FE0B6 0%, #19A877 26%, #006045 62%, #003B2B 100%);
+      box-shadow: 0 0 80px 10px rgba(0,150,105,0.35); }
+    .r2-q { position: absolute; left: 90px; width: 900px; top: 1330px; text-align: center;
+      font-size: 84px; font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
+    .r2-q em { font-style: normal; color: #5FD3A6; }
+    .r2-sub { position: absolute; left: 110px; width: 860px; top: 1580px; text-align: center;
+      font-size: 40px; font-weight: 500; line-height: 1.35; color: #B5B3AD; }
+  </style>
+
+  <div id="root" data-composition-id="02-rupture" data-width="1080" data-height="1920">
+    <svg class="r2-stage" id="r2-stage" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+      <g id="r2-grid" opacity="0.28"></g>
+      <defs>
+        <filter id="r2-bloom" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="10" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <!-- La ligne fluide entre par le bas à gauche, ondule, puis s'enroule autour du centre. -->
+      <path id="r2-line" d="M -40 1180 C 160 1240, 220 1060, 160 900 S 300 520, 560 560 S 900 760, 860 980 S 640 1200, 470 1110 S 360 880, 540 820 S 700 960, 610 1040"
+            fill="none" stroke="#2FC48F" stroke-width="7" stroke-linecap="round" filter="url(#r2-bloom)" />
+    </svg>
+    <div class="r2-glow"></div>
+    <div class="r2-sphere"></div>
+    <div class="r2-q">Et si on changeait <em>les règles</em> ?</div>
+    <div class="r2-sub">Si tu n'avais plus à t'épuiser pour te faire remarquer ?</div>
+  </div>
+
+  <script>
+    (function () {
+      // Restes de la grille figée, en fond.
+      const g = document.getElementById("r2-grid");
+      const NS = "http://www.w3.org/2000/svg";
+      const cell = 60;
+      const hash = (i, j) => { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+      for (let j = 0; j < 32; j++) for (let i = 0; i < 18; i++) {
+        const x = i * cell, y = j * cell, r = hash(i, j);
+        const l = document.createElementNS(NS, "line");
+        if (r < 0.5) { l.setAttribute("x1", x); l.setAttribute("y1", y); l.setAttribute("x2", x + cell); l.setAttribute("y2", y); }
+        else { l.setAttribute("x1", x); l.setAttribute("y1", y); l.setAttribute("x2", x); l.setAttribute("y2", y + cell); }
+        l.setAttribute("stroke", "#3A3936"); l.setAttribute("stroke-width", "4");
+        g.appendChild(l);
+      }
+      window.__timelines["02-rupture"] = gsap.timeline({ paused: true });
+    })();
+  </script>
+</template>

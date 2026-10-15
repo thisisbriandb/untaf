@@ -1,0 +1,83 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #141413; font-family: "Geist", sans-serif; color: #FAFAF8; }
+    .p4-trail { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+    .p4-head { position: absolute; left: 90px; width: 900px; top: 230px; text-align: center;
+      font-size: 72px; font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
+
+    /* Éclair 1 : le CV qui s'adapte */
+    .p4-cv { position: absolute; left: 190px; top: 470px; width: 700px; height: 400px; border-radius: 22px;
+      background: #FAFAF8; color: #1A1918; padding: 40px 44px; box-shadow: 0 0 60px rgba(0,150,105,0.25); }
+    .p4-cv-name { font-size: 34px; font-weight: 700; }
+    .p4-cv-role { font-size: 24px; font-weight: 500; color: #006045; margin-top: 6px; }
+    .p4-line { height: 16px; border-radius: 8px; background: #E6E4DF; margin-top: 22px; }
+    .p4-line.on { background: #2FC48F; }
+    .p4-tag { position: absolute; right: 30px; top: 30px; padding: 10px 18px; border-radius: 100px;
+      background: rgba(0,96,69,0.1); color: #006045; font-size: 22px; font-weight: 600; }
+
+    /* Éclair 2 : candidature envoyée */
+    .p4-sent { position: absolute; left: 190px; width: 700px; top: 950px; height: 120px; border-radius: 100px;
+      background: #006045; display: flex; align-items: center; justify-content: center; gap: 22px;
+      font-size: 44px; font-weight: 600; box-shadow: 0 0 70px rgba(0,150,105,0.45); }
+    .p4-check { width: 64px; height: 64px; border-radius: 50%; background: #FAFAF8; color: #006045;
+      display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; }
+
+    /* Éclair 3 : la réponse */
+    .p4-reply { position: absolute; left: 190px; width: 700px; top: 1150px; border-radius: 22px;
+      background: #232220; border: 2px solid rgba(47,196,143,0.45); padding: 34px 40px; }
+    .p4-from { font-size: 24px; font-weight: 500; color: #B5B3AD; }
+    .p4-subj { font-size: 42px; font-weight: 700; margin-top: 10px; color: #5FD3A6; }
+    .p4-body { font-size: 30px; font-weight: 400; margin-top: 12px; color: #E6E4DF; line-height: 1.35; }
+
+    .p4-direct { position: absolute; left: 0; width: 1080px; top: 1520px; text-align: center;
+      font-size: 120px; font-weight: 700; letter-spacing: -0.03em; }
+    .p4-chrome { position: absolute; right: 70px; top: 1770px; padding: 14px 24px; border-radius: 100px;
+      border: 2px solid rgba(47,196,143,0.6); color: #5FD3A6; font-size: 28px; font-weight: 600; }
+  </style>
+
+  <div id="root" data-composition-id="04-preuve" data-width="1080" data-height="1920">
+    <svg class="p4-trail" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="p4-bloom" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="8" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <!-- Le fil lumineux qui relie les trois éclairs puis sort du cadre (l'extension). -->
+      <path d="M 540 400 C 540 440, 540 450, 540 470 M 540 870 L 540 950 M 540 1070 L 540 1150 M 540 1400 C 540 1440, 560 1470, 600 1470 M 300 1690 C 520 1700, 760 1700, 1120 1740"
+            fill="none" stroke="#2FC48F" stroke-width="5" stroke-linecap="round" filter="url(#p4-bloom)" />
+    </svg>
+    <div class="p4-head">Elle frappe aux bonnes portes.</div>
+
+    <div class="p4-cv">
+      <div class="p4-tag">Adapté à l'offre</div>
+      <div class="p4-cv-name">Camille Martin</div>
+      <div class="p4-cv-role">Alternance · Marketing digital</div>
+      <div class="p4-line" style="width: 92%"></div>
+      <div class="p4-line on" style="width: 78%"></div>
+      <div class="p4-line" style="width: 86%"></div>
+      <div class="p4-line on" style="width: 64%"></div>
+      <div class="p4-line" style="width: 70%"></div>
+    </div>
+
+    <div class="p4-sent"><div class="p4-check">✓</div>Candidature envoyée</div>
+
+    <div class="p4-reply">
+      <div class="p4-from">Réponse du recruteur · 09:12</div>
+      <div class="p4-subj">Entretien</div>
+      <div class="p4-body">On aimerait vous rencontrer jeudi.</div>
+    </div>
+
+    <div class="p4-direct">Directement.</div>
+    <div class="p4-chrome">Aussi sur Chrome</div>
+  </div>
+
+  <script>
+    window.__timelines["04-preuve"] = gsap.timeline({ paused: true });
+  </script>
+</template>
