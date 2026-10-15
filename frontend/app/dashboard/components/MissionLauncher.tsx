@@ -113,7 +113,7 @@ export function MissionLauncher({
     <div className="space-y-6">
       {/* Combien */}
       <div className="space-y-2.5">
-        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+        <p className="text-center text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
           Sur combien d&apos;offres
         </p>
         <div className="flex justify-center gap-2">
@@ -134,14 +134,14 @@ export function MissionLauncher({
             </motion.button>
           ))}
         </div>
-        <p className="text-center text-[11px] font-normal text-[#1A1918]/55">
+        <p className="text-center text-[11px] font-normal text-[#6B6B68]">
           Les meilleures de tes offres retenues, celles que je peux envoyer en premier.
         </p>
       </div>
 
       {/* Les entreprises qui recrutent sans offre publiée */}
       <div className="space-y-2.5">
-        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+        <p className="text-center text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
           Candidatures spontanées
         </p>
         <div className="flex justify-center gap-2">
@@ -163,7 +163,7 @@ export function MissionLauncher({
             </motion.button>
           ))}
         </div>
-        <p className="text-center text-[11px] font-normal text-[#1A1918]/55 leading-relaxed">
+        <p className="text-center text-[11px] font-normal text-[#6B6B68] leading-relaxed">
           J&apos;écris aux entreprises de ton métier près de chez toi, à l&apos;adresse de recrutement
           qu&apos;elles publient sur leur site, avec une lettre qui parle d&apos;elles.
         </p>
@@ -171,7 +171,7 @@ export function MissionLauncher({
 
       {/* Le feu vert */}
       <div className="space-y-2.5">
-        <p className="text-center text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+        <p className="text-center text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
           Quand un dossier peut partir
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -201,7 +201,7 @@ export function MissionLauncher({
       </div>
 
       {/* Le contrat, dit en clair avant de partir */}
-      <p className="text-xs font-normal text-[#1A1918]/50 text-center leading-relaxed tracking-tight">
+      <p className="text-xs font-normal text-[#6B6B68] text-center leading-relaxed tracking-tight">
         Pour chaque offre : CV adapté et lettre. Les offres qui se postulent sur le site de
         l&apos;employeur restent prêtes à finir avec l&apos;extension. Les candidatures spontanées
         partent seulement à une adresse publiée par l&apos;entreprise, quelques-unes par jour. Tu peux fermer l&apos;onglet, je t&apos;écris
@@ -239,7 +239,7 @@ export function MissionLauncher({
         type="button"
         onClick={onClose}
         aria-label="Fermer"
-        className="absolute top-5 right-6 p-2 rounded-full text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+        className="absolute top-5 right-6 p-2 rounded-full text-[#6B6B68] hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
       >
         <X className="w-4 h-4 stroke-[1.4]" />
       </button>

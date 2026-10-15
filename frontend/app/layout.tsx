@@ -4,13 +4,13 @@ import "./globals.css";
 import { API_BASE_URL } from "@/lib/config";
 
 const geist = Geist({
-  variable: "--font-sans",
+  variable: "--font-geist",
   subsets: ["latin"],
   display: "swap",
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
 });

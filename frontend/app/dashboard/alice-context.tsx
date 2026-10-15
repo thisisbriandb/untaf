@@ -123,11 +123,21 @@ function formatTime(date: Date): string {
  * texte est construit à partir du journal de mission réel — jamais inventé,
  * sinon la promesse d'autonomie devient un décor.
  */
+/**
+ * Premier contact : dire comment on travaille avec Alice. Sans ça, un
+ * nouveau venu attend que l'outil « fasse quelque chose » et repart — Alice
+ * agit quand on lui parle, comme une collègue à qui l'on confie une tâche.
+ */
+const FIRST_VISIT =
+  "Je suis Alice. Parle-moi comme à une collègue : dis-moi ce que tu cherches, par exemple " +
+  "« une alternance en marketing à Lyon », et je m'en occupe. Je trouve les offres, j'adapte " +
+  "ton CV, j'écris la lettre et je postule pour toi. Tu peux aussi partir d'une des cartes ci-dessous.";
+
 function briefingFrom(
   mission: Awaited<ReturnType<typeof fetchMission>>,
   pipeline: Pipeline | null,
 ): string {
-  if (!mission) return "Je reprends là où j'en étais.";
+  if (!mission) return FIRST_VISIT;
 
   // Ce qui attend une décision passe avant le récit : c'est la seule chose
   // que l'utilisateur doit faire, et il doit l'apprendre en premier.
@@ -161,7 +171,7 @@ function briefingFrom(
     if (pipeline?.items.length) {
       return `Je reprends là où j'en étais.${agenda}${congrats}`.trim();
     }
-    return "Je n'ai pas encore lancé de veille sur ton mandat. Confie-moi une mission et je m'y mets.";
+    return FIRST_VISIT;
   }
 
   const parts: string[] = [`J'ai passé ${scanned} offres en revue`];

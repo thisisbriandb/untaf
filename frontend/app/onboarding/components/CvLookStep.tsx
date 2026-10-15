@@ -142,7 +142,7 @@ export function CvLookStep({
 
       <div className="space-y-5">
         <section className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wider text-[#1A1918]/55 font-medium">Modèle</p>
+          <p className="text-[11px] uppercase tracking-wider text-[#6B6B68] font-medium">Modèle</p>
           <div className="flex flex-wrap gap-1.5">
             {templates.map((t) => (
               <button
@@ -164,7 +164,7 @@ export function CvLookStep({
             <button
               type="button"
               onClick={() => setShowAll(true)}
-              className="text-[11px] text-[#1A1918]/50 hover:text-[#006045] cursor-pointer"
+              className="text-[11px] text-[#6B6B68] hover:text-[#006045] cursor-pointer"
             >
               voir les {cvTemplates.length} modèles
             </button>
@@ -172,7 +172,7 @@ export function CvLookStep({
         </section>
 
         <section className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wider text-[#1A1918]/55 font-medium">Couleur</p>
+          <p className="text-[11px] uppercase tracking-wider text-[#6B6B68] font-medium">Couleur</p>
           <div className="flex gap-2">
             {colorSwatches.map((c) => (
               <button
@@ -191,7 +191,7 @@ export function CvLookStep({
         </section>
 
         <section className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wider text-[#1A1918]/55 font-medium">Photo</p>
+          <p className="text-[11px] uppercase tracking-wider text-[#6B6B68] font-medium">Photo</p>
           <input
             ref={fileRef}
             type="file"
@@ -220,7 +220,7 @@ export function CvLookStep({
               <Camera className="h-3.5 w-3.5" /> Ajouter une photo
             </button>
           )}
-          <p className="text-[11px] text-[#1A1918]/50 tracking-tight">
+          <p className="text-[11px] text-[#6B6B68] tracking-tight">
             Facultative. En France, beaucoup de recruteurs l&apos;apprécient ; d&apos;autres préfèrent sans.
           </p>
           {photoError && <p className="text-[11px] text-red-600">{photoError}</p>}
@@ -236,7 +236,7 @@ export function CvLookStep({
             C&apos;est mon style
           </button>
         </div>
-        <p className="text-[11px] text-[#1A1918]/50 text-center tracking-tight">
+        <p className="text-[11px] text-[#6B6B68] text-center tracking-tight">
           Tous tes dossiers suivront ce choix. Tu pourras le changer à tout moment.
         </p>
       </div>

@@ -102,7 +102,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
           <Link href="/" className="flex items-center gap-2.5">
             <AliceAvatar size={28} />
             <span className="text-[15px] font-medium tracking-tight">
-              Alice <span className="text-[#1A1918]/45">Community</span>
+              Alice <span className="text-[#6B6B68]">Community</span>
             </span>
           </Link>
           <Link
@@ -160,7 +160,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
                     className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
                       filters.kind === k.value
                         ? "bg-white text-[#1A1918] shadow-sm"
-                        : "text-[#1A1918]/55 hover:text-[#1A1918]"
+                        : "text-[#6B6B68] hover:text-[#1A1918]"
                     }`}
                   >
                     {k.label}
@@ -169,23 +169,23 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
               </div>
             </div>
             <label className="relative min-w-0 flex-1 basis-40">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1A1918]/35" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B6B68]" />
               <input
                 value={typed.q}
                 onChange={(e) => setTyped((t) => ({ ...t, q: e.target.value }))}
                 placeholder="Poste ou entreprise"
                 aria-label="Rechercher un poste ou une entreprise"
-                className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#1A1918]/35 focus:border-[#006045]/50"
+                className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#6B6B68] focus:border-[#006045]/50"
               />
             </label>
             <label className="relative min-w-0 flex-1 basis-32">
-              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1A1918]/35" />
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B6B68]" />
               <input
                 value={typed.city}
                 onChange={(e) => setTyped((t) => ({ ...t, city: e.target.value }))}
                 placeholder="Ville"
                 aria-label="Filtrer par ville"
-                className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#1A1918]/35 focus:border-[#006045]/50"
+                className="w-full rounded-full border border-[#1A1918]/10 bg-white py-2 pl-9 pr-3 text-[14px] outline-none placeholder:text-[#6B6B68] focus:border-[#006045]/50"
               />
             </label>
           </div>
@@ -215,7 +215,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
 
       {/* Liste */}
       <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        {KIND_HINT[filters.kind] && <p className="mb-3 text-[13px] text-[#1A1918]/55">{KIND_HINT[filters.kind]}</p>}
+        {KIND_HINT[filters.kind] && <p className="mb-3 text-[13px] text-[#6B6B68]">{KIND_HINT[filters.kind]}</p>}
         {!head ? (
           results.failed ? (
             <Empty title="La liste ne répond pas" text="Réessaie dans un instant : Alice rassemble les offres du jour." />
@@ -226,7 +226,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
           <Empty title="Aucune offre avec ces filtres" text="Élargis la ville ou le métier, de nouvelles offres arrivent chaque jour." />
         ) : (
           <div className={loading ? "opacity-50 transition-opacity" : "transition-opacity"} aria-busy={loading}>
-            <p className="mb-3 text-[13px] text-[#1A1918]/50">
+            <p className="mb-3 text-[13px] text-[#6B6B68]">
               {head.matched.toLocaleString("fr-FR")} offre{head.matched > 1 ? "s" : ""}
             </p>
             <ul className="divide-y divide-[#1A1918]/[0.07] overflow-hidden rounded-2xl border border-[#1A1918]/[0.08] bg-white">
@@ -266,7 +266,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
           </Link>
         </div>
         {head && (
-          <p className="mt-6 text-center text-[12px] text-[#1A1918]/40">
+          <p className="mt-6 text-center text-[12px] text-[#6B6B68]">
             Mise à jour le{" "}
             {new Date(head.updated_at).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}{" "}
             · La source de chaque offre est indiquée, l&apos;annonce d&apos;origine fait foi.
@@ -350,7 +350,7 @@ function OfferRow({ offer, onApply }: { offer: CommunityOffer; onApply: () => vo
           )}
         </div>
         <p className="mt-0.5 text-[15px] leading-snug text-[#1A1918]">{offer.title}</p>
-        <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-[#1A1918]/50">
+        <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-[#6B6B68]">
           <span>
             {offer.city}
             {offer.other_cities ? ` et ${offer.other_cities} autre${offer.other_cities > 1 ? "s" : ""} ville${offer.other_cities > 1 ? "s" : ""}` : ""}
@@ -417,11 +417,11 @@ function ApplySheet({ offer, onClose, onApply }: { offer: CommunityOffer; onClos
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md rounded-t-3xl bg-[#FAFAF8] p-6 shadow-xl sm:rounded-3xl"
       >
-        <button onClick={onClose} aria-label="Fermer" className="absolute right-4 top-4 rounded-full p-1.5 text-[#1A1918]/40 hover:text-[#1A1918]">
+        <button onClick={onClose} aria-label="Fermer" className="absolute right-4 top-4 rounded-full p-1.5 text-[#6B6B68] hover:text-[#1A1918]">
           <X className="h-4 w-4" />
         </button>
         <AliceAvatar size={36} />
-        <p className="mt-4 flex flex-wrap items-center gap-1 text-[13px] text-[#1A1918]/50">
+        <p className="mt-4 flex flex-wrap items-center gap-1 text-[13px] text-[#6B6B68]">
           <span>{offer.company} · {offer.city}</span>
           {offer.attribution_label && offer.attribution_url && (
             <>
@@ -453,12 +453,12 @@ function ApplySheet({ offer, onClose, onApply }: { offer: CommunityOffer; onClos
         >
           Postuler avec Alice <ArrowRight className="h-4 w-4" />
         </button>
-        <p className="mt-3 text-center text-[12px] text-[#1A1918]/45">Gratuit · 3 candidatures offertes chaque semaine</p>
+        <p className="mt-3 text-center text-[12px] text-[#6B6B68]">Gratuit · 3 candidatures offertes chaque semaine</p>
         <a
           href={offer.url}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="mt-3 block text-center text-[12.5px] text-[#1A1918]/55 underline-offset-2 hover:underline"
+          className="mt-3 block text-center text-[12.5px] text-[#6B6B68] underline-offset-2 hover:underline"
         >
           Voir l&apos;annonce d&apos;origine
         </a>
@@ -471,7 +471,7 @@ function Empty({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-[#1A1918]/12 px-6 py-14 text-center">
       <p className="text-[15px] font-medium">{title}</p>
-      <p className="mt-1 text-[13px] text-[#1A1918]/55">{text}</p>
+      <p className="mt-1 text-[13px] text-[#6B6B68]">{text}</p>
     </div>
   );
 }

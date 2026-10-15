@@ -54,7 +54,7 @@ const REMOTE_LABELS: Record<string, string> = {
 function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-0.5 min-w-0">
-      <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/50">
+      <p className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
         {label}
       </p>
       <p className="text-xs font-normal text-[#1A1918]/75 tracking-tight truncate">
@@ -208,15 +208,15 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
             <h2 className="text-base font-normal text-[#1A1918] tracking-tight">
               {job.title}
             </h2>
-            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               {[companyOf(job.company_name) ?? "Employeur non communiqué", job.location].filter(Boolean).join(" · ")}
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-lg font-light text-[#006045] tabular-nums leading-none">
+            <p className="text-lg font-normal text-[#006045] tabular-nums leading-none">
               {job.match_score}%
             </p>
-            <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/50 pt-1">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68] pt-1">
               match
             </p>
           </div>
@@ -251,14 +251,14 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
         {status === "loading" && (
           <div className="h-full flex flex-col items-center justify-center gap-2.5">
             <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
-            <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               Je récupère l&apos;annonce…
             </p>
           </div>
         )}
 
         {status === "error" && (
-          <p className="text-sm font-light text-[#1A1918]/50 tracking-tight">
+          <p className="text-sm font-normal text-[#6B6B68] tracking-tight">
             Je n&apos;ai pas pu charger le détail de cette offre. L&apos;annonce
             d&apos;origine reste accessible ci-dessous.
           </p>
@@ -289,7 +289,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
         <div className="px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
               Demander à Alice
             </span>
           </div>
@@ -336,7 +336,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
           </button>
           )}
           {!sent && (packReady || mode === "manual") && (
-            <p className="text-[11px] font-normal text-[#1A1918]/55 text-center tracking-tight">
+            <p className="text-[11px] font-normal text-[#6B6B68] text-center tracking-tight">
               {packReady
                 ? `Dossier prêt${appState?.pack_ready_at ? ` depuis le ${day(appState.pack_ready_at)}` : ""} : CV adapté et lettre. `
                 : ""}
@@ -451,7 +451,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
                 href={applyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[11px] font-normal text-[#1A1918]/55 hover:text-[#006045] tracking-tight transition-colors"
+                className="flex items-center gap-1.5 text-[11px] font-normal text-[#6B6B68] hover:text-[#006045] tracking-tight transition-colors"
               >
                 Voir l&apos;annonce d&apos;origine
                 <ExternalLink className="w-3 h-3 stroke-[1.5]" />

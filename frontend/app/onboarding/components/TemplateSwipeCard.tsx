@@ -142,7 +142,7 @@ export function TemplateSwipeCard({
             </div>
             <div className="space-y-1">
               <span className="font-semibold text-[#1A1918] block font-serif">Rendu Typst Vectoriel en cours</span>
-              <span className="text-[11px] text-[#1A1918]/50 block">Compilation du template {template.name}...</span>
+              <span className="text-[11px] text-[#6B6B68] block">Compilation du template {template.name}...</span>
             </div>
           </div>
         ) : svgContent ? (

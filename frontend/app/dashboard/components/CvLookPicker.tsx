@@ -103,8 +103,8 @@ export function CvLookPicker({
       >
         <span className="text-[12px] text-[#161615] tracking-tight">
           Mise en page : <span className="text-[#006045]">{templateName(current)}</span>
-          <span className="text-[#1A1918]/55"> · {photoLabel}</span>
-          {!design.is_explicit && <span className="text-[#1A1918]/45"> · choisie par défaut</span>}
+          <span className="text-[#6B6B68]"> · {photoLabel}</span>
+          {!design.is_explicit && <span className="text-[#6B6B68]"> · choisie par défaut</span>}
         </span>
         <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-[#006045]">
           {busy && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -145,7 +145,7 @@ export function CvLookPicker({
                       {current === t.id && <Check className="h-3 w-3" />}
                       {t.name}
                     </span>
-                    <span className="block text-[10.5px] text-[#1A1918]/50 tracking-tight">{t.tagline}</span>
+                    <span className="block text-[10.5px] text-[#6B6B68] tracking-tight">{t.tagline}</span>
                   </button>
                 ))}
               </div>
@@ -191,7 +191,7 @@ export function CvLookPicker({
                     <button type="button" onClick={() => fileRef.current?.click()} className="text-[11px] text-[#006045] hover:underline cursor-pointer">
                       Changer de photo
                     </button>
-                    <button type="button" onClick={() => void removePhoto()} className="inline-flex items-center gap-1 text-[11px] text-[#1A1918]/55 hover:text-[#161615] cursor-pointer">
+                    <button type="button" onClick={() => void removePhoto()} className="inline-flex items-center gap-1 text-[11px] text-[#6B6B68] hover:text-[#161615] cursor-pointer">
                       <Trash2 className="h-3 w-3" /> Retirer
                     </button>
                   </>
@@ -209,7 +209,7 @@ export function CvLookPicker({
 
               {withPreview && jobId && (
                 <div className="space-y-1">
-                  <p className="text-[10.5px] uppercase tracking-wider text-[#1A1918]/50">Aperçu du CV qui partira</p>
+                  <p className="text-[10.5px] uppercase tracking-wider text-[#6B6B68]">Aperçu du CV qui partira</p>
                   {preview ? (
                     // eslint-disable-next-line @next/next/no-img-element -- aperçu protégé, servi en blob
                     <img

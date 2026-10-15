@@ -127,12 +127,12 @@ function Attachments({ candidateId, detail }: { candidateId: string; detail: Rep
           >
             <Download className="h-3 w-3 shrink-0" />
             <span className="truncate">{a.filename}</span>
-            <span className="shrink-0 text-[#1A1918]/45">{fileSize(a.size)}</span>
+            <span className="shrink-0 text-[#6B6B68]">{fileSize(a.size)}</span>
           </DownloadLink>
         </li>
       ))}
       {detail.skipped_attachments.map((a, i) => (
-        <li key={`${a.filename}-${i}`} className="flex items-center gap-1.5 text-[11px] text-[#1A1918]/50 tracking-tight">
+        <li key={`${a.filename}-${i}`} className="flex items-center gap-1.5 text-[11px] text-[#6B6B68] tracking-tight">
           <Paperclip className="h-3 w-3 shrink-0" />
           <span className="truncate">{a.filename}</span>
           <span className="shrink-0">— trop lourde pour être gardée, demande-la au recruteur</span>
@@ -184,16 +184,16 @@ function ReplyRow({
             {KIND_LABEL[reply.kind]}
           </span>
           <span className={cn("text-[13px] tracking-tight", read ? "text-[#1A1918]/75" : "text-[#161615]")}>{who}</span>
-          {reply.job_title && <span className="text-[12px] text-[#1A1918]/50 truncate">· {reply.job_title}</span>}
+          {reply.job_title && <span className="text-[12px] text-[#6B6B68] truncate">· {reply.job_title}</span>}
           {reply.attachments_count > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-[11px] text-[#1A1918]/50" title="Pièces jointes">
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-[#6B6B68]" title="Pièces jointes">
               <Paperclip className="h-3 w-3" />
               {reply.attachments_count}
             </span>
           )}
-          <span className="ml-auto text-[11px] text-[#1A1918]/50 shrink-0">{date(reply.received_at)}</span>
+          <span className="ml-auto text-[11px] text-[#6B6B68] shrink-0">{date(reply.received_at)}</span>
         </div>
-        <p className="mt-1 text-sm font-light text-[#1A1918]/80 tracking-tight group-hover:text-[#161615]">
+        <p className="mt-1 text-sm font-normal text-[#1A1918]/80 tracking-tight group-hover:text-[#161615]">
           {reply.summary}
         </p>
         {reply.next_step && (
@@ -212,7 +212,7 @@ function ReplyRow({
             className="overflow-hidden"
           >
             <div className="mt-3 rounded-2xl bg-white ring-1 ring-[#1A1918]/8 p-4 space-y-3">
-              <div className="text-[11px] text-[#1A1918]/55 space-y-0.5">
+              <div className="text-[11px] text-[#6B6B68] space-y-0.5">
                 <p>De : {reply.from_name ? `${reply.from_name} <${reply.from_email}>` : reply.from_email}</p>
                 <p>Objet : {reply.subject}</p>
               </div>
@@ -242,7 +242,7 @@ function AddressCard({ inbox }: { inbox: Inbox }) {
   const [copied, setCopied] = useState(false);
   if (!inbox.configured || !inbox.address) {
     return (
-      <p className="text-xs text-[#1A1918]/55 tracking-tight">
+      <p className="text-xs text-[#6B6B68] tracking-tight">
         La réception automatique des réponses n&apos;est pas encore active : les recruteurs te
         répondent directement. Note leurs réponses depuis Candidatures.
       </p>
@@ -324,7 +324,7 @@ export function MessagesView({
       <div className="w-full max-w-[640px] mx-auto text-left space-y-8 py-2 pb-10">
         <div>
           <h2 className="text-xl font-normal text-[#1A1918] tracking-tight">Messages</h2>
-          <p className="text-xs text-[#1A1918]/50 mt-0.5 tracking-tight">
+          <p className="text-xs text-[#6B6B68] mt-0.5 tracking-tight">
             Les réponses des recruteurs, et ce que je t&apos;ai écrit.
           </p>
         </div>
@@ -332,7 +332,7 @@ export function MessagesView({
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
             <InboxIcon className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">Réponses des recruteurs</p>
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Réponses des recruteurs</p>
             {inbox && inbox.unread > 0 && (
               <span className="rounded-full bg-[#006045] px-1.5 py-px text-[10px] tabular-nums text-white">{inbox.unread}</span>
             )}
@@ -352,7 +352,7 @@ export function MessagesView({
                   ))}
                 </ul>
               ) : inbox.configured ? (
-                <p className="text-sm font-light text-[#1A1918]/55 tracking-tight py-1">
+                <p className="text-sm font-normal text-[#6B6B68] tracking-tight py-1">
                   Pas encore de réponse. Je te préviens dès qu&apos;un recruteur écrit.
                 </p>
               ) : null}
@@ -364,11 +364,11 @@ export function MessagesView({
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
             <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">Notées par toi</p>
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Notées par toi</p>
           </div>
           {replies.length === 0 ? (
             <div className="space-y-1.5 py-1">
-              <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+              <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
                 Un recruteur t&apos;a répondu ? Note-le depuis{" "}
                 <button
                   type="button"
@@ -390,8 +390,8 @@ export function MessagesView({
                   transition={{ delay: i * 0.03 }}
                   className="py-3 flex items-start justify-between gap-3"
                 >
-                  <p className="text-sm font-light text-[#1A1918]/80 tracking-tight">{e.summary}</p>
-                  <span className="text-[11px] font-normal text-[#1A1918]/50 shrink-0">{date(e.created_at)}</span>
+                  <p className="text-sm font-normal text-[#1A1918]/80 tracking-tight">{e.summary}</p>
+                  <span className="text-[11px] font-normal text-[#6B6B68] shrink-0">{date(e.created_at)}</span>
                 </motion.li>
               ))}
             </ul>
@@ -402,12 +402,12 @@ export function MessagesView({
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
             <Mail className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
               Ce que je t&apos;ai écrit
             </p>
           </div>
           {emails.length === 0 ? (
-            <p className="text-sm font-light text-[#1A1918]/60 tracking-tight py-1">
+            <p className="text-sm font-normal text-[#1A1918]/60 tracking-tight py-1">
               Aucun e-mail pour l&apos;instant. Je t&apos;écris à la fin de chaque mission et quand une
               candidature attend ton accord.
             </p>
@@ -422,17 +422,17 @@ export function MessagesView({
                   className="py-3 flex items-start justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-light text-[#1A1918]/80 tracking-tight truncate">{n.subject}</p>
+                    <p className="text-sm font-normal text-[#1A1918]/80 tracking-tight truncate">{n.subject}</p>
                     <p
                       className={cn(
                         "text-[11px] font-normal tracking-tight",
-                        n.status === "sent" ? "text-[#006045]" : n.status === "failed" ? "text-red-600" : "text-[#1A1918]/55",
+                        n.status === "sent" ? "text-[#006045]" : n.status === "failed" ? "text-red-600" : "text-[#6B6B68]",
                       )}
                     >
                       {STATUS_LABEL[n.status]}
                     </p>
                   </div>
-                  <span className="text-[11px] font-normal text-[#1A1918]/50 shrink-0">{date(n.created_at)}</span>
+                  <span className="text-[11px] font-normal text-[#6B6B68] shrink-0">{date(n.created_at)}</span>
                 </motion.li>
               ))}
             </ul>

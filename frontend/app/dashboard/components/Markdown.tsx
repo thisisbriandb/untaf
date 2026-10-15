@@ -81,7 +81,7 @@ export function Markdown({
 
   if (!md) {
     return (
-      <p className="text-sm font-light text-[#1A1918]/55 tracking-tight">
+      <p className="text-sm font-normal text-[#6B6B68] tracking-tight">
         Aucun contenu à afficher.
       </p>
     );
@@ -92,7 +92,7 @@ export function Markdown({
   return (
     <div
       className={cn(
-        "space-y-3.5 text-sm font-light leading-relaxed tracking-tight text-[#1A1918]/75",
+        "space-y-3.5 text-sm font-normal leading-relaxed tracking-tight text-[#1A1918]/75",
         className,
       )}
     >

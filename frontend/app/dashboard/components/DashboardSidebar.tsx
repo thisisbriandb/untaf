@@ -54,7 +54,7 @@ export function DashboardSidebar({
                   "p-2.5 rounded-xl transition-all cursor-pointer relative flex items-center justify-center",
                   isActive
                     ? "bg-[#1A1918]/8 text-[#1A1918]"
-                    : "text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/4"
+                    : "text-[#6B6B68] hover:text-[#1A1918] hover:bg-[#1A1918]/4"
                 )}
               >
                 <Icon className="w-4 h-4 stroke-[1.3]" />

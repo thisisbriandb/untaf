@@ -42,7 +42,7 @@ export function CanvasPanel({ candidateId }: { candidateId: string | null }) {
             className="fixed inset-y-0 right-0 z-50 w-full sm:w-[26rem]
                        lg:relative lg:inset-auto lg:z-auto lg:h-full lg:w-[44%] lg:min-w-[24rem] lg:max-w-[52rem] lg:shrink-0
                        bg-white border-l border-[#EDECEA] shadow-2xl lg:shadow-none
-                       flex flex-col overflow-hidden font-light tracking-tight text-[#1A1918]"
+                       flex flex-col overflow-hidden font-normal tracking-tight text-[#1A1918]"
             aria-label={`Canvas — ${canvasLabel(canvas)}`}
           >
             {/* En-tête : Alice reste présente dans le canvas */}

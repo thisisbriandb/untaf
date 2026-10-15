@@ -94,7 +94,7 @@ export function NextAction({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm text-[#1A1918] tracking-tight">{action.title}</span>
-        <span className="block text-xs font-normal text-[#1A1918]/50 tracking-tight">{action.detail}</span>
+        <span className="block text-xs font-normal text-[#6B6B68] tracking-tight">{action.detail}</span>
       </span>
       <span className="flex shrink-0 items-center gap-1 text-xs text-[#006045]">
         {action.cta}

@@ -89,7 +89,7 @@ export function SignaturePad({
 
   return (
     <div className="space-y-2.5">
-      <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+      <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
         Signe ici — je la réutiliserai sur toutes tes lettres.
       </p>
 

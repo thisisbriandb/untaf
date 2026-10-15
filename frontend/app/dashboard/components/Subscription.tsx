@@ -60,7 +60,7 @@ export function PlanSection({ candidateId }: { candidateId: string | null }) {
 
   return (
     <section className="space-y-3">
-      <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">Abonnement</p>
+      <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Abonnement</p>
       <div className="border-t border-b border-[#1A1918]/10 divide-y divide-[#1A1918]/8">
         <div className="py-3.5 flex items-center justify-between gap-4">
           <div className="min-w-0">
@@ -88,7 +88,7 @@ export function PlanSection({ candidateId }: { candidateId: string | null }) {
                   if (fresh) setBilling(fresh);
                   if (fresh?.plan === "weekly") window.dispatchEvent(new CustomEvent("untaf:billing-changed"));
                 }}
-                className="mt-1 text-[11px] text-[#1A1918]/50 underline-offset-2 hover:underline hover:text-[#006045] cursor-pointer disabled:opacity-50"
+                className="mt-1 text-[11px] text-[#6B6B68] underline-offset-2 hover:underline hover:text-[#006045] cursor-pointer disabled:opacity-50"
               >
                 {syncing ? "Vérification…" : "Déjà abonné ? Actualiser"}
               </button>
@@ -204,7 +204,7 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
               type="button"
               onClick={close}
               aria-label="Fermer"
-              className="absolute right-3 top-3 p-1 text-[#1A1918]/40 hover:text-[#1A1918] cursor-pointer"
+              className="absolute right-3 top-3 p-1 text-[#6B6B68] hover:text-[#1A1918] cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -227,7 +227,7 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
                   {busy && <Loader2 className="h-4 w-4 animate-spin" />}
                   S&apos;abonner{billing ? ` — ${billing.price_label}` : ""}
                 </button>
-                <p className="text-[11px] text-center text-[#1A1918]/50 tracking-tight">
+                <p className="text-[11px] text-center text-[#6B6B68] tracking-tight">
                   Paiement sécurisé par Lemon Squeezy. Résiliable en un clic.
                 </p>
               </>

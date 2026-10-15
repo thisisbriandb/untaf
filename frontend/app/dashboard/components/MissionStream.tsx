@@ -100,7 +100,7 @@ export function MissionStream({
               setStopping(false);
               if (stopped) onChange(stopped);
             }}
-            className="text-[#1A1918]/50 hover:text-red-600 underline-offset-2 hover:underline cursor-pointer disabled:opacity-40"
+            className="text-[#6B6B68] hover:text-red-600 underline-offset-2 hover:underline cursor-pointer disabled:opacity-40"
           >
             arrêter
           </button>
@@ -116,7 +116,7 @@ export function MissionStream({
               initial={{ opacity: 0, y: 6, filter: "blur(2px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-start gap-2.5 text-[15px] font-light text-[#1A1918]/80 leading-relaxed tracking-tight"
+              className="flex items-start gap-2.5 text-[15px] font-normal text-[#1A1918]/80 leading-relaxed tracking-tight"
             >
               <span className={cn("mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full", DOT[e.kind] ?? "bg-[#1A1918]/25")} />
               <span>
@@ -140,7 +140,7 @@ export function MissionStream({
             key={run.current_step ?? "start"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2.5 text-[15px] font-light text-[#1A1918]/60 tracking-tight"
+            className="flex items-center gap-2.5 text-[15px] font-normal text-[#1A1918]/60 tracking-tight"
           >
             <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
             {run.current_step ? `${STEP_LABELS[run.current_step]}…` : "Je m'y mets…"}
@@ -165,7 +165,7 @@ export function MissionStream({
               type="button"
               onClick={onDismiss}
               aria-label="Masquer"
-              className="p-1.5 rounded-full text-[#1A1918]/45 hover:text-[#1A1918] cursor-pointer"
+              className="p-1.5 rounded-full text-[#6B6B68] hover:text-[#1A1918] cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>

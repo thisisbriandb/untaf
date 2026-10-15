@@ -94,7 +94,7 @@ DEFAULT_DESIGN: dict = {
     },
     "typography": {
         "line_spacing": "0.6em",
-        "alignment": "justified",
+        "alignment": "left",  # justifié : grands blancs dans les colonnes étroites
         "date_and_location_column_alignment": "right",
         "font_family": {
             "body": "Source Sans 3",

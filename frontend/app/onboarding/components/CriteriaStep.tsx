@@ -107,10 +107,10 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   return (
     <div className="space-y-2.5">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">
+        <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
           {label}
         </p>
-        {hint && <p className="text-[11px] text-[#1A1918]/45">{hint}</p>}
+        {hint && <p className="text-[11px] text-[#6B6B68]">{hint}</p>}
       </div>
       {children}
     </div>
@@ -134,7 +134,7 @@ function Chip({
         "px-3.5 py-1.5 rounded-full text-sm transition-all cursor-pointer border",
         active
           ? "border-[#006045] bg-[#006045]/8 text-[#006045] font-normal"
-          : "border-[#1A1918]/12 text-[#1A1918]/55 hover:border-[#1A1918]/30 hover:text-[#1A1918]"
+          : "border-[#1A1918]/12 text-[#6B6B68] hover:border-[#1A1918]/30 hover:text-[#1A1918]"
       )}
     >
       {children}
@@ -196,7 +196,7 @@ export function CriteriaStep({
             </Chip>
           ))}
         </div>
-        <p className="text-[11px] text-[#1A1918]/45">
+        <p className="text-[11px] text-[#6B6B68]">
           {ZONES.find((z) => z.id === value.zone)?.hint}
         </p>
       </Field>
@@ -224,7 +224,7 @@ export function CriteriaStep({
         )}
 
         <div className="relative">
-          <MapPin className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#1A1918]/45 pointer-events-none" />
+          <MapPin className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B6B68] pointer-events-none" />
           <input
             type="text"
             value={cityInput}
@@ -236,7 +236,7 @@ export function CriteriaStep({
               }
             }}
             placeholder="Ajouter une ville…"
-            className="w-full pl-10 pr-11 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+            className="w-full pl-10 pr-11 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#6B6B68] text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
           />
           {cityInput.trim() && (
             <button
@@ -257,7 +257,7 @@ export function CriteriaStep({
                 key={city}
                 type="button"
                 onClick={() => addCity(city)}
-                className="px-2.5 py-1 rounded-full text-xs text-[#1A1918]/55 hover:text-[#006045] transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-full text-xs text-[#6B6B68] hover:text-[#006045] transition-colors cursor-pointer"
               >
                 + {city}
               </button>
@@ -315,7 +315,7 @@ export function CriteriaStep({
             value={emailInput}
             onChange={(e) => setEmailInput?.(e.target.value)}
             placeholder="prenom@email.com"
-            className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+            className="w-full px-3.5 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#6B6B68] text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
           />
         </Field>
       )}
@@ -345,7 +345,7 @@ export function CriteriaStep({
             </button>
           ))}
         </div>
-        <p className="text-[11px] text-[#1A1918]/50 leading-relaxed">
+        <p className="text-[11px] text-[#6B6B68] leading-relaxed">
           J&apos;envoie moi-même quand l&apos;offre le permet (e-mail, La bonne alternance), avec ton CV adapté
           et ta lettre. Quand l&apos;employeur a son propre formulaire, je te prépare le dossier et tu finis en un geste.
           Tu peux changer d&apos;avis à chaque mission.
