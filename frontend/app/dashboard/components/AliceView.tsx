@@ -76,7 +76,7 @@ function AuditBlock({ data }: { data: CvAuditData }) {
       {data.improvements.length > 0 && (
         <div className="space-y-1">
           {data.improvements.map((s, i) => (
-            <p key={i} className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p key={i} className="text-xs font-normal text-[#6B6B68] tracking-tight">
               → {s}
             </p>
           ))}
@@ -108,12 +108,12 @@ function ApplicationsBlock({ data }: { data: { applications: ApplicationData[]; 
             <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
               {app.job_title}
             </p>
-            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               {companyOf(app.company_name) ?? "Employeur non communiqué"}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight">
+            <span className="text-[11px] font-normal text-[#6B6B68] tracking-tight">
               {STATUS_LABELS[app.status] || app.status}
             </span>
             <span className="text-xs font-medium text-[#006045] tabular-nums">
@@ -152,7 +152,7 @@ function MissionBlock({ data }: { data: MissionReportData }) {
           [data.compteurs.entretiens, "entretiens"],
         ].map(([value, label]) => (
           <div key={label as string}>
-            <p className="text-lg font-light text-[#1A1918] tabular-nums leading-none">
+            <p className="text-lg font-normal text-[#1A1918] tabular-nums leading-none">
               {value}
             </p>
             <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight pt-0.5">
@@ -165,7 +165,7 @@ function MissionBlock({ data }: { data: MissionReportData }) {
       {reasons.length > 0 && (
         <div className="space-y-1 pt-1 border-t border-[#1A1918]/6">
           {reasons.map(([motif, n]) => (
-            <p key={motif} className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p key={motif} className="text-xs font-normal text-[#6B6B68] tracking-tight">
               <span className="tabular-nums text-[#1A1918]/70">{n}</span> écartées — {motif}
             </p>
           ))}
@@ -205,7 +205,7 @@ function CanvasRefChip({ canvasRef }: { canvasRef: CanvasPayload }) {
       <span className="flex-1 min-w-0 text-xs font-normal text-[#1A1918] tracking-tight truncate">
         {canvasLabel(canvasRef)}
       </span>
-      <span className="text-[11px] font-normal text-[#1A1918]/55 group-hover:text-[#006045] tracking-tight shrink-0">
+      <span className="text-[11px] font-normal text-[#6B6B68] group-hover:text-[#006045] tracking-tight shrink-0">
         {isActive ? "ouvert" : "rouvrir"}
       </span>
     </button>
@@ -224,12 +224,12 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
           <div className="flex items-baseline gap-2">
             <span className="text-[12px] font-medium text-[#006045] tracking-tight">Alice</span>
             {msg.timestamp && (
-              <span className="text-[11px] text-[#1A1918]/45 tabular-nums">{msg.timestamp}</span>
+              <span className="text-[11px] text-[#6B6B68] tabular-nums">{msg.timestamp}</span>
             )}
           </div>
           <Markdown
             source={msg.text}
-            className="text-sm md:text-[15px] text-[#1A1918]/85 leading-relaxed"
+            className="text-base text-[#1A1918] leading-relaxed"
           />
           {msg.uiBlocks?.map((block, idx) => (
             <UiBlockRenderer key={idx} block={block} />
@@ -241,7 +241,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   }
   // Toi : une bulle à droite, discrète, qui ne concurrence pas la réponse.
   return (
-    <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-[#EDECE8] text-[#161615] text-sm leading-relaxed tracking-tight">
+    <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-[#EDECE8] text-[#161615] text-base leading-relaxed">
       {msg.text}
     </div>
   );
@@ -439,7 +439,7 @@ export function AliceView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.35 }}
-      className="w-full h-full flex flex-col select-none font-light tracking-tight overflow-hidden"
+      className="w-full h-full flex flex-col select-none font-normal tracking-tight overflow-hidden"
     >
       {/* ═══ Zone scrollable : contenu ancré en bas, comme une messagerie ═══ */}
       <div
@@ -457,7 +457,7 @@ export function AliceView({
           {/* Hero — remonte et sort du champ au fil de la conversation */}
           <div className="flex flex-col items-center text-center gap-3 shrink-0">
             <AlicePresence emotion={emotion} size="lg" />
-            <h1 className="text-2xl md:text-3xl font-light text-[#1A1918]/90 tracking-tight pt-1">
+            <h1 className="text-2xl font-normal text-[#1A1918] tracking-tight pt-1">
               Bonjour{firstName ? ` ${firstName}` : ""}.
             </h1>
           </div>
@@ -500,7 +500,7 @@ export function AliceView({
               ))}
             </AnimatePresence>
             {isThinking && (
-              <div className="flex items-center gap-1 text-[#1A1918]/55 text-sm font-light py-2">
+              <div className="flex items-center gap-1 text-[#6B6B68] text-sm font-normal py-2">
                 <span className="animate-pulse">{workingLabel}</span>
               </div>
             )}
@@ -537,7 +537,7 @@ export function AliceView({
                 className="text-left rounded-2xl border border-[#1A1918]/8 bg-white px-3.5 py-3 hover:border-[#006045]/35 transition-colors cursor-pointer disabled:opacity-40"
               >
                 <span className="block text-[13px] text-[#1A1918] tracking-tight">{m.label}</span>
-                <span className="block text-[11px] text-[#1A1918]/55 tracking-tight pt-0.5">{m.detail}</span>
+                <span className="block text-[11px] text-[#6B6B68] tracking-tight pt-0.5">{m.detail}</span>
               </button>
             ))}
           </div>
@@ -554,7 +554,7 @@ export function AliceView({
             onClick={() => setShowLauncher(true)}
             aria-label="Confier une mission à Alice"
             title="Confier une mission"
-            className="text-[#1A1918]/50 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#6B6B68] hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <Plus className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -563,7 +563,7 @@ export function AliceView({
             onClick={() => setShowImport(true)}
             aria-label="Coller une offre"
             title="Coller une offre trouvée ailleurs"
-            className="text-[#1A1918]/50 hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
+            className="text-[#6B6B68] hover:text-[#006045] p-1 rounded-full transition-colors cursor-pointer shrink-0 mr-2"
           >
             <ClipboardPaste className="w-4 h-4 stroke-[1.4]" />
           </button>
@@ -575,7 +575,7 @@ export function AliceView({
             placeholder={hasConversation ? "Écris à Alice…" : "Dis-moi ce que tu cherches, ex. une alternance en marketing à Lyon"}
             maxLength={500}
             aria-label="Confier une mission à Alice"
-            className="flex-1 bg-transparent text-sm font-light placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none tracking-tight"
+            className="flex-1 bg-transparent text-base font-normal placeholder:text-[#6B6B68] text-[#1A1918] focus:outline-none"
           />
 
           <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -583,7 +583,7 @@ export function AliceView({
               type="submit"
               disabled={!prompt.trim() || isThinking}
               aria-label="Envoyer"
-              className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:opacity-30 transition-all cursor-pointer"
+              className="p-2 rounded-full bg-[#006045] text-white hover:bg-[#004d37] disabled:bg-[#1A1918]/15 disabled:text-[#6B6B68] transition-all cursor-pointer"
             >
               <ArrowUp className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>

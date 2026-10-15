@@ -104,7 +104,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
       <div className="w-full max-w-[640px] mx-auto text-left space-y-8 py-2 pb-10">
         <div>
           <h2 className="text-xl font-normal text-[#1A1918] tracking-tight">Paramètres</h2>
-          <p className="text-xs text-[#1A1918]/50 mt-0.5 tracking-tight">
+          <p className="text-xs text-[#6B6B68] mt-0.5 tracking-tight">
             Ton profil, et ce qu&apos;Alice a le droit de t&apos;écrire.
           </p>
         </div>
@@ -125,7 +125,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
         {/* ═══ Notifications ═══ */}
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
               Notifications par e-mail
             </p>
             {prefs && <Switch on={prefs.enabled} onChange={() => update({ enabled: !prefs.enabled })} />}
@@ -199,7 +199,7 @@ export function ParametresView({ candidateId, userName, userEmail, onLogout }: P
 
           {settings && (
             <div className="flex items-center justify-between gap-3 pt-1">
-              <p className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight truncate">
+              <p className="text-[11px] font-normal text-[#6B6B68] tracking-tight truncate">
                 Envoyées à {settings.recipient}
               </p>
               <button

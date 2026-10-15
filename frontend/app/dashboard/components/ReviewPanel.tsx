@@ -26,7 +26,7 @@ import { CvLookPicker } from "./CvLookPicker";
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-[#1A1918]/55 font-medium">{title}</p>
+      <p className="text-[11px] uppercase tracking-[0.12em] text-[#6B6B68] font-medium">{title}</p>
       {children}
     </section>
   );
@@ -37,7 +37,7 @@ function BeforeAfter({ before, after }: { before?: string | null; after?: string
   return (
     <div className="space-y-1">
       {before && before !== after && (
-        <p className="text-[12px] text-[#1A1918]/45 line-through decoration-[#1A1918]/25">{before}</p>
+        <p className="text-[12px] text-[#6B6B68] line-through decoration-[#1A1918]/25">{before}</p>
       )}
       <p className="text-[13px] text-[#161615] leading-relaxed">{after}</p>
     </div>
@@ -143,7 +143,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
                       {e.before.length > 0 && (
                         <ul className="space-y-0.5">
                           {e.before.map((b) => (
-                            <li key={b} className="text-[12px] text-[#1A1918]/45 line-through decoration-[#1A1918]/25">{b}</li>
+                            <li key={b} className="text-[12px] text-[#6B6B68] line-through decoration-[#1A1918]/25">{b}</li>
                           ))}
                         </ul>
                       )}
@@ -158,7 +158,7 @@ export function ReviewPanel({ job }: { job: JobCardData }) {
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-[#1A1918]/55">
+                <p className="text-[11px] text-[#6B6B68]">
                   Reformulées depuis ton parcours : rien n&apos;y a été ajouté.
                 </p>
               </Section>

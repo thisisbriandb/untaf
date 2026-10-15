@@ -26,7 +26,7 @@ export function RecruiterReply({ candidateId, jobId }: { candidateId: string; jo
     <div className={`px-5 py-3 border-b border-[#1A1918]/6 ${positive ? "bg-[#006045]/[0.06]" : ""}`}>
       <div className="flex items-center gap-1.5">
         <MessageCircleReply className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />
-        <span className="text-[11px] uppercase tracking-wider text-[#1A1918]/55">
+        <span className="text-[11px] uppercase tracking-wider text-[#6B6B68]">
           Réponse reçue · {KIND_LABEL[reply.kind]}
         </span>
       </div>

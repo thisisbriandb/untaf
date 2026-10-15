@@ -36,7 +36,7 @@ export default function ConfirmedPage() {
     <main className="min-h-[100dvh] bg-[#FAFAF8] flex flex-col items-center justify-center gap-6 px-6 text-center">
       <AlicePresence emotion={state === "ok" ? "happy" : "thinking"} />
       {state === "waiting" && (
-        <p className="flex items-center gap-2 text-sm font-light text-[#1A1918]/55">
+        <p className="flex items-center gap-2 text-sm font-normal text-[#6B6B68]">
           <Loader2 className="h-4 w-4 animate-spin text-[#006045]" /> Je vérifie ton lien…
         </p>
       )}
@@ -45,7 +45,7 @@ export default function ConfirmedPage() {
           <p className="flex items-center justify-center gap-2 text-xl font-normal text-[#1A1918]/85 tracking-tight">
             <Check className="h-5 w-5 text-[#006045]" /> C&apos;est confirmé.
           </p>
-          <p className="text-sm font-light text-[#1A1918]/55 leading-relaxed">
+          <p className="text-sm font-normal text-[#6B6B68] leading-relaxed">
             Si tu as un autre onglet ouvert avec moi, retourne-y : il a déjà repris. Sinon, on
             continue ici.
           </p>
@@ -61,7 +61,7 @@ export default function ConfirmedPage() {
       {state === "failed" && (
         <div className="space-y-3 max-w-sm">
           <p className="text-lg font-normal text-[#1A1918]/85">Ce lien n&apos;est plus valable.</p>
-          <p className="text-sm font-light text-[#1A1918]/55">Il a peut-être déjà servi, ou il a expiré.</p>
+          <p className="text-sm font-normal text-[#6B6B68]">Il a peut-être déjà servi, ou il a expiré.</p>
           <button
             type="button"
             onClick={() => router.replace("/login")}

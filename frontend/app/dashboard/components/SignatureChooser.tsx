@@ -217,7 +217,7 @@ export function SignatureChooser({
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs text-[#1A1918]/55 hover:text-[#1A1918] cursor-pointer"
+          className="text-xs text-[#6B6B68] hover:text-[#1A1918] cursor-pointer"
         >
           Plus tard
         </button>

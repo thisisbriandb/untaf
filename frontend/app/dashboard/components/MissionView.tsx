@@ -85,7 +85,7 @@ function relativeTime(iso: string): string {
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="space-y-0.5">
-      <p className="text-2xl font-light text-[#1A1918] tabular-nums leading-none">
+      <p className="text-2xl font-normal text-[#1A1918] tabular-nums leading-none">
         {value}
       </p>
       <p className="text-[11px] font-normal text-[#1A1918]/60 tracking-tight">{label}</p>
@@ -96,7 +96,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="py-3.5 flex items-start justify-between gap-4">
-      <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium shrink-0 pt-0.5">
+      <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium shrink-0 pt-0.5">
         {label}
       </p>
       <div className="text-sm text-[#1A1918] text-right min-w-0">{children}</div>
@@ -105,7 +105,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function labelList(values: string[], map: Record<string, string>, empty: string) {
-  if (!values?.length) return <span className="text-[#1A1918]/50">{empty}</span>;
+  if (!values?.length) return <span className="text-[#6B6B68]">{empty}</span>;
   return <span>{values.map((v) => map[v] ?? v).join(" · ")}</span>;
 }
 
@@ -162,7 +162,7 @@ export function MissionView() {
     return (
       <div className="flex flex-col items-center justify-center gap-2.5 py-16">
         <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
-        <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
+        <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
           Je charge ta mission…
         </p>
       </div>
@@ -171,7 +171,7 @@ export function MissionView() {
 
   if (!mission) {
     return (
-      <p className="text-sm font-light text-[#1A1918]/50 tracking-tight text-center py-16">
+      <p className="text-sm font-normal text-[#6B6B68] tracking-tight text-center py-16">
         Je ne trouve pas ta mission. Reconnecte-toi.
       </p>
     );
@@ -199,7 +199,7 @@ export function MissionView() {
             <h2 className="text-xl font-normal text-[#1A1918] tracking-tight">
               {mission.title}
             </h2>
-            <p className="text-xs text-[#1A1918]/50 mt-0.5 tracking-tight">
+            <p className="text-xs text-[#6B6B68] mt-0.5 tracking-tight">
               {isPaused
                 ? "En pause — je ne cherche plus."
                 : mission.last_run_at
@@ -246,7 +246,7 @@ export function MissionView() {
               <span className="block text-sm text-[#1A1918] tracking-tight">
                 {readyPacks} dossier{readyPacks > 1 ? "s prêts" : " prêt"}
               </span>
-              <span className="block text-xs font-normal text-[#1A1918]/50 tracking-tight">
+              <span className="block text-xs font-normal text-[#6B6B68] tracking-tight">
                 CV adapté et lettre pour chaque offre, à télécharger ou envoyer depuis Candidatures.
               </span>
             </span>
@@ -258,7 +258,7 @@ export function MissionView() {
 
         {/* ═══ Autonomie ═══ */}
         <section className="space-y-3">
-          <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+          <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
             Jusqu&apos;où je peux aller
           </p>
           <div className="divide-y divide-[#1A1918]/8 border-t border-b border-[#1A1918]/10">
@@ -289,7 +289,7 @@ export function MissionView() {
                     >
                       {level.label}
                     </span>
-                    <span className="block text-xs font-normal text-[#1A1918]/55 tracking-tight mt-0.5">
+                    <span className="block text-xs font-normal text-[#6B6B68] tracking-tight mt-0.5">
                       {level.detail}
                     </span>
                   </span>
@@ -300,7 +300,7 @@ export function MissionView() {
 
           {mission.autonomy === "auto_above" && (
             <div className="flex items-center justify-between gap-4 pt-1">
-              <span className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+              <span className="text-xs font-normal text-[#6B6B68] tracking-tight">
                 Seuil d&apos;envoi automatique
               </span>
               <div className="flex items-center gap-3 flex-1 max-w-[260px]">
@@ -326,7 +326,7 @@ export function MissionView() {
           )}
 
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <span className="text-xs font-normal text-[#6B6B68] tracking-tight">
               Maximum de candidatures par semaine
             </span>
             <div className="flex items-center gap-3 flex-1 max-w-[260px]">
@@ -347,7 +347,7 @@ export function MissionView() {
               </span>
             </div>
           </div>
-          <p className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight">
+          <p className="text-[11px] font-normal text-[#6B6B68] tracking-tight">
             {stats.quota_remaining} envoi{stats.quota_remaining > 1 ? "s" : ""} restant
             {stats.quota_remaining > 1 ? "s" : ""} cette semaine.
           </p>
@@ -356,11 +356,11 @@ export function MissionView() {
         {/* ═══ Mandat ═══ */}
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
               Mon mandat
             </p>
             {!mission.criteria_is_explicit && (
-              <span className="text-[11px] font-normal text-[#1A1918]/50">
+              <span className="text-[11px] font-normal text-[#6B6B68]">
                 déduit de ton profil
               </span>
             )}
@@ -369,10 +369,10 @@ export function MissionView() {
             <Row label="Métier">{labelList(c.job_families, FAMILY_LABELS, "tous")}</Row>
             <Row label="Contrat">{labelList(c.contract_types, CONTRACT_LABELS, "tous")}</Row>
             <Row label="Zone">
-              {c.countries?.length ? c.countries.join(" · ") : <span className="text-[#1A1918]/50">sans limite</span>}
+              {c.countries?.length ? c.countries.join(" · ") : <span className="text-[#6B6B68]">sans limite</span>}
             </Row>
             <Row label="Villes">
-              {c.locations?.length ? c.locations.join(" · ") : <span className="text-[#1A1918]/50">indifférent</span>}
+              {c.locations?.length ? c.locations.join(" · ") : <span className="text-[#6B6B68]">indifférent</span>}
             </Row>
             <Row label="Rythme">{labelList(c.remote_policies, REMOTE_LABELS, "indifférent")}</Row>
             <Row label="Langues">{labelList(c.languages, LANGUAGE_LABELS, "toutes")}</Row>
@@ -381,11 +381,11 @@ export function MissionView() {
           {/* Pourquoi si peu d'offres — la question que le mandat pose toujours */}
           {reasons.length > 0 && (
             <div className="pt-1 space-y-1.5">
-              <p className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
+              <p className="text-[11px] font-normal text-[#6B6B68] tracking-tight">
                 Sur la dernière veille, j&apos;ai écarté :
               </p>
               {reasons.map(([motif, n]) => (
-                <p key={motif} className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+                <p key={motif} className="text-xs font-normal text-[#6B6B68] tracking-tight">
                   <span className="tabular-nums text-[#1A1918]/70">{n}</span> offres — {motif}
                 </p>
               ))}
@@ -404,13 +404,13 @@ export function MissionView() {
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
             <Radar className="w-3 h-3 stroke-[1.6] text-[#006045]" />
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
               Ce que j&apos;ai fait
             </p>
           </div>
 
           {journal.length === 0 ? (
-            <p className="text-sm font-light text-[#1A1918]/55 tracking-tight py-2">
+            <p className="text-sm font-normal text-[#6B6B68] tracking-tight py-2">
               Rien à raconter pour l&apos;instant.
             </p>
           ) : (
@@ -437,7 +437,7 @@ export function MissionView() {
                     )}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-light text-[#1A1918]/75 leading-relaxed tracking-tight">
+                    <p className="text-sm font-normal text-[#1A1918]/75 leading-relaxed tracking-tight">
                       {e.summary}
                       {e.kind === "letter_written" && (
                         <span className="ml-1.5 text-xs text-[#006045] opacity-60 group-hover:opacity-100 transition-opacity">
@@ -446,7 +446,7 @@ export function MissionView() {
                       )}
                     </p>
                   </div>
-                  <span className="text-[11px] font-normal text-[#1A1918]/45 tracking-tight shrink-0 pt-0.5">
+                  <span className="text-[11px] font-normal text-[#6B6B68] tracking-tight shrink-0 pt-0.5">
                     {relativeTime(e.created_at)}
                   </span>
                 </div>

@@ -19,7 +19,10 @@ import { updateMission } from "@/lib/mission-client";
 import { accessToken, authEnabled } from "@/lib/auth";
 import { destinationAfterSignIn } from "@/lib/session";
 import { EmailSignIn } from "../../auth/EmailSignIn";
-import { SignatureChooser } from "@/app/dashboard/components/SignatureChooser";
+import dynamic from "next/dynamic";
+
+// Chargé à la demande : ses polices manuscrites ne pèsent pas sur le reste de la page.
+const SignatureChooser = dynamic(() => import("@/app/dashboard/components/SignatureChooser").then((m) => m.SignatureChooser), { ssr: false });
 import { saveCvDesign, uploadPhoto } from "@/lib/cv-profile";
 import { CvLookStep, DEFAULT_LOOK, type CvLook } from "./CvLookStep";
 import Link from "next/link";
@@ -676,7 +679,7 @@ export function AliceExperience() {
               {/* ── Phase 1: Objective selector ── */}
               {phase === 1 && (
                 <div className="space-y-3 pt-1">
-                  <p className="text-sm font-medium text-[#1A1918]/55">Je cherche...</p>
+                  <p className="text-sm font-medium text-[#6B6B68]">Je cherche...</p>
                   {[
                     "une alternance",
                     "un stage",
@@ -739,7 +742,7 @@ export function AliceExperience() {
 
                   {/* LinkedIn fallback */}
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-[#1A1918]/50">
+                    <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-[#6B6B68]">
                       <LinkIcon className="h-4 w-4" />
                     </div>
                     <input
@@ -748,7 +751,7 @@ export function AliceExperience() {
                       value={linkedinUrl}
                       onChange={(e) => setLinkedinUrl(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleLinkedinSubmit()}
-                      className="w-full pl-10 pr-12 py-3 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
+                      className="w-full pl-10 pr-12 py-3 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#6B6B68] text-[#1A1918] focus:outline-none focus:border-[#006045] transition-all"
                     />
                     {linkedinUrl.trim() && (
                       <button
@@ -764,7 +767,7 @@ export function AliceExperience() {
                   <button
                     type="button"
                     onClick={handleBypassCv}
-                    className="block mx-auto text-xs text-[#1A1918]/45 hover:text-[#006045] transition-colors cursor-pointer"
+                    className="block mx-auto text-xs text-[#6B6B68] hover:text-[#006045] transition-colors cursor-pointer"
                   >
                     je n&apos;ai pas de CV
                   </button>
@@ -799,7 +802,7 @@ export function AliceExperience() {
                     <>
                       {/* « Ajuster » reste accessible même sans titre ni nom lus. */}
                       <div className="flex justify-between items-center">
-                        <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Ton profil</p>
+                        <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Ton profil</p>
                         <button
                           type="button"
                           onClick={() => setIsEditingProfile(true)}
@@ -811,7 +814,7 @@ export function AliceExperience() {
 
                       {askName ? (
                         <div className="space-y-2">
-                          <p className="text-xs text-[#1A1918]/50">
+                          <p className="text-xs text-[#6B6B68]">
                             Ton prénom et ton nom : ils signent tes candidatures.
                           </p>
                           <div className="grid grid-cols-2 gap-2">
@@ -822,7 +825,7 @@ export function AliceExperience() {
                               aria-label="Prénom"
                               value={profile.firstName}
                               onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
-                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 focus:outline-none focus:border-[#006045]"
+                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#6B6B68] focus:outline-none focus:border-[#006045]"
                             />
                             <input
                               type="text"
@@ -831,7 +834,7 @@ export function AliceExperience() {
                               aria-label="Nom"
                               value={profile.lastName}
                               onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
-                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#1A1918]/50 focus:outline-none focus:border-[#006045]"
+                              className="w-full px-3 py-2.5 bg-white border border-[#EDECEA] rounded-xl text-sm placeholder:text-[#6B6B68] focus:outline-none focus:border-[#006045]"
                             />
                           </div>
                         </div>
@@ -843,21 +846,21 @@ export function AliceExperience() {
 
                       {profile.headline && (
                         <div className="space-y-1">
-                          <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Titre professionnel</p>
+                          <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Titre professionnel</p>
                           <p className="text-sm font-semibold text-[#1A1918]">{profile.headline}</p>
                         </div>
                       )}
 
                       {profile.summary && (
                         <div className="space-y-1">
-                          <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Accroche &amp; Synthèse</p>
+                          <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Accroche &amp; Synthèse</p>
                           <p className="text-xs text-[#1A1918]/70 leading-relaxed">{profile.summary}</p>
                         </div>
                       )}
 
                       {profile.skills.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-xs text-[#1A1918]/50 uppercase tracking-wider font-medium">Compétences clés</p>
+                          <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">Compétences clés</p>
                           <div className="flex flex-wrap gap-1.5">
                             {profile.skills.map((s) => (
                               <span key={s} className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#006045]/8 text-[#006045]">
@@ -888,7 +891,7 @@ export function AliceExperience() {
                     <div className="space-y-4 text-left">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs font-medium text-[#1A1918]/50">Prénom</label>
+                          <label className="text-xs font-medium text-[#6B6B68]">Prénom</label>
                           <input
                             type="text"
                             autoComplete="given-name"
@@ -898,7 +901,7 @@ export function AliceExperience() {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-[#1A1918]/50">Nom</label>
+                          <label className="text-xs font-medium text-[#6B6B68]">Nom</label>
                           <input
                             type="text"
                             autoComplete="family-name"
@@ -909,7 +912,7 @@ export function AliceExperience() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-[#1A1918]/50">Titre professionnel</label>
+                        <label className="text-xs font-medium text-[#6B6B68]">Titre professionnel</label>
                         <input
                           type="text"
                           value={profile.headline}
@@ -918,7 +921,7 @@ export function AliceExperience() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-[#1A1918]/50">Synthèse</label>
+                        <label className="text-xs font-medium text-[#6B6B68]">Synthèse</label>
                         <textarea
                           rows={3}
                           value={profile.summary}
@@ -947,7 +950,7 @@ export function AliceExperience() {
                       setIsEditingProfile(false);
                       setPhase(2);
                     }}
-                    className="block mx-auto text-xs text-[#1A1918]/45 hover:text-[#006045] transition-colors cursor-pointer"
+                    className="block mx-auto text-xs text-[#6B6B68] hover:text-[#006045] transition-colors cursor-pointer"
                   >
                     déposer un autre CV
                   </button>
@@ -967,7 +970,7 @@ export function AliceExperience() {
                     onSave={(dataUrl) => void handleSignatureDone(dataUrl)}
                     onCancel={() => void handleSignatureDone(null)}
                   />
-                  <p className="text-[11px] text-[#1A1918]/50 tracking-tight">
+                  <p className="text-[11px] text-[#6B6B68] tracking-tight">
                     Elle ne sert qu&apos;au bas de tes lettres de motivation.
                   </p>
                 </div>

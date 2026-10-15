@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Download, Eye, Loader2, PenLine, PenTool, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Markdown } from "./Markdown";
-import { SignatureChooser } from "./SignatureChooser";
+import dynamic from "next/dynamic";
+
+// Chargé à la demande : ses polices manuscrites ne pèsent pas sur le reste de la page.
+const SignatureChooser = dynamic(() => import("./SignatureChooser").then((m) => m.SignatureChooser), { ssr: false });
 import {
   downloadLetterPdf,
   emptyLetter,
@@ -97,7 +100,7 @@ export function CoverLetterEditor({
     setLetter((prev) => ({ ...prev, [key]: value }));
 
   return (
-    <div className="h-full flex flex-col min-h-0 font-light tracking-tight text-[#1A1918]">
+    <div className="h-full flex flex-col min-h-0 font-normal tracking-tight text-[#1A1918]">
       {/* ── En-tête ── */}
       <div className="shrink-0 px-5 pt-4 pb-3 border-b border-[#1A1918]/8 space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -105,7 +108,7 @@ export function CoverLetterEditor({
             <p className="text-sm font-normal text-[#1A1918] truncate">
               {jobTitle || letter.subject || "Lettre de motivation"}
             </p>
-            <p className="text-xs text-[#1A1918]/50 truncate">
+            <p className="text-xs text-[#6B6B68] truncate">
               {letter.recipient_company || companyName}
               {letter.grounded_on_experiences === false && letter.source !== "empty" && (
                 <span className="text-[#006045]/80"> · sans tes expériences</span>
@@ -150,7 +153,7 @@ export function CoverLetterEditor({
                 onClick={() => setPane(id)}
                 className={cn(
                   "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-colors cursor-pointer",
-                  pane === id ? "bg-white text-[#1A1918] shadow-sm" : "text-[#1A1918]/50 hover:text-[#1A1918]",
+                  pane === id ? "bg-white text-[#1A1918] shadow-sm" : "text-[#6B6B68] hover:text-[#1A1918]",
                 )}
               >
                 <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
@@ -166,7 +169,7 @@ export function CoverLetterEditor({
               "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] transition-colors cursor-pointer",
               letter.signature_image
                 ? "border-[#006045]/35 text-[#006045]"
-                : "border-[#1A1918]/12 text-[#1A1918]/55 hover:border-[#1A1918]/30",
+                : "border-[#1A1918]/12 text-[#6B6B68] hover:border-[#1A1918]/30",
             )}
           >
             <PenTool className="w-3.5 h-3.5 stroke-[1.5]" />
@@ -198,7 +201,7 @@ export function CoverLetterEditor({
         {pane === "edit" ? (
           <div className="scroll-discreet h-full overflow-y-auto space-y-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
                 Objet
               </label>
               <input
@@ -209,7 +212,7 @@ export function CoverLetterEditor({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
                 Corps de la lettre — Markdown
               </label>
               <textarea
@@ -220,7 +223,7 @@ export function CoverLetterEditor({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
                 Formule de politesse
               </label>
               <textarea
@@ -295,7 +298,7 @@ export function CoverLetterEditor({
       <div className="shrink-0 border-t border-[#1A1918]/8 bg-[#FAFAF8] px-5 py-3 space-y-2">
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />
-          <span className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
             Faire retravailler par Alice
           </span>
         </div>

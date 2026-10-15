@@ -140,7 +140,7 @@ export function ApplyPanel({
           <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
             Candidature — {companyName}
           </p>
-          <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight truncate">
+          <p className="text-xs font-normal text-[#6B6B68] tracking-tight truncate">
             {jobTitle}
           </p>
         </div>
@@ -150,7 +150,7 @@ export function ApplyPanel({
         {!plan ? (
           <div className="h-full flex flex-col items-center justify-center gap-2.5">
             <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
-            <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               J&apos;examine l&apos;offre…
             </p>
           </div>
@@ -162,7 +162,7 @@ export function ApplyPanel({
                 emotion={phase === "running" ? "working" : succeeded ? "happy" : "listening"}
                 size="md"
               />
-              <p className="text-base font-light text-[#1A1918]/85 tracking-tight leading-snug">
+              <p className="text-base font-normal text-[#1A1918]/85 tracking-tight leading-snug">
                 {phase === "running"
                   ? "Je m'en occupe…"
                   : outcome && "message" in outcome
@@ -174,7 +174,7 @@ export function ApplyPanel({
             {/* Ce que l'offre demande */}
             {requirements.length > 0 && (
               <div className="space-y-1.5 p-4 rounded-xl bg-[#FAFAF8] border border-[#1A1918]/6">
-                <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55 pb-0.5">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68] pb-0.5">
                   Ce que l&apos;offre demande
                 </p>
                 {requirements.map((r) => (
@@ -186,7 +186,7 @@ export function ApplyPanel({
                       {MARK[r.status].mark}
                     </span>
                     {r.label}
-                    {r.detail && <span className="text-[#1A1918]/50"> — {r.detail}</span>}
+                    {r.detail && <span className="text-[#6B6B68]"> — {r.detail}</span>}
                   </p>
                 ))}
               </div>
@@ -210,7 +210,7 @@ export function ApplyPanel({
                       )}
                       <span>
                         {s.label}
-                        {s.detail && <span className="text-[#1A1918]/50"> — {s.detail}</span>}
+                        {s.detail && <span className="text-[#6B6B68]"> — {s.detail}</span>}
                       </span>
                     </motion.p>
                   ))}
@@ -221,7 +221,7 @@ export function ApplyPanel({
             {/* Pourquoi l'envoi automatique ne passe pas — dit en une ligne */}
             {outcome?.type === "unsupported" && (
               <div className="space-y-2">
-                <span className="inline-block px-2 py-0.5 rounded-full text-[11px] tracking-tight bg-[#1A1918]/6 text-[#1A1918]/55">
+                <span className="inline-block px-2 py-0.5 rounded-full text-[11px] tracking-tight bg-[#1A1918]/6 text-[#6B6B68]">
                   {COMPLEXITY_LABEL[outcome.complexity]}
                 </span>
                 {outcome.reason && (
@@ -243,7 +243,7 @@ export function ApplyPanel({
                   <FolderDown className="w-4 h-4 text-[#006045] stroke-[1.6]" />
                   <p className="text-sm font-normal text-[#1A1918] tracking-tight">Ton dossier est prêt</p>
                 </div>
-                <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight leading-relaxed">
+                <p className="text-xs font-normal text-[#6B6B68] tracking-tight leading-relaxed">
                   {resumeInPack
                     ? "CV adapté à l'offre, lettre de motivation et annonce, dans un seul fichier."
                     : "Lettre de motivation et annonce prêtes. Ton CV n'a pas pu être produit : complète-le ou dépose-le dans l'éditeur, puis télécharge à nouveau."}
@@ -340,7 +340,7 @@ export function ApplyPanel({
               <div className="space-y-5 pt-1">
                 {result.steps.length > 0 && (
                   <div className="space-y-2.5">
-                    <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+                    <p className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
                       Ce qu&apos;il reste à faire
                     </p>
                     <ol className="space-y-2">
@@ -349,7 +349,7 @@ export function ApplyPanel({
                           key={step}
                           className="flex items-start gap-2.5 text-xs font-normal text-[#1A1918]/70 tracking-tight leading-relaxed"
                         >
-                          <span className="shrink-0 mt-px w-4 h-4 rounded-full bg-[#1A1918]/6 text-[11px] text-[#1A1918]/55 flex items-center justify-center tabular-nums">
+                          <span className="shrink-0 mt-px w-4 h-4 rounded-full bg-[#1A1918]/6 text-[11px] text-[#6B6B68] flex items-center justify-center tabular-nums">
                             {i + 1}
                           </span>
                           {step}
@@ -361,7 +361,7 @@ export function ApplyPanel({
 
                 {(result.has_resume || result.has_letter) && (
                   <div className="space-y-2">
-                    <p className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+                    <p className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
                       {result.sent ? "Documents envoyés" : "Documents préparés"}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -454,7 +454,7 @@ export function ApplyPanel({
                   <p className="text-sm font-normal text-[#1A1918] tracking-tight">
                     Je postule chez {companyName} ?
                   </p>
-                  <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight leading-relaxed">
+                  <p className="text-xs font-normal text-[#6B6B68] tracking-tight leading-relaxed">
                     {plan.complexity === "simple"
                       ? "J'envoie la candidature en ton nom. Tu ne pourras pas la rappeler."
                       : "Cette offre ne se postule pas automatiquement. Je prépare ton dossier complet — CV adapté et lettre — et tu l'envoies en deux clics sur le site de l'employeur."}
@@ -464,7 +464,7 @@ export function ApplyPanel({
                   type="button"
                   onClick={onBack}
                   aria-label="Annuler"
-                  className="p-1 rounded-full text-[#1A1918]/50 hover:text-[#1A1918] transition-colors cursor-pointer shrink-0"
+                  className="p-1 rounded-full text-[#6B6B68] hover:text-[#1A1918] transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4 stroke-[1.4]" />
                 </button>
@@ -478,7 +478,7 @@ export function ApplyPanel({
                       {MARK[r.status].mark}
                     </span>
                     {r.label}
-                    {r.detail && <span className="text-[#1A1918]/50"> — {r.detail}</span>}
+                    {r.detail && <span className="text-[#6B6B68]"> — {r.detail}</span>}
                   </p>
                 ))}
               </div>
@@ -499,7 +499,7 @@ export function ApplyPanel({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="text-xs font-normal text-[#1A1918]/50 hover:text-[#1A1918] tracking-tight cursor-pointer"
+                  className="text-xs font-normal text-[#6B6B68] hover:text-[#1A1918] tracking-tight cursor-pointer"
                 >
                   Annuler
                 </button>

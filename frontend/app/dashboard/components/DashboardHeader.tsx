@@ -261,10 +261,10 @@ export function DashboardHeader({
                             DOT[e.kind] ?? "bg-[#1A1918]/20",
                           )}
                         />
-                        <p className={cn("flex-1 leading-relaxed", e.is_read ? "text-[#1A1918]/55" : "text-[#1A1918]/85")}>
+                        <p className={cn("flex-1 leading-relaxed", e.is_read ? "text-[#6B6B68]" : "text-[#1A1918]/85")}>
                           {e.summary}
                         </p>
-                        <span className="text-[11px] text-[#1A1918]/45 shrink-0 pt-0.5">{ago(e.created_at)}</span>
+                        <span className="text-[11px] text-[#6B6B68] shrink-0 pt-0.5">{ago(e.created_at)}</span>
                       </motion.div>
                     ))
                   )}

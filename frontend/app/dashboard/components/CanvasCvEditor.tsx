@@ -83,7 +83,7 @@ function CvDesignPane({
     <div className="space-y-7">
       {design?.has_original && (
         <div className="space-y-2.5">
-          <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+          <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
             Présentation
           </p>
           <div className="border-t border-b border-[#1A1918]/10 divide-y divide-[#1A1918]/8">
@@ -126,7 +126,7 @@ function CvDesignPane({
                   >
                     {opt.label}
                   </span>
-                  <span className="block text-xs font-normal text-[#1A1918]/55 tracking-tight mt-0.5">
+                  <span className="block text-xs font-normal text-[#6B6B68] tracking-tight mt-0.5">
                     {opt.detail}
                   </span>
                 </span>
@@ -140,11 +140,11 @@ function CvDesignPane({
         <>
           <div className="space-y-2.5">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+              <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
                 Modèle
               </p>
               {!templateId && (
-                <span className="text-[11px] font-normal text-[#1A1918]/50">
+                <span className="text-[11px] font-normal text-[#6B6B68]">
                   aucun choisi
                 </span>
               )}
@@ -170,7 +170,7 @@ function CvDesignPane({
                   >
                     {t.name}
                   </span>
-                  <span className="block text-[11px] font-normal text-[#1A1918]/55 tracking-tight mt-0.5">
+                  <span className="block text-[11px] font-normal text-[#6B6B68] tracking-tight mt-0.5">
                     {t.tagline}
                   </span>
                 </button>
@@ -179,7 +179,7 @@ function CvDesignPane({
           </div>
 
           <div className="space-y-2.5">
-            <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+            <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
               Couleur
             </p>
             <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ function CvDesignPane({
 
           {templateId ? (
             <div className="pt-1 space-y-2">
-              <p className="text-xs text-[#1A1918]/55 uppercase tracking-wider font-medium">
+              <p className="text-xs text-[#6B6B68] uppercase tracking-wider font-medium">
                 Aperçu
               </p>
               <div className="mx-auto w-full max-w-md">
@@ -241,7 +241,7 @@ function CvDesignPane({
               </div>
             </div>
           ) : (
-            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               Choisis un modèle pour voir le rendu. Rien n&apos;est appliqué tant
               que tu n&apos;as rien désigné.
             </p>
@@ -459,7 +459,7 @@ export function CanvasCvEditor({
   if (!candidateId) {
     return (
       <div className="h-full flex items-center justify-center px-8 text-center">
-        <p className="text-sm font-light text-[#1A1918]/50 tracking-tight">
+        <p className="text-sm font-normal text-[#6B6B68] tracking-tight">
           Je ne trouve pas ton profil. Reconnecte-toi pour éditer ton CV.
         </p>
       </div>
@@ -470,7 +470,7 @@ export function CanvasCvEditor({
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2.5">
         <Loader2 className="w-5 h-5 animate-spin text-[#006045]" />
-        <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
+        <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
           Je charge ton CV…
         </p>
       </div>
@@ -499,7 +499,7 @@ export function CanvasCvEditor({
                 "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-normal tracking-tight transition-colors cursor-pointer",
                 pane === id
                   ? "bg-white text-[#1A1918] shadow-sm"
-                  : "text-[#1A1918]/50 hover:text-[#1A1918]",
+                  : "text-[#6B6B68] hover:text-[#1A1918]",
               )}
             >
               <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
@@ -519,7 +519,7 @@ export function CanvasCvEditor({
                   "shrink-0 px-3 py-1.5 rounded-full text-[11px] font-normal tracking-tight transition-colors cursor-pointer border",
                   subStep === step.id
                     ? "border-[#006045]/40 text-[#006045] bg-[#006045]/6"
-                    : "border-[#1A1918]/10 text-[#1A1918]/50 hover:text-[#1A1918] hover:border-[#1A1918]/25",
+                    : "border-[#1A1918]/10 text-[#6B6B68] hover:text-[#1A1918] hover:border-[#1A1918]/25",
                 )}
               >
                 {step.shortLabel}
@@ -543,7 +543,7 @@ export function CanvasCvEditor({
               className="w-full flex-1 min-h-[28rem] rounded-xl border border-[#1A1918]/10 bg-white"
             >
               <div className="p-6 text-center space-y-3">
-                <p className="text-sm font-light text-[#1A1918]/55 tracking-tight">
+                <p className="text-sm font-normal text-[#6B6B68] tracking-tight">
                   Ton navigateur n&apos;affiche pas les PDF ici.
                 </p>
                 <button
@@ -573,7 +573,7 @@ export function CanvasCvEditor({
               <div className="space-y-4">
                 {/* Alice rédige à partir du parcours, pas à partir du vide. */}
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#1A1918]/8">
-                  <p className="text-xs font-normal text-[#1A1918]/50 tracking-tight">
+                  <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
                     Accroche et synthèse, écrites depuis tes expériences.
                   </p>
                   <button
@@ -683,7 +683,7 @@ export function CanvasCvEditor({
         <div className="px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 stroke-[1.6] text-[#006045] shrink-0" />
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#1A1918]/55">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6B68]">
               Demander à Alice
             </span>
           </div>
@@ -718,7 +718,7 @@ export function CanvasCvEditor({
           </button>
 
           <div className="flex items-center gap-2.5">
-            <span className="text-[11px] font-normal tracking-tight text-[#1A1918]/55">
+            <span className="text-[11px] font-normal tracking-tight text-[#6B6B68]">
               {saveState === "saved" && !isDirty
                 ? "Enregistré"
                 : saveState === "error"

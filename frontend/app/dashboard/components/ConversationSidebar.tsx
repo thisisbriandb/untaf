@@ -60,7 +60,7 @@ function Monogram({ name, size = "md" }: { name: string | null; size?: "sm" | "m
   if (!name) {
     return (
       <span className={cn(
-        "shrink-0 flex items-center justify-center bg-[#ECEBE7] text-[#1A1918]/55",
+        "shrink-0 flex items-center justify-center bg-[#ECEBE7] text-[#6B6B68]",
         size === "md" ? "h-8 w-8 rounded-xl" : "h-6 w-6 rounded-lg",
       )}>
         <Briefcase className={size === "md" ? "h-3.5 w-3.5" : "h-3 w-3"} />
@@ -126,7 +126,7 @@ function Row({
                 <span className={cn("truncate text-[13px] tracking-tight", active ? "text-[#1A1918]" : "text-[#1A1918]/80")}>
                   {c.job_id ? employer ?? c.job_title ?? c.title : c.title}
                 </span>
-                <span className="ml-auto shrink-0 text-[11px] font-normal text-[#1A1918]/50 group-hover:opacity-0 transition-opacity">
+                <span className="ml-auto shrink-0 text-[11px] font-normal text-[#6B6B68] group-hover:opacity-0 transition-opacity">
                   {when(c.updated_at)}
                 </span>
               </span>
@@ -146,7 +146,7 @@ function Row({
             type="button"
             aria-label="Supprimer la conversation"
             onClick={() => onRemove(c)}
-            className="absolute right-2 top-2 p-1 rounded-full text-[#1A1918]/45 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-opacity"
+            className="absolute right-2 top-2 p-1 rounded-full text-[#6B6B68] opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-opacity"
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -157,9 +157,9 @@ function Row({
 
 function Heading({ children, count }: { children: React.ReactNode; count?: number }) {
   return (
-    <p className="flex items-center gap-1.5 px-2 pb-1.5 text-[11px] uppercase tracking-[0.12em] text-[#1A1918]/55 font-medium">
+    <p className="flex items-center gap-1.5 px-2 pb-1.5 text-[11px] uppercase tracking-[0.12em] text-[#6B6B68] font-medium">
       {children}
-      {count ? <span className="text-[#1A1918]/40 tabular-nums">{count}</span> : null}
+      {count ? <span className="text-[#6B6B68] tabular-nums">{count}</span> : null}
     </p>
   );
 }
@@ -368,13 +368,13 @@ export function ConversationSidebar({
                   exit={{ height: 0, opacity: 0 }}
                   className="flex items-center gap-2 overflow-hidden rounded-xl bg-white border border-[#1A1918]/[0.08] px-2.5 py-1.5 mt-1"
                 >
-                  <Search className="h-3 w-3 text-[#1A1918]/50" />
+                  <Search className="h-3 w-3 text-[#6B6B68]" />
                   <input
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Une entreprise, un poste…"
-                    className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#1A1918]/45 outline-none"
+                    className="w-full bg-transparent text-[12px] text-[#1A1918] placeholder:text-[#6B6B68] outline-none"
                   />
                 </motion.label>
               )}
@@ -415,16 +415,16 @@ export function ConversationSidebar({
                             <span className="block truncate text-[12px] text-[#1A1918]/80">
                               {companyOf(i.company_name) ?? i.title}
                             </span>
-                            <span className="block truncate text-[11px] font-normal text-[#1A1918]/55">
+                            <span className="block truncate text-[11px] font-normal text-[#6B6B68]">
                               {companyOf(i.company_name) ? i.title : "Employeur non communiqué"}
                             </span>
                           </span>
-                          <ArrowRight className="h-3 w-3 text-[#1A1918]/40 group-hover:text-[#006045] transition-colors" />
+                          <ArrowRight className="h-3 w-3 text-[#6B6B68] group-hover:text-[#006045] transition-colors" />
                         </motion.button>
                       ))}
                     </div>
                   ) : (
-                    <p className="px-2 text-[11px] font-normal text-[#1A1918]/55 leading-relaxed">
+                    <p className="px-2 text-[11px] font-normal text-[#6B6B68] leading-relaxed">
                       Pose une question depuis une offre : la conversation se range ici, sous le nom de
                       l&apos;entreprise, avec l&apos;état de ton dossier.
                     </p>
@@ -442,7 +442,7 @@ export function ConversationSidebar({
                     />)}
                 </AnimatePresence>
                 {general.length === 0 && (
-                  <p className="px-2 text-[11px] font-normal text-[#1A1918]/55">
+                  <p className="px-2 text-[11px] font-normal text-[#6B6B68]">
                     {q ? "Aucun résultat." : "Pas encore de conversation."}
                   </p>
                 )}
@@ -467,7 +467,7 @@ export function ConversationSidebar({
                 type="button"
                 onClick={() => goTab("parametres")}
                 aria-label="Paramètres"
-                className="p-1.5 rounded-full text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
+                className="p-1.5 rounded-full text-[#6B6B68] hover:text-[#1A1918] hover:bg-[#1A1918]/5 cursor-pointer"
               >
                 <Settings className="h-4 w-4 stroke-[1.4]" />
               </button>

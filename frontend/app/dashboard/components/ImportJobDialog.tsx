@@ -53,7 +53,7 @@ export function ImportJobDialog({
         type="button"
         onClick={onClose}
         aria-label="Fermer"
-        className="absolute top-5 right-6 p-2 rounded-full text-[#1A1918]/55 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+        className="absolute top-5 right-6 p-2 rounded-full text-[#6B6B68] hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
       >
         <X className="w-4 h-4 stroke-[1.4]" />
       </button>
@@ -86,7 +86,7 @@ export function ImportJobDialog({
             disabled={isImporting}
             autoFocus
             aria-label="Texte de l'offre"
-            className="w-full resize-none rounded-2xl border border-[#EDECEA] bg-white px-4 py-3 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
+            className="w-full resize-none rounded-2xl border border-[#EDECEA] bg-white px-4 py-3 text-sm font-normal text-[#1A1918] placeholder:text-[#6B6B68] tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
           />
           <input
             type="url"
@@ -96,7 +96,7 @@ export function ImportJobDialog({
             maxLength={2000}
             disabled={isImporting}
             aria-label="Lien de l'annonce"
-            className="w-full rounded-full border border-[#EDECEA] bg-white px-4 py-2.5 text-sm font-light text-[#1A1918] placeholder:text-[#1A1918]/50 tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
+            className="w-full rounded-full border border-[#EDECEA] bg-white px-4 py-2.5 text-sm font-normal text-[#1A1918] placeholder:text-[#6B6B68] tracking-tight focus:outline-none focus:border-[#006045] disabled:opacity-60"
           />
 
           {error && (
@@ -106,7 +106,7 @@ export function ImportJobDialog({
           <button
             type="submit"
             disabled={tooShort || isImporting}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-full bg-[#006045] text-white text-sm font-light tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
+            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-full bg-[#006045] text-white text-sm font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
             {isImporting ? (
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -161,7 +161,7 @@ function FollowupPanel({
 
   if (loading || !draft) {
     return (
-      <div className="flex items-center gap-2 py-3 text-xs font-normal text-[#1A1918]/50">
+      <div className="flex items-center gap-2 py-3 text-xs font-normal text-[#6B6B68]">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-[#006045]" />
         Je rédige une relance courte et polie…
       </div>
@@ -329,7 +329,7 @@ function Row({
               <p className="text-sm text-[#1A1918] tracking-tight truncate group-hover:text-[#006045] transition-colors">
                 {item.title}
               </p>
-              <p className="text-[11px] font-normal text-[#1A1918]/50 tracking-tight truncate">{subtitle}</p>
+              <p className="text-[11px] font-normal text-[#6B6B68] tracking-tight truncate">{subtitle}</p>
             </button>
             <motion.span
               key={item.stage}
@@ -445,7 +445,7 @@ function Row({
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-label="Historique"
-                className="ml-auto p-1 rounded-full text-[#1A1918]/50 hover:text-[#1A1918] cursor-pointer"
+                className="ml-auto p-1 rounded-full text-[#6B6B68] hover:text-[#1A1918] cursor-pointer"
               >
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
               </button>
@@ -480,7 +480,7 @@ function Row({
                 className="overflow-hidden border-l border-[#1A1918]/10 ml-1 pl-3 space-y-1.5 pt-1"
               >
                 {[...item.timeline].reverse().map((t, i) => (
-                  <li key={`${t.at}-${i}`} className="text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
+                  <li key={`${t.at}-${i}`} className="text-[11px] font-normal text-[#6B6B68] tracking-tight">
                     <span className="text-[#1A1918]/75">{STAGE_LABELS[t.status as Stage] ?? t.status}</span>
                     {" · "}
                     {when(t.at)}
@@ -575,7 +575,7 @@ export function CandidaturesView({
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-xl font-normal text-[#1A1918] tracking-tight">Candidatures</h2>
-            <p className="text-xs text-[#1A1918]/50 mt-0.5 tracking-tight">
+            <p className="text-xs text-[#6B6B68] mt-0.5 tracking-tight">
               De l&apos;offre retenue à la réponse : où en est chacune, et ce qui reste à faire.
             </p>
           </div>
@@ -583,7 +583,7 @@ export function CandidaturesView({
             type="button"
             onClick={() => void refresh()}
             aria-label="Rafraîchir"
-            className="p-2 rounded-full text-[#1A1918]/50 hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-[#6B6B68] hover:text-[#1A1918] hover:bg-[#1A1918]/5 transition-colors cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -630,7 +630,7 @@ export function CandidaturesView({
                   onClick={() => setFilter(f.id)}
                   className={cn(
                     "relative shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] tracking-tight transition-colors cursor-pointer",
-                    active ? "text-white" : "text-[#1A1918]/55 hover:text-[#1A1918]",
+                    active ? "text-white" : "text-[#6B6B68] hover:text-[#1A1918]",
                   )}
                 >
                   {active && (
@@ -642,7 +642,7 @@ export function CandidaturesView({
                   )}
                   <span className="relative">
                     {f.label}
-                    {n > 0 && <span className={cn("ml-1 tabular-nums", active ? "text-white/60" : "text-[#1A1918]/50")}>{n}</span>}
+                    {n > 0 && <span className={cn("ml-1 tabular-nums", active ? "text-white/60" : "text-[#6B6B68]")}>{n}</span>}
                   </span>
                 </button>
               );
@@ -665,10 +665,10 @@ export function CandidaturesView({
           </div>
         ) : items.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-10 space-y-1.5">
-            <p className="text-sm font-light text-[#1A1918]/60 tracking-tight">
+            <p className="text-sm font-normal text-[#1A1918]/60 tracking-tight">
               {filter === "all" ? "Aucune candidature pour l'instant." : "Rien ici pour le moment."}
             </p>
-            <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight">
+            <p className="text-xs font-normal text-[#6B6B68] tracking-tight">
               {filter === "all"
                 ? "Confie-moi une mission depuis la conversation : je retiens les offres et je prépare les packs."
                 : "Tout ce qui demande ton attention apparaîtra ici."}

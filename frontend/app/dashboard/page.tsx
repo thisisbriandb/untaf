@@ -183,7 +183,7 @@ export default function DashboardPage() {
       <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <AlicePresence emotion="searching" />
-          <p className="text-sm font-light text-[#1A1918]/60 tracking-tight">Je synchronise ton espace...</p>
+          <p className="text-sm font-normal text-[#1A1918]/60 tracking-tight">Je synchronise ton espace...</p>
         </div>
       </main>
     );

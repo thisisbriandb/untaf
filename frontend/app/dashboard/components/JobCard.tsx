@@ -46,7 +46,7 @@ export function JobCard({ job }: { job: JobCardData }) {
           <p className="text-sm font-normal text-[#1A1918] tracking-tight truncate">
             {job.title}
           </p>
-          <p className="text-xs font-normal text-[#1A1918]/55 tracking-tight truncate">
+          <p className="text-xs font-normal text-[#6B6B68] tracking-tight truncate">
             {[companyOf(job.company_name) ?? "Employeur non communiqué", job.location].filter(Boolean).join(" · ")}
           </p>
           {(tags || job.apply_mode) && (
@@ -75,7 +75,7 @@ export function JobCard({ job }: { job: JobCardData }) {
 export function JobCardList({ jobs }: { jobs: JobCardData[] }) {
   if (!jobs.length) {
     return (
-      <p className="text-sm font-light text-[#1A1918]/50 tracking-tight py-2">
+      <p className="text-sm font-normal text-[#6B6B68] tracking-tight py-2">
         Aucune offre trouvée pour l&apos;instant.
       </p>
     );

@@ -23,13 +23,13 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-[100dvh] bg-[#FAFAF8] px-4 py-12 text-[#1A1918] sm:px-6 sm:py-16">
       <article className="mx-auto max-w-2xl">
-        <Link href="/" className="text-[13px] text-[#1A1918]/55 hover:text-[#006045]">
+        <Link href="/" className="text-[13px] text-[#6B6B68] hover:text-[#006045]">
           ← Alice
         </Link>
         <h1 className="mt-6 text-[32px] font-semibold leading-tight tracking-tight sm:text-[40px]">
           Confidentialité
         </h1>
-        <p className="mt-3 text-[14px] text-[#1A1918]/55">Mise à jour le {UPDATED}</p>
+        <p className="mt-3 text-[14px] text-[#6B6B68]">Mise à jour le {UPDATED}</p>
         <p className="mt-6 text-[15px] leading-relaxed text-[#1A1918]/75">
           Alice (alice-agent.fr) est un assistant de recherche d&apos;emploi : il trouve des offres, adapte ton CV
           et ta lettre à chacune, et t&apos;aide à postuler. Cette page explique quelles données Alice et son

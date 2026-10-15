@@ -103,7 +103,7 @@ export function EmailSignIn({
           >
             <p className="text-center text-lg font-normal text-[#1A1918]/85 tracking-tight">{title}</p>
             <div className="flex items-center bg-white border border-[#EDECEA] focus-within:border-[#006045] rounded-full pl-4 pr-1.5 py-1.5 shadow-sm transition-colors">
-              <Mail className="h-4 w-4 text-[#1A1918]/45 shrink-0" />
+              <Mail className="h-4 w-4 text-[#6B6B68] shrink-0" />
               <input
                 type="email"
                 autoComplete="email"
@@ -111,7 +111,7 @@ export function EmailSignIn({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ton@email.fr"
-                className="flex-1 bg-transparent px-3 text-sm font-light outline-none placeholder:text-[#1A1918]/50"
+                className="flex-1 bg-transparent px-3 text-sm font-normal outline-none placeholder:text-[#6B6B68]"
               />
               <button
                 type="submit"
@@ -122,7 +122,7 @@ export function EmailSignIn({
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-center text-[11px] font-normal text-[#1A1918]/55 tracking-tight">
+            <p className="text-center text-[11px] font-normal text-[#6B6B68] tracking-tight">
               Pas de mot de passe : je t&apos;envoie un lien et un code, depuis alice@alice-agent.fr.
             </p>
           </motion.form>
@@ -135,7 +135,7 @@ export function EmailSignIn({
             className="space-y-4 text-center"
           >
             <p className="text-lg font-normal text-[#1A1918]/85 tracking-tight">Vérifie ta boîte mail.</p>
-            <p className="text-sm font-light text-[#1A1918]/55 tracking-tight leading-relaxed">
+            <p className="text-sm font-normal text-[#6B6B68] tracking-tight leading-relaxed">
               J&apos;ai envoyé un lien à <span className="text-[#1A1918]">{sentTo}</span>. Clique dessus —
               je t&apos;attends ici, cet onglet reprendra tout seul.
             </p>
@@ -175,7 +175,7 @@ export function EmailSignIn({
                 setSentTo(null);
                 setCode("");
               }}
-              className="text-[11px] font-normal text-[#1A1918]/55 hover:text-[#1A1918] cursor-pointer"
+              className="text-[11px] font-normal text-[#6B6B68] hover:text-[#1A1918] cursor-pointer"
             >
               Changer d&apos;adresse ou renvoyer
             </button>
