@@ -178,7 +178,7 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
   const primaryLabel = sent
     ? `Candidature envoyée${appState?.applied_at ? ` le ${day(appState.applied_at)}` : ""}`
     : awaiting
-      ? "Valider l'envoi"
+      ? "Valider et envoyer"
       : packReady
         ? mode === "manual" ? "Finir ma candidature sur le site" : "Envoyer ma candidature"
         : mode === "manual" ? "Préparer ma candidature" : "Préparer et envoyer ma candidature";
@@ -324,13 +324,9 @@ export function JobDetailCanvas({ job, autoApply = false }: { job: JobCardData; 
           ) : (
           <button
             type="button"
-            onClick={() => {
-              if (awaiting) {
-                window.dispatchEvent(new CustomEvent("untaf:select-tab", { detail: "candidatures" }));
-                return;
-              }
-              setApplying(true);
-            }}
+            // En attente comme prêt : on (re)lance la candidature ici même.
+            // Le clic vaut accord, Alice reprend le dossier en attente et l'envoie.
+            onClick={() => setApplying(true)}
             disabled={!candidateId || sent}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-full bg-[#006045] text-white text-xs font-normal tracking-tight hover:bg-[#004d37] transition-colors cursor-pointer disabled:opacity-40"
           >
