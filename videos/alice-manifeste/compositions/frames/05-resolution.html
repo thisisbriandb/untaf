@@ -1,39 +1,92 @@
 <template>
   <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
-
+    
     #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
-            background: #FAFAF8; font-family: "Geist", sans-serif; color: #1A1918; }
-    .s5-halo { position: absolute; left: 140px; top: 360px; width: 800px; height: 800px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,96,69,0.14) 0%, rgba(0,96,69,0.06) 40%, rgba(0,96,69,0) 70%); }
-    .s5-logo { position: absolute; left: 270px; top: 610px; width: 540px; height: 300px; }
-    .s5-name { position: absolute; left: 0; width: 1080px; top: 1010px; text-align: center;
-      font-size: 120px; font-weight: 700; letter-spacing: -0.04em; color: #006045; line-height: 1; }
-    .s5-line { position: absolute; left: 90px; width: 900px; top: 1170px; text-align: center;
-      font-size: 54px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
-    .s5-url { position: absolute; left: 0; width: 1080px; top: 1440px; display: flex; justify-content: center; }
-    .s5-pill { padding: 26px 56px; border-radius: 100px; background: #006045; color: #FAFAF8;
-      font-size: 52px; font-weight: 600; letter-spacing: -0.01em; }
-    .s5-small { position: absolute; left: 0; width: 1080px; top: 1600px; text-align: center;
-      font-size: 34px; font-weight: 500; color: #4E4C47; }
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .s5-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .s5-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .s5-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .s5-l span { font-size: 112px; }
+    .s5-m span { font-size: 84px; }
+    .s5-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .s5-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .s5-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #s5-light { left: 190px; top: 610px; width: 700px; height: 700px; }
+    .s5-logo { position: absolute; left: 180px; top: 790px; width: 720px; height: 340px; opacity: 0; }
+    /* Le logo : deux anneaux de verre. */
+    .s5-ring { position: absolute; top: 0; width: 340px; height: 340px; border-radius: 50%;
+      border: 54px solid rgba(255,255,255,0.13);
+      backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), 0 2px 0 rgba(255,255,255,0.28), 0 30px 80px rgba(0,0,0,0.6); }
+    .s5-r1 { left: 20px; } .s5-r2 { left: 360px; }
+    /* Le texte qui agit comme du verre. */
+    .s5-glasstext { font-size: 230px; font-weight: 700; letter-spacing: -0.06em; line-height: 1;
+      color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,0.55);
+      background: linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(150,240,205,0.55) 35%, rgba(255,255,255,0.12) 62%, rgba(255,255,255,0.5) 100%);
+      background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; }
   </style>
 
   <div id="root" data-composition-id="05-resolution" data-width="1080" data-height="1920">
-    <div class="s5-halo"></div>
-    <!-- Le logo : deux anneaux, comme sur le site. -->
-    <svg class="s5-logo" viewBox="0 0 540 300" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="152" cy="150" r="100" fill="none" stroke="#006045" stroke-width="40" />
-      <circle cx="388" cy="150" r="100" fill="none" stroke="#006045" stroke-width="40" />
-    </svg>
-    <div class="s5-name">Alice</div>
-    <div class="s5-line">Ton agent de carrière personnel.</div>
-    <div class="s5-url"><div class="s5-pill">alice-agent.fr</div></div>
-    <div class="s5-small">Gratuit pour commencer · Aussi sur Chrome</div>
+    <div class="s5-t s5-l" id="s5-a"><span>Ne cherche plus.</span></div>
+    <div class="s5-t s5-m" id="s5-b"><span>Laisse les opportunités<br>venir à toi.</span></div>
+    <div class="s5-light" id="s5-light"></div>
+    <div class="s5-logo" id="s5-logo"><div class="s5-ring s5-r1"></div><div class="s5-ring s5-r2"></div></div>
+    <div class="s5-t" id="s5-name"><span class="s5-glasstext">Alice</span></div>
+    <div class="s5-t s5-s" id="s5-c"><span>Ton agent de carrière personnel.</span></div>
+    <div class="s5-t s5-m" id="s5-d"><span>alice-agent.fr</span></div>
   </div>
 
   <script>
-    window.__timelines["05-resolution"] = gsap.timeline({ paused: true });
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      { const B = [["s5-a", 0.25, 1.4], ["s5-b", 1.52, 3.45]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      const logo = document.getElementById("s5-logo"), light = document.getElementById("s5-light"), name = document.getElementById("s5-name");
+      tl.fromTo(light, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 1.2, ease: "sine.out" }, 3.45);
+      tl.fromTo(logo, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.9, ease: "expo.out" }, 3.55);
+      tl.to(light, { x: 60, duration: 1.2, ease: "sine.inOut" }, 4.0);
+      tl.to([logo, light], { opacity: 0, duration: 0.3 }, 4.75);
+      tl.fromTo(name, { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.6, ease: "expo.out" }, 5.0);
+      tl.fromTo(name.firstChild, { backgroundPosition: "0% 0%" }, { backgroundPosition: "100% 100%", duration: 1.2, ease: "sine.inOut" }, 5.0);
+      tl.to(name, { opacity: 0, duration: 0.25 }, 5.95);
+      { const B = [["s5-c", 6.25, 7.35]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      const url = document.getElementById("s5-d");
+      tl.fromTo(url, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 7.45);
+      window.__timelines["05-resolution"] = tl;
+    })();
   </script>
 </template>

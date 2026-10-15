@@ -1,58 +1,70 @@
 <template>
   <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
-
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
     #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
-            background: #1A1918; font-family: "Geist", sans-serif; color: #FAFAF8; }
-    .r2-stage { position: absolute; inset: 0; width: 1080px; height: 1920px; }
-    .r2-glow { position: absolute; left: 140px; top: 510px; width: 800px; height: 800px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,150,105,0.42) 0%, rgba(0,96,69,0.22) 34%, rgba(0,96,69,0) 68%); }
-    .r2-sphere { position: absolute; left: 380px; top: 750px; width: 320px; height: 320px; border-radius: 50%;
-      background: radial-gradient(circle at 38% 34%, #6FE0B6 0%, #19A877 26%, #006045 62%, #003B2B 100%);
-      box-shadow: 0 0 80px 10px rgba(0,150,105,0.35); }
-    .r2-q { position: absolute; left: 90px; width: 900px; top: 1330px; text-align: center;
-      font-size: 84px; font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
-    .r2-q em { font-style: normal; color: #5FD3A6; }
-    .r2-sub { position: absolute; left: 110px; width: 860px; top: 1580px; text-align: center;
-      font-size: 40px; font-weight: 500; line-height: 1.35; color: #B5B3AD; }
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .r2-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .r2-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .r2-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .r2-l span { font-size: 112px; }
+    .r2-m span { font-size: 84px; }
+    .r2-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .r2-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .r2-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #r2-orb { left: 230px; top: 650px; width: 620px; height: 620px; border-radius: 50%; }
+    #r2-light { left: 190px; top: 610px; width: 700px; height: 700px; }
   </style>
 
   <div id="root" data-composition-id="02-rupture" data-width="1080" data-height="1920">
-    <svg class="r2-stage" id="r2-stage" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
-      <g id="r2-grid" opacity="0.28"></g>
-      <defs>
-        <filter id="r2-bloom" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="10" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <!-- La ligne fluide entre par le bas à gauche, ondule, puis s'enroule autour du centre. -->
-      <path id="r2-line" d="M -40 1180 C 160 1240, 220 1060, 160 900 S 300 520, 560 560 S 900 760, 860 980 S 640 1200, 470 1110 S 360 880, 540 820 S 700 960, 610 1040"
-            fill="none" stroke="#2FC48F" stroke-width="7" stroke-linecap="round" filter="url(#r2-bloom)" />
-    </svg>
-    <div class="r2-glow"></div>
-    <div class="r2-sphere"></div>
-    <div class="r2-q">Et si on changeait <em>les règles</em> ?</div>
-    <div class="r2-sub">Si tu n'avais plus à t'épuiser pour te faire remarquer ?</div>
+    <div class="r2-light" id="r2-light"></div>
+    <div class="r2-t r2-l" id="r2-q"><span>Et si on changeait les règles ?</span></div>
+    <div class="r2-t r2-s" id="r2-s"><span>Si tu n'avais plus à t'épuiser<br>pour te faire remarquer ?</span></div>
+    <div class="r2-glass" id="r2-orb"></div>
   </div>
 
   <script>
     (function () {
-      // Restes de la grille figée, en fond.
-      const g = document.getElementById("r2-grid");
-      const NS = "http://www.w3.org/2000/svg";
-      const cell = 60;
-      const hash = (i, j) => { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
-      for (let j = 0; j < 32; j++) for (let i = 0; i < 18; i++) {
-        const x = i * cell, y = j * cell, r = hash(i, j);
-        const l = document.createElementNS(NS, "line");
-        if (r < 0.5) { l.setAttribute("x1", x); l.setAttribute("y1", y); l.setAttribute("x2", x + cell); l.setAttribute("y2", y); }
-        else { l.setAttribute("x1", x); l.setAttribute("y1", y); l.setAttribute("x2", x); l.setAttribute("y2", y + cell); }
-        l.setAttribute("stroke", "#3A3936"); l.setAttribute("stroke-width", "4");
-        g.appendChild(l);
-      }
-      window.__timelines["02-rupture"] = gsap.timeline({ paused: true });
+      const tl = gsap.timeline({ paused: true });
+      const orb = document.getElementById("r2-orb"), q = document.getElementById("r2-q"),
+            s = document.getElementById("r2-s"), light = document.getElementById("r2-light");
+      // Silence : le verre seul, qui se forme.
+      tl.fromTo(orb, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 1.3, ease: "expo.out" }, 0.15);
+      // La question naît derrière le verre, floue ; le verre se lève, elle devient nette.
+      tl.set(q, { opacity: 1 }, 1.45);
+      tl.to(orb, { y: -1500, duration: 1.1, ease: "power3.inOut" }, 1.75);
+      tl.to(orb, { opacity: 0, duration: 0.3 }, 2.55);
+      tl.to(q, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, 2.62);
+      { const B = [["r2-s", 2.9, 5.55]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      // La présence d'Alice : le verre revient, une lumière verte s'allume derrière.
+      tl.set(orb, { y: 0, scale: 0.9 }, 5.6);
+      tl.to(orb, { opacity: 1, scale: 1, duration: 1.2, ease: "expo.out" }, 5.75);
+      tl.fromTo(light, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 2.4, ease: "sine.inOut" }, 6.3);
+      tl.to(orb, { scale: 1.03, duration: 1.4, ease: "sine.inOut" }, 8.1);
+      window.__timelines["02-rupture"] = tl;
     })();
   </script>
 </template>

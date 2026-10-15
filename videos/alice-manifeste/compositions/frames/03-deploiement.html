@@ -1,83 +1,65 @@
 <template>
   <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
-
+    
     #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
-            background: #141413; font-family: "Geist", sans-serif; color: #FAFAF8; }
-    .d3-map { position: absolute; inset: 0; width: 1080px; height: 1920px; }
-    .d3-head { position: absolute; left: 90px; width: 900px; top: 250px; text-align: center;
-      font-size: 72px; font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; }
-    .d3-head em { font-style: normal; color: #5FD3A6; }
-    .d3-count { position: absolute; left: 0; width: 1080px; top: 1560px; text-align: center; }
-    .d3-num { font-size: 118px; font-weight: 700; letter-spacing: -0.03em; color: #5FD3A6; font-variant-numeric: tabular-nums; line-height: 1; }
-    .d3-lbl { margin-top: 18px; font-size: 38px; font-weight: 500; color: #B5B3AD; }
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .d3-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .d3-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .d3-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .d3-l span { font-size: 112px; }
+    .d3-m span { font-size: 84px; }
+    .d3-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .d3-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .d3-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #d3-orb { left: 300px; top: 720px; width: 480px; height: 480px; border-radius: 50%; }
+    #d3-light { left: 290px; top: 710px; width: 500px; height: 500px; }
   </style>
 
   <div id="root" data-composition-id="03-deploiement" data-width="1080" data-height="1920">
-    <svg class="d3-map" id="d3-map" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <radialGradient id="d3-core" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stop-color="#6FE0B6" /><stop offset="35%" stop-color="#19A877" /><stop offset="100%" stop-color="#004D37" />
-        </radialGradient>
-        <filter id="d3-bloom" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <g id="d3-dots"></g>
-      <g id="d3-links" filter="url(#d3-bloom)"></g>
-      <g id="d3-cities" filter="url(#d3-bloom)"></g>
-      <circle id="d3-glow" r="120" fill="rgba(0,150,105,0.25)" />
-      <circle id="d3-sphere" r="46" fill="url(#d3-core)" />
-    </svg>
-    <div class="d3-head">Une intelligence <em>silencieuse</em> travaille.</div>
-    <div class="d3-count"><div class="d3-num">4 812</div><div class="d3-lbl">offres passées en revue</div></div>
+    <div class="d3-t d3-m" id="d3-a"><span>Pendant que tu vis,</span></div>
+    <div class="d3-t d3-m" id="d3-b"><span>que tu crées,</span></div>
+    <div class="d3-t d3-m" id="d3-c"><span>que tu respires…</span></div>
+    <div class="d3-light" id="d3-light"></div>
+    <div class="d3-t d3-l" id="d3-d"><span>une intelligence silencieuse travaille.</span></div>
+    <div class="d3-glass" id="d3-orb"></div>
   </div>
 
   <script>
     (function () {
-      const NS = "http://www.w3.org/2000/svg";
-      // Contour simplifié de la France métropolitaine (longitude, latitude).
-      const FR = [[2.55,51.09],[4.2,49.95],[4.85,50.15],[5.8,49.55],[6.36,49.46],[8.2,48.96],[7.6,47.6],[6.85,47.4],[6.0,46.4],[6.8,46.0],[7.0,45.2],[6.6,44.8],[7.0,44.2],[7.5,43.8],[6.6,43.1],[5.0,43.35],[4.2,43.45],[3.1,42.45],[1.7,42.5],[-0.3,42.85],[-1.8,43.4],[-1.25,44.6],[-1.2,46.0],[-2.2,47.1],[-2.5,47.3],[-4.6,47.9],[-4.75,48.4],[-3.0,48.8],[-1.6,48.65],[-1.4,49.7],[-0.2,49.3],[1.4,50.1],[1.6,50.9]];
-      const K = 68, OX = 115, OY = 560;
-      const proj = ([lon, lat]) => [OX + (lon + 4.9) * K, OY + (51.2 - lat) * K * 1.42];
-      const poly = FR.map(proj);
-      const inside = (x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
-      const hash = (i, j) => { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+      const tl = gsap.timeline({ paused: true });
+      { const B = [["d3-a", 0.35, 1.3], ["d3-b", 1.5, 2.3], ["d3-c", 2.4, 3.55]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      // Le verre glisse à travers la phrase : elle travaille, sans bruit.
+      const d = document.getElementById("d3-d"), orb = document.getElementById("d3-orb"), light = document.getElementById("d3-light");
+      tl.fromTo(d, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 3.7);
+      tl.set(orb, { opacity: 1 }, 3.9);
+      tl.set(light, { opacity: 0.35 }, 3.9);
+      tl.fromTo([orb, light], { x: -900 }, { x: 900, duration: 1.6, ease: "sine.inOut" }, 3.9);
 
-      const dots = document.getElementById("d3-dots");
-      const step = 17;
-      for (let y = 520; y < 1480; y += step) for (let x = 60; x < 1040; x += step) {
-        if (!inside(x, y)) continue;
-        const r = hash(x, y);
-        const d = document.createElementNS(NS, "circle");
-        d.setAttribute("cx", x); d.setAttribute("cy", y); d.setAttribute("r", 3.6);
-        // Offres retenues en vert, les autres en gris éteint.
-        d.setAttribute("fill", r > 0.9 ? "#2FC48F" : "#3E3D3A");
-        d.setAttribute("class", r > 0.9 ? "d3-dot d3-kept" : "d3-dot");
-        dots.appendChild(d);
-      }
-
-      const CITIES = { Paris: [2.35, 48.86], Lyon: [4.84, 45.76], Marseille: [5.37, 43.3], Toulouse: [1.44, 43.6], Bordeaux: [-0.58, 44.84], Lille: [3.06, 50.63], Nantes: [-1.55, 47.22], Strasbourg: [7.75, 48.58], Rennes: [-1.68, 48.11], Montpellier: [3.88, 43.61], Grenoble: [5.72, 45.19], Nice: [7.26, 43.7] };
-      const [cx, cy] = proj([2.35, 47.2]);
-      const sphere = document.getElementById("d3-sphere"), glow = document.getElementById("d3-glow");
-      sphere.setAttribute("cx", cx); sphere.setAttribute("cy", cy); glow.setAttribute("cx", cx); glow.setAttribute("cy", cy);
-      const links = document.getElementById("d3-links"), cities = document.getElementById("d3-cities");
-      Object.values(CITIES).forEach(([lon, lat], i) => {
-        const [x, y] = proj([lon, lat]);
-        const mx = (cx + x) / 2 + (i % 2 ? 40 : -40), my = (cy + y) / 2 - 60;
-        const p = document.createElementNS(NS, "path");
-        p.setAttribute("d", `M ${cx} ${cy} Q ${mx} ${my} ${x} ${y}`);
-        p.setAttribute("fill", "none"); p.setAttribute("stroke", "#2FC48F"); p.setAttribute("stroke-width", "2"); p.setAttribute("opacity", "0.55");
-        p.setAttribute("class", "d3-link");
-        links.appendChild(p);
-        const c = document.createElementNS(NS, "circle");
-        c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", 9); c.setAttribute("fill", "#6FE0B6");
-        c.setAttribute("class", "d3-city");
-        cities.appendChild(c);
-      });
-      window.__timelines["03-deploiement"] = gsap.timeline({ paused: true });
+      window.__timelines["03-deploiement"] = tl;
     })();
   </script>
 </template>

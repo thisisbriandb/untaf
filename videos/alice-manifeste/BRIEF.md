@@ -51,6 +51,15 @@ en quatre actes écrits par Briand :
 - Sound design composé sur mesure : battement mécanique qui accélère, coupure sur sub-basse,
   nappe ample et lumineuse.
 
+## Direction artistique (v2, demandée par Briand)
+
+- Fond noir pur (#000), uni, sur tout le film.
+- Un seul élément à l'écran à la fois, au centre absolu.
+- Focus typographique : Geist (la police d'Alice), blanc cassé #F5F5F2.
+- Glass UI comme seul objet visuel : plaque ou disque de verre dépoli (backdrop-filter) qui passe
+  sur le texte et le floute, écrans de verre (envoi, réponse, Chrome), texte « Alice » en verre.
+- Seule couleur : une lumière verte d'Alice derrière le verre. Esprit luxe, hyper-minimal (Apple, Nothing).
+
 ## Notes
 
 - Identité Alice : vert #006045, fond clair #FAFAF8, encre #1A1918, police Geist.
