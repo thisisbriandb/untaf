@@ -17,7 +17,7 @@
 
 {% endfor %}
   ],
-{% if design.templates.education_entry.degree_column %}
+{% if design.templates.education_entry.degree_column and (entry.degree_column or "")|trim %}
   degree-column: [
     {{ entry.degree_column|indent(4) }}
   ],

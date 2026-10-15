@@ -432,7 +432,17 @@ def render_cv(
     if is_sidebar_layout and sidebar_section_codes:
         main_part = "\n".join(main_section_codes)
         side_part = "\n".join(sidebar_section_codes)
-        code += f"\n#grid(columns: (2.2fr, 1fr), column-gutter: 15pt, [\n{main_part}\n], [\n{side_part}\n])\n"
+        # Dans la grille, les sections échappent aux réglages du modèle (elles
+        # ne passent plus par sa mise en page de sections) : sans eux, les
+        # puces sur deux lignes chevauchaient la suivante.
+        cell_rules = (
+            "#set par(spacing: 0.9em, leading: 0.6em, justify: false)\n"
+            "#set list(spacing: 0.7em, indent: 0cm, body-indent: 0.5em)\n"
+        )
+        code += (
+            f"\n#grid(columns: (2.2fr, 1fr), column-gutter: 15pt, "
+            f"[\n{cell_rules}{main_part}\n], [\n{cell_rules}{side_part}\n])\n"
+        )
     else:
         code += "\n" + "\n".join(main_section_codes + sidebar_section_codes)
 

@@ -89,6 +89,8 @@ def _period(start, end) -> dict:
     (« No date provided for this entry »), fréquente dans un CV lu depuis un PDF.
     """
     start, end = _date(start), _date(end)
+    if start and end and start == end:
+        return {"date": start}  # « Janv. 2022 – Janv. 2022 » → « Janv. 2022 »
     if start and end:
         return {"start_date": start, "end_date": end}
     single = start or (end if end != "present" else "")
