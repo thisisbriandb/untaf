@@ -76,7 +76,7 @@ export interface CriteriaDraft {
   remotePolicies: string[];
   languages: string[];
   jobFamilies: string[];
-  /** Alice envoie elle-même ce qui peut partir (e-mail, La bonne alternance). */
+  /** Alice envoie elle-même ce qui peut partir (e-mail, sites carrière qui le permettent). */
   autoSend: boolean;
 }
 
@@ -346,7 +346,7 @@ export function CriteriaStep({
           ))}
         </div>
         <p className="text-[11px] text-[#6B6B68] leading-relaxed">
-          J&apos;envoie moi-même quand l&apos;offre le permet (e-mail, La bonne alternance), avec ton CV adapté
+          J&apos;envoie moi-même quand l&apos;offre le permet (e-mail, sites carrière qui l&apos;acceptent), avec ton CV adapté
           et ta lettre. Quand l&apos;employeur a son propre formulaire, je te prépare le dossier et tu finis en un geste.
           Tu peux changer d&apos;avis à chaque mission.
         </p>

@@ -254,7 +254,8 @@ def dedup_key(offer: CommunityOffer) -> tuple[str, str, str]:
 # ── Lecture, mise en cache ─────────────────────────────────────────────────
 
 #: Taleez : mentions légales qui interdisent la reproduction sans accord écrit.
-NOT_REPUBLISHED = ("taleez:",)
+#: La bonne alternance : reprise refusée par l'opérateur (octobre 2026).
+NOT_REPUBLISHED = ("taleez:", "lba:")
 
 _cache: dict[str, tuple[float, CommunityList]] = {}
 

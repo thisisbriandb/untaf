@@ -85,7 +85,7 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
     # ── La bonne alternance : transmission par l'API de l'État ──
     if channel == "lba_api":
         if not settings.lba_configured:
-            blockers.append("L'envoi via La bonne alternance n'est pas configuré sur ce serveur.")
+            blockers.append("Alice ne passe plus par La bonne alternance : termine ta candidature sur leur site, ton dossier est prêt.")
         return Feasibility(
             "simple", not blockers,
             "Je transmets ta candidature au recruteur par La bonne alternance, "

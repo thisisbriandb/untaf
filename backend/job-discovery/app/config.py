@@ -133,7 +133,10 @@ class Settings(BaseSettings):
 
     @property
     def lba_configured(self) -> bool:
-        return bool(self.lba_api_key.strip())
+        # Désactivé (octobre 2026) : La bonne alternance n'autorise ni la
+        # reprise de ses offres ni l'envoi de candidatures par un service en
+        # partie payant. Ni collecte, ni envoi, quelle que soit la clé.
+        return False
 
     # ── Agrégateurs d'offres (Alice Community) ───────────
     # Adzuna : clé gratuite sur developer.adzuna.com. Conditions : chaque offre

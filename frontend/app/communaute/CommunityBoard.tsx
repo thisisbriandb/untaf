@@ -121,7 +121,7 @@ export function CommunityBoard({ initial }: { initial: CommunityPage | null }) {
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#1A1918]/65 sm:text-base">
           Toutes les offres qu&apos;Alice repère en France pour les étudiants et jeunes diplômés : France Travail,
-          La bonne alternance, les sites carrière des entreprises et des agrégateurs comme Adzuna. Gratuit, sans
+          les sites carrière des entreprises et des agrégateurs comme Adzuna. Gratuit, sans
           inscription. Et si tu veux, Alice adapte ton CV et ta lettre à l&apos;offre et postule pour toi.
         </p>
 

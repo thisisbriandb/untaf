@@ -158,8 +158,8 @@ async def decide(
         recipient = contact.get("lba_recipient_id")
         destination = f"{LBA_PREFIX}{recipient}" if recipient else None
         if not settings.lba_configured:
-            return Decision(False, "l'envoi via La bonne alternance n'est pas configuré "
-                                   "sur ce serveur", channel, destination)
+            return Decision(False, "Alice ne passe plus par La bonne alternance : termine "
+                                   "sur leur site, ton dossier est prêt", channel, destination)
 
     if job.apply_channel == ApplyChannel.RECRUITEE_API:
         target = contact.get("recruitee") or {}
