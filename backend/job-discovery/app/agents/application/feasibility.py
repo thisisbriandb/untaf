@@ -84,8 +84,8 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
 
     # ── La bonne alternance : transmission par l'API de l'État ──
     if channel == "lba_api":
-        if not settings.lba_configured:
-            blockers.append("L'envoi via La bonne alternance n'est pas configuré sur ce serveur.")
+        if not settings.lba_apply_enabled:
+            blockers.append("Alice ne passe plus par La bonne alternance : termine ta candidature sur leur site, ton dossier est prêt.")
         return Feasibility(
             "simple", not blockers,
             "Je transmets ta candidature au recruteur par La bonne alternance, "
@@ -186,7 +186,7 @@ def apply_mode(job: JobPosting) -> str:
     channel = job.apply_channel.value if job.apply_channel else "unknown"
     contact = job.contact_json or {}
     if channel == "lba_api":
-        return "auto" if settings.lba_configured else "manual"
+        return "auto" if settings.lba_apply_enabled else "manual"
     if channel in ("recruitee_api", "taleez_api"):
         return "auto"
     if is_valid_email(contact.get("email")):

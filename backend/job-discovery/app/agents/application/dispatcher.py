@@ -157,9 +157,9 @@ async def decide(
         # L'API ne connaît que le destinataire qu'elle a publié.
         recipient = contact.get("lba_recipient_id")
         destination = f"{LBA_PREFIX}{recipient}" if recipient else None
-        if not settings.lba_configured:
-            return Decision(False, "l'envoi via La bonne alternance n'est pas configuré "
-                                   "sur ce serveur", channel, destination)
+        if not settings.lba_apply_enabled:
+            return Decision(False, "Alice ne passe plus par La bonne alternance : termine "
+                                   "sur leur site, ton dossier est prêt", channel, destination)
 
     if job.apply_channel == ApplyChannel.RECRUITEE_API:
         target = contact.get("recruitee") or {}
@@ -434,7 +434,10 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
 
     # Une lettre non signée est mal vue : sans signature, on la demande avant
     # l'envoi. Le feu vert explicite du candidat (approved_at) vaut accord.
-    if not getattr(candidate, "signature_image", None) and not dispatch.approved_at:
+    # Seulement par e-mail, où la lettre part en PDF signé : sur un site
+    # carrière (Taleez, Recruitee), elle part en texte, sans signature.
+    if (dispatch.channel == DispatchChannel.EMAIL
+            and not getattr(candidate, "signature_image", None) and not dispatch.approved_at):
         return Hold(DispatchStatus.AWAITING_APPROVAL, MISSING_SIGNATURE_REASON)
 
     if application:

@@ -588,6 +588,15 @@ async def _detached(events):
         yield item
 
 
+def _send_label(destination: str) -> str:
+    """« J'envoie à … » lisible : jamais un identifiant interne (« taleez:… »)."""
+    for prefix, site in (("taleez:", "Taleez"), ("recruitee:", "Recruitee"),
+                         ("lba:", "La bonne alternance")):
+        if destination.startswith(prefix):
+            return f"Je dépose ta candidature sur le site de l'employeur ({site})"
+    return f"J'envoie à {destination}" if destination else "J'envoie ta candidature"
+
+
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -777,7 +786,7 @@ async def apply_stream(candidate_id: UUID, job_id: UUID):
             # ── Envoi ─────────────────────────────────────
             yield _sse("step", {
                 "key": "send",
-                "label": f"J'envoie à {dispatch.destination}",
+                "label": _send_label(dispatch.destination or ""),
                 "status": "running",
             })
 

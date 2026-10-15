@@ -274,3 +274,41 @@ def test_pasted_links():
     assert taleez.pasted_code("https://taleez.com/apply/thanks") is None
     assert taleez.pasted_code("https://evil.example/taleez.com/apply/x") is None
     assert taleez.pasted_code(None) is None
+
+
+def test_confirm_follows_link_then_calls_the_page_api():
+    calls = []
+
+    def handler(request):
+        calls.append((request.method, str(request.url)))
+        if request.url.host == "u1.ct.sendgrid.net":
+            return httpx.Response(302, headers={"location": "https://taleez.com/apply/confirm/AbC-123"})
+        if request.method == "GET":
+            return httpx.Response(200, text="<html></html>")
+        assert json.loads(request.content) == {"token": "AbC-123"}
+        return httpx.Response(200, json={})
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=True) as c:
+            return await taleez.confirm("https://u1.ct.sendgrid.net/ls/click?upn=x", client=c)
+
+    assert asyncio.run(go()) is True
+    assert calls[-1] == ("POST", "https://taleez.com/api/public/confirm-apply")
+
+
+def test_confirm_refuses_unexpected_destinations():
+    def handler(request):
+        return httpx.Response(200, text="ailleurs")
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=True) as c:
+            return await taleez.confirm("https://evil.example/x", client=c)
+
+    assert asyncio.run(go()) is False
+
+
+def test_confirm_never_fetches_internal_addresses():
+    for bad in ("http://taleez.com/apply/confirm/x", "https://127.0.0.1/x", "https://localhost/x",
+                "https://api.railway.internal/x", "https://[::1]/x"):
+        assert taleez._public_https(bad) is False, bad
+    assert taleez._public_https("https://u1.ct.sendgrid.net/ls/click?upn=x")

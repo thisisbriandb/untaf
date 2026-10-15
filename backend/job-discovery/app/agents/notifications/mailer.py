@@ -171,6 +171,8 @@ async def send_mail(mail: Mail) -> dict:
             "error": "aucun service d'envoi configuré"}
 
 
-async def deliver(to: str, subject: str, html: str, text: str) -> dict:
+async def deliver(to: str, subject: str, html: str, text: str,
+                  attachments: list[Attachment] | None = None) -> dict:
     """Notification au candidat — expéditeur Alice."""
-    return await send_mail(Mail(to=to, subject=subject, text=text, html=html))
+    return await send_mail(Mail(to=to, subject=subject, text=text, html=html,
+                                attachments=attachments or []))

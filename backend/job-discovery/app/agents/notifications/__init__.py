@@ -95,6 +95,7 @@ async def _send(
     dedupe_key: str,
     email: Email,
     payload: dict | None = None,
+    attachments: list | None = None,
 ) -> Notification | None:
     """
     Envoie si les préférences le permettent et si ce n'est pas déjà fait.
@@ -114,7 +115,11 @@ async def _send(
                 return None
             recipient = candidate.email
 
-        result = await deliver(recipient, email.subject, render_html(email), render_text(email))
+        result = await deliver(recipient, email.subject, render_html(email), render_text(email),
+                               attachments=attachments)
+        if attachments and not result.get("ok"):
+            # Pièce refusée par le service d'envoi : la notification part sans.
+            result = await deliver(recipient, email.subject, render_html(email), render_text(email))
 
         status = (
             NotificationStatus.SENT if result["ok"] and result["real"]
@@ -243,6 +248,9 @@ async def notify_mission_report(run_id: UUID) -> Notification | None:
 # ── Candidature partie ─────────────────────────────────────────────────────
 
 
+#: Taleez fait confirmer l'adresse : Alice le fait quand son e-mail lui arrive.
+TALEEZ_CONFIRMED_BY_ALICE = ("Taleez demande de confirmer l'adresse e-mail de la candidature : je m'en "
+                             "occupe dès que leur e-mail arrive, et je te préviens.")
 #: Taleez ne transmet la candidature qu'après le clic du candidat.
 TALEEZ_CONFIRM = ("Dernière étape : Taleez va t'écrire (je te transfère son e-mail). Clique sur "
                   "« Confirmer ma candidature » : sans ce clic, l'employeur ne la reçoit pas.")
@@ -259,6 +267,8 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
         title, company = dispatch.job_title, dispatch.company_name
         channel = dispatch.channel.value
         destination = dispatch.destination
+        resume, resume_name = dispatch.resume_blob, dispatch.resume_name
+        letter = (dispatch.letter_body or "").strip()
 
     via = f"par e-mail à {destination}" if channel == "email" else "via le formulaire de l'employeur"
     email = Email(
@@ -268,17 +278,25 @@ async def notify_application_sent(candidate_id: UUID, dispatch_id: UUID) -> Noti
         paragraphs=[
             f"J'ai envoyé ta candidature pour « {title} » {via}, avec ton CV adapté "
             f"et ta lettre.",
-            *([TALEEZ_CONFIRM] if (destination or "").startswith("taleez:") else []),
+            *([TALEEZ_CONFIRMED_BY_ALICE if settings.inbound_configured else TALEEZ_CONFIRM]
+              if (destination or "").startswith("taleez:") else []),
             f"Si rien ne bouge d'ici {settings.followup_after_days} jours, je te "
             f"proposerai une relance déjà rédigée.",
+            # Sa copie : exactement ce que le recruteur a reçu.
+            *(["Ta copie : le CV envoyé est joint à cet e-mail, et voici la lettre."]
+              if resume else (["Ta copie de la lettre envoyée :"] if letter else [])),
+            *([p for p in letter.split("\n\n") if p.strip()] if letter else []),
         ],
         cta_label="Voir la candidature",
         cta_url=link("candidatures"),
         footer=FOOTER,
     )
+    from app.agents.notifications.mailer import Attachment
+
     return await _send(
         candidate_id, NotificationKind.APPLICATION_SENT, f"application_sent:{dispatch_id}",
         email, {"dispatch_id": str(dispatch_id)},
+        attachments=[Attachment(resume_name or "CV.pdf", resume)] if resume else None,
     )
 
 
