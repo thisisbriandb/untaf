@@ -572,7 +572,7 @@ export function AliceView({
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Confie une mission à Alice..."
+            placeholder={hasConversation ? "Écris à Alice…" : "Dis-moi ce que tu cherches, ex. une alternance en marketing à Lyon"}
             maxLength={500}
             aria-label="Confier une mission à Alice"
             className="flex-1 bg-transparent text-sm font-light placeholder:text-[#1A1918]/50 text-[#1A1918] focus:outline-none tracking-tight"
