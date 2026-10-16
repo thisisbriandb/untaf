@@ -183,16 +183,7 @@ D = {"D2": 73.42, "A2": 110.0, "B2": 123.47, "D3": 146.83, "F#3": 185.0, "G2": 9
      "A6": 1760.0, "D7": 2349.32}
 
 
-mus, sfx = Track(), Track()   # mus : rythme ; sfx : bruitages calés sur l'image
-
-def kick(d=0.4):
-    t = tt(d)
-    f = 48 * (1 + 2.5 * np.exp(-t / 0.025))
-    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.13) * np.minimum(t / 0.002, 1)
-
-def hat(d=0.05, bright=9000):
-    t = tt(d)
-    return filt(noise(d), "highpass", bright, 4) * np.exp(-t / 0.012)
+mus, sfx = Track(), Track()   # mus : nappe ; sfx : bruitages calés sur l'image
 
 def buzz(d=0.36):
     """Vibration de téléphone : bourdon grave modulé, sourd."""
@@ -209,65 +200,65 @@ sfx.add(pan(thud(110, 0.15), 0.1), 0.85, 0.08, send=0.2)                        
 sfx.add(pan(tick(4200, d=0.03, body=1900), 0.05), 0.99, 0.4, send=0.25)                           # clic
 sfx.add(pan(tick(3600, d=0.03, body=1500), 0.05), 1.07, 0.25, send=0.25)                          # relâché
 
-# ===== 1 – 1.8 s : catapultée dans l'écran =====
-sfx.add(whoosh(0.8, 300, 9000, width=1.0, shape=3.5, seed_pan=(-0.2, 0.2)), 1.0, 0.45, send=0.5)
-rise = tt(0.8); r = np.sin(2 * np.pi * np.cumsum(200 * (1 + 7 * (rise / 0.8) ** 2)) / SR) * (rise / 0.8) ** 2
-sfx.add(np.stack([r, r]), 1.0, 0.08, send=0.4)
-sfx.add(sub(60, 30, 1.6, 0.5), 1.8, 0.7)                                                          # entrée dans le blanc
-sfx.add(pan(filt(noise(0.4), "lowpass", 5000) * np.exp(-tt(0.4) / 0.06), 0), 1.8, 0.45, send=1.0)
+# ===== 1.15 – 2.4 s : catapultée, puis la plongée dans la fenêtre noire =====
+sfx.add(whoosh(1.2, 300, 9000, width=1.0, shape=3.5, seed_pan=(-0.2, 0.2)), 1.15, 0.4, send=0.5)
+rise = tt(1.2); r = np.sin(2 * np.pi * np.cumsum(180 * (1 + 6 * (rise / 1.2) ** 2)) / SR) * (rise / 1.2) ** 2.5
+sfx.add(np.stack([r, r]), 1.15, 0.06, send=0.5)
+sfx.add(sub(58, 30, 2.4, 0.8), 2.38, 0.7)                                                          # on entre dans le noir
+sfx.add(whoosh(2.2, 9000, 2000, width=1.2, shape=0.8, seed_pan=(-0.3, 0.3)), 2.38, 0.06, send=1.0)
 
-# ===== 2.4 – 17 s : le rythme (120 bpm, ré mineur) =====
-BEAT, START, STOP = 0.5, 2.4, 17.0
-BASS = [73.42, 73.42, 87.31, 65.41]
-b = 0
-t0 = START
-while t0 < STOP - 0.01:
-    mus.add(pan(kick(), 0), t0, 0.55, send=0.05)
-    note = BASS[(b // 4) % 4]
-    bt = tt(0.42)
-    bass = np.tanh(2.2 * np.sin(2 * np.pi * note * bt)) * np.exp(-bt / 0.22)
-    mus.add(pan(filt(bass, "lowpass", 380), 0), t0 + BEAT / 2, 0.22, send=0.05)
-    for k in range(4):
-        tk = t0 + k * BEAT / 4
-        if tk < STOP:
-            mus.add(pan(hat(), 0.35 if k % 2 else -0.35), tk, 0.05 if k % 2 else 0.025, send=0.15)
-    if b % 2 == 1:
-        sn = filt(noise(0.18), "bandpass", [1200, 6000]) * np.exp(-tt(0.18) / 0.05)
-        mus.add(pan(sn, 0), t0, 0.12, send=0.5)
-    b += 1
-    t0 += BEAT
+# ===== La nappe (comme le manifeste) : ré → si mineur → sol, qui monte vers 12 s =====
+mus.add(pad([D["D3"], D["A3"], D["E4"], D["F#4"], D["C#5"]], 3.6, attack=0.8, release=1.0, bright=1600), 2.3, 0.22, send=0.8)
+mus.add(pad([D["B2"], D["F#3"], D["D4"], D["A4"], D["C#5"]], 6.2, attack=1.2, release=1.2, bright=1900), 5.0, 0.22, send=0.8)
+mus.add(pad([D["G2"], D["D3"], D["B3"], D["F#4"], D["A4"], D["D5"]], 6.2, attack=1.0, release=0.05, bright=2800), 10.85, 0.26, send=0.8)
+mus.add(filt(air(14.6), "lowpass", 13000), 2.4, 0.03, send=0.5)
+tg = 2.8
+while tg < 16.8:                                                                                    # grains de verre dans l'espace
+    f = [587.33, 739.99, 880.0, 1174.66, 1479.98][int(rng.integers(5))] * (2 if rng.random() < 0.3 else 1)
+    g = tt(rng.uniform(0.04, 0.12))
+    grain = np.sin(2 * np.pi * f * g) * np.sin(np.pi * g / g[-1]) ** 2
+    mus.add(pan(grain, rng.uniform(-0.95, 0.95)), tg, rng.uniform(0.02, 0.05), send=0.9)
+    tg += rng.exponential(1 / (5 if tg < 11 else 11))
 
 # ===== 2.4 – 5.4 : la signature =====
+sfx.add(glass(D["D5"], d=3, soft=0.05), 2.45, 0.07, send=1.0)                                       # le CV de verre apparaît
 sc = tt(0.7); scan = np.sin(2 * np.pi * (900 + 1400 * sc / 0.7) * sc) * 0.4 + filt(noise(0.7), "bandpass", [3000, 9000])
 scan *= np.sin(np.pi * sc / 0.7)
-sfx.add(np.stack([scan, scan]) / np.abs(scan).max(), 2.9, 0.07, send=0.4)                           # scan
-sfx.add(glass(D["D6"], d=2.0, soft=0.003), 3.55, 0.08, send=0.8)                                      # la signature s'allume
-sfx.add(whoosh(0.35, 1500, 7000, width=0.8, shape=1.5, seed_pan=(-0.6, 0.6)), 3.8, 0.12, send=0.4)    # éventail
-for i in range(4):                                                                                     # tampons
-    t = 2.4 + 1.85 + i * 0.15
-    sfx.add(pan(thud(70, 0.25), -0.4 + 0.27 * i), t, 0.3, send=0.15)
-    sfx.add(pan(tick(2500, d=0.04, body=800), -0.4 + 0.27 * i), t, 0.2, send=0.3)
-sfx.add(whoosh(0.5, 4000, 800, width=0.8, shape=1.2, seed_pan=(0.4, -0.6)), 4.9, 0.12, send=0.4)    # pivot
+sfx.add(np.stack([scan, np.roll(scan, 200)]) / np.abs(scan).max(), 2.85, 0.06, send=0.5)            # scan
+sfx.add(glass(D["D6"], d=2.0, soft=0.003), 3.5, 0.08, send=0.9)                                      # la signature s'embrase
+sfx.add(whoosh(0.5, 1500, 7000, width=0.8, shape=1.5, seed_pan=(-0.7, 0.7)), 3.75, 0.13, send=0.5)   # l'éventail
+for i in range(4):                                                                                     # les tampons
+    t = 2.4 + 1.85 + i * 0.14
+    sfx.add(pan(thud(70, 0.25), -0.45 + 0.3 * i), t, 0.26, send=0.2)
+    sfx.add(pan(glass([D["A5"], D["D6"], D["F#6"], D["A6"]][i], d=1.2, soft=0.002)[i % 2], -0.45 + 0.3 * i), t, 0.05, send=0.7)
+sfx.add(whoosh(0.5, 4000, 800, width=0.8, shape=1.2, seed_pan=(0.4, -0.6)), 4.88, 0.12, send=0.5)    # pivot
 
 # ===== 5.4 – 11 : CV et lettre sur mesure =====
-for t in [5.8, 7.5, 9.2]:
-    sfx.add(whoosh(0.3, 2000, 8000, width=0.6, shape=1.5, seed_pan=(0.5, -0.3)), t - 0.05, 0.08, send=0.3)
-    sfx.add(glass(D["A6"], d=1.2, soft=0.002), t + 0.05, 0.05, send=0.6)
-    for j in range(10):                                                                                # les blocs se réorganisent
-        sfx.add(pan(tick(5000 + 600 * (j % 3), d=0.02, body=2500), np.sin(j * 1.9) * 0.7), t + 0.15 + j * 0.045, 0.06, send=0.3)
+LIT = [[0, 1, 2], [1, 3], [0, 2, 3]]
+for k, T in enumerate([0.4, 2.1, 3.8]):
+    t = 5.4 + T
+    sfx.add(whoosh(0.35, 2000, 8000, width=0.6, shape=1.5, seed_pan=(0.5, -0.3)), t - 0.05, 0.08, send=0.4)
+    if k:
+        sfx.add(whoosh(0.6, 3000, 600, width=0.8, shape=1.4, seed_pan=(-0.2, 0.2)), t + 0.1, 0.06, send=0.5)  # les blocs glissent
+    for n, i in enumerate(LIT[k]):                                                                    # clics cristallins des mots-clés
+        f = [D["D6"], D["F#6"], D["A6"], D["D7"]][min(n + k % 2, 3)]
+        sfx.add(pan(glass(f, d=0.9, soft=0.001)[n % 2], -0.3 + 0.3 * n), t + 0.2 + i * 0.03, 0.06, send=0.6)
+        sfx.add(pan(tick(7000, d=0.015, body=3500), -0.3 + 0.3 * n), t + 0.2 + i * 0.03, 0.05, send=0.3)
 
-# ===== 11 – 17 : la rafale de formulaires =====
+# ===== 11 – 17 : la rafale de formulaires, montée en puissance =====
 for j in range(12):                                                                                    # gros plan : frappe
-    sfx.add(pan(tick(2800 + 300 * (j % 4), d=0.025, body=900), 0), 11.2 + j * 0.07, 0.09, send=0.15)
-sfx.add(whoosh(0.85, 4000, 500, width=1.0, shape=1.2, seed_pan=(0, 0)), 12.0, 0.25, send=0.5)         # recul
-sfx.add(whoosh(0.4, 600, 6000, width=0.7, shape=3.0, seed_pan=(0, 0)), 12.7, 0.12, send=0.4)          # 1re fusée
-for k in range(17):
-    t = 11 + 1.85 + k * 0.2
-    pp = np.sin(k * 2.1) * 0.6
-    for j in range(4):
-        sfx.add(pan(tick(3000 + 400 * j, d=0.02, body=1000), pp), t + j * 0.035, 0.05, send=0.15)
-    sfx.add(pan(tick(1800, d=0.03, body=600), pp), t + 0.11, 0.08, send=0.2)                          # le CV s'aimante
-    sfx.add(whoosh(0.32, 700, 7000, width=0.7, shape=3.0, seed_pan=(pp, pp * 0.3)), t + 0.2, 0.07, send=0.4)
+    sfx.add(pan(tick(2800 + 300 * (j % 4), d=0.025, body=900), 0), 11.15 + j * 0.07, 0.08, send=0.15)
+rs = tt(1.9); riser = whoosh(1.9, 300, 7000, width=1.0, shape=4.0, seed_pan=(-0.4, 0.4))
+tone = np.sin(2 * np.pi * np.cumsum(110 * (1 + 3 * (rs / 1.9) ** 2)) / SR) * (rs / 1.9) ** 3
+sfx.add(riser, 11.0, 0.22, send=0.6)
+sfx.add(np.stack([tone, tone]), 11.0, 0.08, send=0.6)
+sfx.add(sub(55, 34, 2.0, 0.7), 12.9, 0.55)                                                            # la vague part
+sfx.add(pan(filt(noise(0.4), "lowpass", 4000) * np.exp(-tt(0.4) / 0.07), 0), 12.9, 0.3, send=1.0)
+for k in range(69):                                                                                    # chaque formulaire propulsé
+    t = 11 + 1.9 + k * 0.052
+    pp = np.sin(k * 2.1) * 0.8
+    sfx.add(pan(tick(3200 + 500 * (k % 3), d=0.02, body=1200), pp), t, 0.035, send=0.2)
+    sfx.add(whoosh(0.45, 500, 6500, width=0.8, shape=3.2, seed_pan=(pp, pp * 0.2)), t + 0.25, 0.035, send=0.4)
 
 # ===== 17 – 23 : coupure, la pièce, les vibrations =====
 room2 = filt(noise(6.0), "lowpass", 220)
@@ -275,6 +266,7 @@ sfx.add(np.stack([room2, np.roll(room2, 500)]) / np.abs(room2).max(), 17.0, 0.04
 for k, t in enumerate([17.45, 17.95, 18.4, 18.85]):
     sfx.add(pan(buzz(), 0), t, 0.35, send=0.1)
     sfx.add(glass(D["D6"] if k % 2 == 0 else D["F#6"], d=1.5, soft=0.002), t + 0.02, 0.05, send=0.7)
+mus.add(pad([D["D3"], D["A3"], D["F#4"], D["E4"]], 5.2, attack=1.5, release=1.5, bright=1500), 17.8, 0.12, send=0.8)
 for f, dt in [("D5", 0), ("F#5", 0.05), ("A5", 0.1), ("D6", 0.15)]:                                  # Alice signe
     sfx.add(glass(D[f], d=4, soft=0.01), 21.6 + dt, 0.07, send=1.0)
 sfx.add(sub(73.4, 73.4, 2.5, 1.0), 21.6, 0.2)
@@ -284,7 +276,7 @@ def finish(track, rt60, bright, seed):
     wet = reverb(track.send, impulse(rt60, bright=bright, seed=seed))
     return track.dry + wet * 0.5
 
-mix = finish(mus, 1.4, 7000, 3) * 0.55 + finish(sfx, 2.6, 8000, 5)
+mix = finish(mus, 4.0, 6000, 3) * 0.6 + finish(sfx, 2.8, 8000, 5)
 t = np.arange(N) / SR
 mix *= np.clip((END - t) / 0.8, 0, 1)
 mix = mix / np.abs(mix).max() * 10 ** (-3 / 20)
