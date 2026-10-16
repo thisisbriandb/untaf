@@ -111,19 +111,19 @@ b2, j2 = text_beats([("c", "", 92, 1.95, 2.95)])
 
 # ---------- 02/03 · le chat : on tape, Alice trouve et postule ----------
 VH = SW * 2700 / 2160  # hauteur affichée des captures de l'app (1080x1350)
-video_scene("02-chat", "chat-a.mp4", 3.47, VH, [(0, 0.5, 0.955, 2.3, 0)])
-video_scene("03-mission", "chat-b.mp4", 3.5, VH, [(0, 0.5, 0.74, 1.75, 0), (1.2, 0.5, 0.86, 1.75, 2.0)])
+video_scene("02-chat", "chat-a.mp4", 3.1, VH, [(0, 0.5, 0.955, 2.3, 0)])
+video_scene("03-mission", "chat-b.mp4", 3.56, VH, [(0, 0.5, 0.66, 1.6, 0)])
 # ---------- 04 · le canevas : valider et envoyer ----------
-video_scene("04-envoi", "canvas.mp4", 4.07, VH,
+video_scene("04-envoi", "canvas.mp4", 4.15, VH,
             [(0, 0.79, 0.40, 2.2, 0), (1.35, 0.64, 0.50, 2.6, 0.35), (2.0, 0.79, 0.16, 2.2, 0.4)])
 # ---------- 05 · « Aussi sur Chrome. » ----------
 body, js = text_beats([("d", "Aussi sur Chrome.", 112, 0.15, 1.0)])
 (COMP / "05-chrome.html").write_text(page("05-chrome", body, js))
 # ---------- 06 · l'extension remplit le formulaire ----------
-video_scene("06-extension", "extension.mp4", 4.77, SW * 1100 / 1200,
+video_scene("06-extension", "extension.mp4", 4.36, SW * 1100 / 1200,
             [(0, 0.5, 0.45, 1.5, 0), (2.9, 0.82, 0.80, 2.0, 0.6)])
 # ---------- 07 · le suivi des candidatures ----------
-video_scene("07-suivi", "candidatures.mp4", 2.0, VH, [(0, 0.5, 0.34, 1.7, 0)])
+video_scene("07-suivi", "candidatures.mp4", 2.05, VH, [(0, 0.5, 0.34, 1.7, 0)])
 
 # ---------- 08 · signature ----------
 body = "\n    ".join([
@@ -145,8 +145,8 @@ js = """
 (COMP / "08-signature.html").write_text(page("08-signature", body, js, extra))
 
 # ---------- index ----------
-SCENES = [("00-accroche", 2.8), ("01-cv", 2.5), ("02-chat", 3.47), ("03-mission", 3.5), ("04-envoi", 4.07),
-          ("05-chrome", 1.0), ("06-extension", 4.77), ("07-suivi", 2.0), ("08-signature", 3.0)]
+SCENES = [("00-accroche", 2.8), ("01-cv", 2.5), ("02-chat", 3.1), ("03-mission", 3.56), ("04-envoi", 4.15),
+          ("05-chrome", 1.0), ("06-extension", 4.36), ("07-suivi", 2.05), ("08-signature", 3.0)]
 starts, t = [], 0.0
 for cid, d in SCENES:
     starts.append((cid, round(t, 3), d))

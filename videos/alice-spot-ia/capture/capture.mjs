@@ -41,12 +41,12 @@ async function scene(name, run) {
   const frames = [];
   let n = 0;
   cdp.on("Page.screencastFrame", async (f) => {
-    const file = path.join(tmp, `f${String(n++).padStart(6, "0")}.png`);
+    const file = path.join(tmp, `f${String(n++).padStart(6, "0")}.jpg`);
     fs.writeFileSync(file, Buffer.from(f.data, "base64"));
     frames.push({ file, t: f.metadata.timestamp * 1000 });
     cdp.send("Page.screencastFrameAck", { sessionId: f.sessionId }).catch(() => {});
   });
-  await cdp.send("Page.startScreencast", { format: "png", maxWidth: W * DSF, maxHeight: H * DSF, everyNthFrame: 1 });
+  await cdp.send("Page.startScreencast", { format: "jpeg", quality: 95, maxWidth: W * DSF, maxHeight: H * DSF, everyNthFrame: 1 });
   page.on("pageerror", (e) => errors.push("pageerror " + e.message));
   page.on("console", (m) => m.type() === "error" && errors.push("console " + m.text()));
   const startAt = await run(page);            // ms timestamp where the clip should start

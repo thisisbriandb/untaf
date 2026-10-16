@@ -17,7 +17,7 @@ from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
 DUR = 28.0
-END = 27.11  # fin du film
+END = 26.52  # fin du film
 N = int(SR * DUR)
 rng = np.random.default_rng(20261015)
 
@@ -196,8 +196,8 @@ sfx.add(np.stack([pp, np.roll(pp, 120)]), 2.8, 0.05, send=0.4)
 # ===== la nappe s'ouvre sur « Et si Alice s'en chargeait ? » et porte la suite =====
 mus.add(pad([D["D3"], D["A3"], D["E4"], D["F#4"], D["C#5"]], 7.8, attack=1.0, release=1.4, bright=1700), 4.6, 0.22, send=0.8)
 mus.add(pad([D["B2"], D["F#3"], D["D4"], D["A4"], D["C#5"]], 5.6, attack=1.0, release=1.2, bright=2000), 11.6, 0.22, send=0.8)
-mus.add(pad([D["G2"], D["D3"], D["B3"], D["F#4"], D["A4"], D["D5"]], 7.6, attack=1.0, release=1.2, bright=2600), 16.3, 0.24, send=0.8)
-mus.add(pad([D["D2"], D["A2"], D["D3"], D["F#3"], D["A3"], D["E4"]], 4.2, attack=0.6, release=1.4, bright=2200), 23.6, 0.24, send=0.8)
+mus.add(pad([D["G2"], D["D3"], D["B3"], D["F#4"], D["A4"], D["D5"]], 7.6, attack=1.0, release=1.2, bright=2600), 16.0, 0.24, send=0.8)
+mus.add(pad([D["D2"], D["A2"], D["D3"], D["F#3"], D["A3"], D["E4"]], 4.2, attack=0.6, release=1.4, bright=2200), 23.0, 0.24, send=0.8)
 mus.add(filt(air(22.5), "lowpass", 13000), 4.6, 0.025, send=0.5)
 tg = 5.4
 while tg < 26.5:
@@ -207,31 +207,31 @@ while tg < 26.5:
     tg += rng.exponential(1 / 5)
 # ===== le chat : la frappe, l'envoi, Alice répond, la mission avance =====
 for j in range(30):
-    sfx.add(pan(tick(2700 + 300 * (j % 4), d=0.025, body=900), 0.08 * np.sin(j)), 5.75 + j * 0.034, 0.06, send=0.15)
-sfx.add(glass(D["D6"], d=1.5, soft=0.003), 8.35, 0.06, send=0.8)
-sfx.add(glass(D["A6"], d=1.8, soft=0.003), 8.43, 0.05, send=0.8)
+    sfx.add(pan(tick(2700 + 300 * (j % 4), d=0.025, body=900), 0.08 * np.sin(j)), 5.63 + j * 0.067, 0.06, send=0.15)
+sfx.add(glass(D["D6"], d=1.5, soft=0.003), 8.13, 0.06, send=0.8)
+sfx.add(glass(D["A6"], d=1.8, soft=0.003), 8.21, 0.05, send=0.8)
 for f, dt in [("D5", 0), ("F#5", 0.05), ("A5", 0.1)]:
-    sfx.add(glass(D[f], d=3, soft=0.03), 8.9 + dt, 0.05, send=1.0)
+    sfx.add(glass(D[f], d=3, soft=0.03), 8.45 + dt, 0.05, send=1.0)
 for k in range(7):
-    sfx.add(pan(glass([D["D6"], D["E6"], D["F#6"], D["A6"]][k % 4], d=0.8, soft=0.002)[k % 2], -0.3 + 0.1 * k), 9.4 + k * 0.4, 0.035, send=0.6)
+    sfx.add(pan(glass([D["D6"], D["E6"], D["F#6"], D["A6"]][k % 4], d=0.8, soft=0.002)[k % 2], -0.3 + 0.1 * k), 9.0 + k * 0.38, 0.035, send=0.6)
 # ===== valider et envoyer =====
-sfx.add(whoosh(0.4, 1200, 6000, width=0.6, shape=1.8, seed_pan=(0, 0)), 13.45, 0.06, send=0.5)
-sfx.add(pan(tick(2200, d=0.04, body=800), 0), 14.25, 0.18, send=0.3)
-sfx.add(pan(thud(80, 0.3), 0), 14.25, 0.15, send=0.2)
+sfx.add(whoosh(0.4, 1200, 6000, width=0.6, shape=1.8, seed_pan=(0, 0)), 13.4, 0.06, send=0.5)
+sfx.add(pan(tick(2200, d=0.04, body=800), 0), 14.07, 0.18, send=0.3)
+sfx.add(pan(thud(80, 0.3), 0), 14.07, 0.15, send=0.2)
 for f, dt, g in [("D6", 0, 0.07), ("F#6", 0.09, 0.06), ("A6", 0.18, 0.06)]:
-    sfx.add(glass(D[f], d=2.5, soft=0.002), 15.3 + dt, g, send=1.0)
+    sfx.add(glass(D[f], d=2.5, soft=0.002), 15.04 + dt, g, send=1.0)
 # ===== Chrome : l'extension remplit, champ par champ =====
-sfx.add(glass(D["D5"], d=2.5, soft=0.004), 16.4, 0.05, send=0.9)
+sfx.add(glass(D["D5"], d=2.5, soft=0.004), 16.2, 0.05, send=0.9)
 for i, f in enumerate([D["D6"], D["E6"], D["F#6"], 1567.98, D["A6"], 1975.53, D["D7"]]):
-    sfx.add(pan(glass(f, d=0.6, soft=0.002)[i % 2], -0.3 + 0.1 * i), 18.6 + i * 0.11, 0.04, send=0.6)
-sfx.add(pan(glass(1046.5, d=0.9, soft=0.004, detune=0.01)[0], 0.4), 19.45, 0.045, send=0.6)
-sfx.add(glass(D["A5"], d=2, soft=0.01), 20.2, 0.05, send=0.9)
-sfx.add(whoosh(0.5, 1500, 6500, width=0.6, shape=1.8, seed_pan=(0, 0)), 22.0, 0.06, send=0.5)
+    sfx.add(pan(glass(f, d=0.6, soft=0.002)[i % 2], -0.3 + 0.1 * i), 19.0 + i * 0.11, 0.04, send=0.6)
+sfx.add(pan(glass(1046.5, d=0.9, soft=0.004, detune=0.01)[0], 0.4), 19.8, 0.045, send=0.6)
+sfx.add(glass(D["A5"], d=2, soft=0.01), 20.4, 0.05, send=0.9)
+sfx.add(whoosh(0.5, 1500, 6500, width=0.6, shape=1.8, seed_pan=(0, 0)), 21.4, 0.06, send=0.5)
 # ===== signature =====
 for f, dt in [("D5", 0), ("F#5", 0.05), ("A5", 0.1), ("D6", 0.15)]:
-    sfx.add(glass(D[f], d=4, soft=0.01), 24.2 + dt, 0.07, send=1.0)
-sfx.add(sub(73.4, 73.4, 2.5, 1.0), 24.2, 0.2)
-sfx.add(glass(D["A6"], d=2.5, soft=0.004), 25.8, 0.05, send=1.0)
+    sfx.add(glass(D[f], d=4, soft=0.01), 23.6 + dt, 0.07, send=1.0)
+sfx.add(sub(73.4, 73.4, 2.5, 1.0), 23.6, 0.2)
+sfx.add(glass(D["A6"], d=2.5, soft=0.004), 25.2, 0.05, send=1.0)
 
 def finish(track, rt60, bright, seed):
     return track.dry + reverb(track.send, impulse(rt60, bright=bright, seed=seed)) * 0.5
