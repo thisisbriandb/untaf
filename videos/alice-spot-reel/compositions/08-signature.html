@@ -1,0 +1,43 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000;
+            font-family: "Geist", sans-serif; color: #F5F5F2; }
+    .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 96px;
+         text-align: center; opacity: 0; font-weight: 600; letter-spacing: -0.035em; line-height: 1.1; }
+    .halo { position: absolute; left: 40px; top: 360px; width: 1000px; height: 1200px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0) 68%); }
+    .screen { position: absolute; left: 60px; top: 280px; width: 960px; height: 1360px;
+      border-radius: 44px; overflow: hidden; background: #FAFAF8;
+      box-shadow: 0 0 0 1.5px rgba(255,255,255,0.35), 0 0 120px rgba(255,255,255,0.18), 0 60px 140px rgba(0,0,0,0.8); }
+    .cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .cam video { display: block; width: 960px; height: 1360px; object-fit: cover; }
+
+    .end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+    .eyes { width: 240px; height: 240px; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 100px rgba(255,255,255,0.25); }
+    .eyes svg { width: 160px; height: 80px; }
+    .name { margin-top: 40px; font-size: 140px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+  </style>
+  <div id="root" data-composition-id="08-signature" data-width="1080" data-height="1920">
+    <div class="halo" id="halo"></div>
+    <div class="end" id="logo"><div class="eyes"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="name">Alice</div></div>
+    <div class="t" id="u" style="font-size:84px">alice-agent.fr</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Cadrage : centre le point (fx, fy) de la vidéo (fractions) dans l'écran, au zoom s.
+      const frame = (vh) => (fx, fy, s) => ({ x: 960 / 2 - fx * 960 * s, y: 1360 / 2 - fy * vh * s, scale: s });
+      tl.fromTo("#halo", { opacity: 0 }, { opacity: 1, duration: 0.8 }, 0);
+      tl.fromTo("#logo", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.6, ease: "expo.out" }, 0.1);
+      tl.to("#logo", { opacity: 0, duration: 0.3 }, 1.4);
+      tl.fromTo("#u", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.7);
+      window.__timelines["08-signature"] = tl;
+    })();
+  </script>
+</template>
