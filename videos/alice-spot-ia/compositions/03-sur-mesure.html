@@ -1,0 +1,81 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    .m3-glass {
+      backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.17) 0%, rgba(255,255,255,0.04) 48%, rgba(255,255,255,0.10) 100%);
+      border: 1.5px solid rgba(255,255,255,0.26);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .m3-bar { height: 14px; border-radius: 7px; background: rgba(255,255,255,0.22); }
+    .m3-lit { background: #FFFFFF; box-shadow: 0 0 18px rgba(255,255,255,0.8); }
+
+    .m3-halo { position: absolute; left: 90px; top: 560px; width: 900px; height: 900px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0) 70%); }
+    .m3-pills { position: absolute; left: 0; top: 330px; width: 1080px; height: 110px; }
+    .m3-pill { position: absolute; left: 50%; top: 0; transform: translateX(-50%); white-space: nowrap; padding: 26px 46px; border-radius: 60px;
+      font-size: 42px; font-weight: 600; letter-spacing: -0.02em; opacity: 0; }
+    .m3-stage { position: absolute; inset: 0; perspective: 1800px; }
+    .m3-cv { position: absolute; left: 80px; top: 520px; width: 640px; height: 960px; border-radius: 40px; padding: 48px 46px; overflow: hidden; }
+    .m3-title { font-size: 40px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; height: 100px; }
+    .m3-blk { position: absolute; left: 46px; right: 46px; top: 0; overflow: hidden; border-radius: 18px; padding: 18px 20px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10); }
+    .m3-h { font-size: 22px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #BDBDB8; }
+    .m3-bar { height: 12px; border-radius: 6px; background: rgba(255,255,255,0.22); margin-top: 18px; }
+    .m3-keys { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .m3-key { padding: 10px 20px; border-radius: 30px; border: 1.5px solid rgba(255,255,255,0.25); font-size: 24px; font-weight: 500; color: #CFCFCA; }
+    .m3-key.on { color: #000; }
+    .m3-letter { position: absolute; left: 600px; top: 640px; width: 420px; height: 780px; border-radius: 36px; padding: 44px 38px; }
+    .m3-lt { font-size: 26px; font-weight: 600; color: #DADAD5; margin-bottom: 10px; }
+    .m3-lb { margin-top: 30px; }
+  </style>
+
+  <div id="root" data-composition-id="03-sur-mesure" data-width="1080" data-height="1920">
+    <div class="m3-halo"></div>
+    <div class="m3-pills"><div class="m3-pill m3-glass" id="m3-p0">Offre #1 · Data</div><div class="m3-pill m3-glass" id="m3-p1">Offre #2 · FinTech</div><div class="m3-pill m3-glass" id="m3-p2">Offre #3 · Retail</div></div>
+    <div class="m3-stage" id="m3-stage">
+      <div class="m3-letter m3-glass" id="m3-letter"><div class="m3-lt">Lettre</div><div class="m3-bar m3-lb" id="m3-lb0" style="width:92%"></div><div class="m3-bar m3-lb" id="m3-lb1" style="width:70%"></div><div class="m3-bar m3-lb" id="m3-lb2" style="width:86%"></div><div class="m3-bar m3-lb" id="m3-lb3" style="width:60%"></div><div class="m3-bar m3-lb" id="m3-lb4" style="width:80%"></div><div class="m3-bar m3-lb" id="m3-lb5" style="width:74%"></div></div>
+      <div class="m3-cv m3-glass" id="m3-cv"><div class="m3-title" id="m3-title">Data Analyst — Alternance</div><div class="m3-blk" id="m3-b0"><div class="m3-h">Profil</div><div class="m3-bar" style="width:90%"></div><div class="m3-bar" style="width:72%"></div></div><div class="m3-blk" id="m3-b1"><div class="m3-h">Expériences</div><div class="m3-bar" id="m3-x0" style="width:86%"></div><div class="m3-bar" id="m3-x1" style="width:64%"></div><div class="m3-bar" id="m3-x2" style="width:78%"></div></div><div class="m3-blk" id="m3-b2"><div class="m3-h">Compétences</div><div class="m3-keys"><span class="m3-key" id="m3-k0">SQL</span><span class="m3-key" id="m3-k1">Python</span><span class="m3-key" id="m3-k2">Power BI</span><span class="m3-key" id="m3-k3">Excel</span><span class="m3-key" id="m3-k4">Agile</span></div></div><div class="m3-blk" id="m3-b3"><div class="m3-h">Formation</div><div class="m3-bar" style="width:58%"></div></div></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const L = [{"b0": [150, 120, 100], "b1": [290, 230, 100], "b2": [540, 200, 100], "b3": [760, 90, 100]}, {"b0": [150, 120, 100], "b1": [510, 230, 100], "b2": [290, 200, 100], "b3": [760, 90, 100]}, {"b0": [150, 160, 100], "b1": [330, 150, 100], "b2": [690, 200, 100], "b3": [500, 170, 100]}], KEYS = [["SQL", "Python", "Power BI", "Excel", "Agile"], ["Python", "Risque", "Excel", "Paiements", "SQL"], ["Merch", "Excel", "Ventes", "CRM", "Terrain"]], LIT = [[0, 1, 2], [1, 3], [0, 2, 3]], LET = [[92, 70, 86, 60, 80, 74], [70, 92, 60, 88, 66, 82], [84, 66, 92, 72, 58, 90]], TITLES = ["Data Analyst \u2014 Alternance", "Analyste FinTech \u2014 Alternance", "Charg\u00e9e Retail \u2014 Alternance"];
+      const apply = (k, t, d) => {
+        Object.entries(L[k]).forEach(([id, [y, h]]) => tl.to("#m3-" + id, { y, height: h, duration: d, ease: "expo.inOut" }, t));
+        LET[k].forEach((w, i) => tl.to("#m3-lb" + i, { width: w + "%", duration: d, ease: "expo.inOut" }, t + i * 0.02));
+        KEYS[k].forEach((word, i) => {
+          const el = document.getElementById("m3-k" + i), on = LIT[k].includes(i);
+          tl.call(() => { el.textContent = word; el.classList.toggle("on", false); }, null, t + 0.05);
+          tl.to(el, { backgroundColor: on ? "#FFFFFF" : "rgba(255,255,255,0)", color: on ? "#000000" : "#CFCFCA",
+            boxShadow: on ? "0 0 22px rgba(255,255,255,0.85)" : "0 0 0 rgba(255,255,255,0)", duration: 0.25 }, t + 0.1 + i * 0.03);
+        });
+        tl.call(() => { document.getElementById("m3-title").textContent = TITLES[k]; }, null, t + 0.12);
+        tl.fromTo("#m3-title", { opacity: 0.2 }, { opacity: 1, duration: 0.25, immediateRender: false }, t + 0.12);
+      };
+      // État de départ, sans animation.
+      Object.entries(L[0]).forEach(([id, [y, h]]) => tl.set("#m3-" + id, { y, height: h }, 0));
+      // La caméra pivote vers le CV central.
+      tl.fromTo("#m3-stage", { rotationY: 38, x: 260, opacity: 0 }, { rotationY: 0, x: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, 0);
+      tl.fromTo("#m3-letter", { rotation: 0 }, { rotation: 3, duration: 5, ease: "sine.inOut" }, 0);
+      // Les offres défilent ; à chaque offre, CV et lettre se réorganisent.
+      const T = [0.4, 2.1, 3.8];
+      T.forEach((t, k) => {
+        const pill = "#m3-p" + k;
+        tl.fromTo(pill, { opacity: 0, xPercent: 10 }, { opacity: 1, xPercent: -50, duration: 0.35, ease: "power3.out" }, t);
+        if (k < 2) tl.to(pill, { opacity: 0, xPercent: -110, duration: 0.25, ease: "power2.in" }, T[k + 1] - 0.05);
+        apply(k, t + 0.1, k === 0 ? 0.01 : 0.55);
+      });
+      tl.to("#m3-stage", { scale: 0.92, opacity: 0, duration: 0.35, ease: "power2.in" }, 5.25);
+      tl.to(".m3-pills", { opacity: 0, duration: 0.25 }, 5.25);
+      window.__timelines["03-sur-mesure"] = tl;
+    })();
+  </script>
+</template>

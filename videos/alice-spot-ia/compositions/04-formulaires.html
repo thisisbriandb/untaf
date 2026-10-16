@@ -1,0 +1,90 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    .f4-glass {
+      backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.17) 0%, rgba(255,255,255,0.04) 48%, rgba(255,255,255,0.10) 100%);
+      border: 1.5px solid rgba(255,255,255,0.26);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .f4-bar { height: 14px; border-radius: 7px; background: rgba(255,255,255,0.22); }
+    .f4-lit { background: #FFFFFF; box-shadow: 0 0 18px rgba(255,255,255,0.8); }
+
+    .f4-space { position: absolute; inset: 0; perspective: 2200px; }
+    .f4-grid { position: absolute; left: 50.0px; top: -120.0px; width: 980px; height: 2600px;
+      transform-origin: 490.0px 1080.0px; transform-style: preserve-3d; }
+    .f4-form { position: absolute; width: 300px; height: 400px; border-radius: 26px; padding: 24px 22px; opacity: 0; }
+    #f4-7 { opacity: 1; }
+    .f4-ft { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .f4-lab { margin-top: 12px; font-size: 15px; font-weight: 500; color: #A9A9A4; }
+    .f4-fld { margin-top: 6px; height: 40px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.04);
+      display: flex; align-items: center; padding: 0 12px; }
+    .f4-val { height: 10px; border-radius: 5px; background: #FFFFFF; transform-origin: 0 50%; transform: scaleX(0); }
+    .f4-att { margin-top: 6px; height: 50px; border-radius: 10px; border: 1.5px dashed rgba(255,255,255,0.28); display: flex; align-items: center; padding: 0 8px; }
+    .f4-cv { padding: 8px 14px; border-radius: 8px; background: #FFFFFF; color: #000; font-size: 15px; font-weight: 600; opacity: 0; }
+    .f4-wave { position: absolute; left: 0; top: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0) 70%); pointer-events: none; }
+  </style>
+
+  <div id="root" data-composition-id="04-formulaires" data-width="1080" data-height="1920">
+    <div class="f4-space" id="f4-space"><div class="f4-grid" id="f4-grid">
+    <div class="f4-form f4-glass" id="f4-0" style="left:0px; top:0px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-1" style="left:340px; top:0px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-2" style="left:680px; top:0px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-3" style="left:0px; top:440px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-4" style="left:340px; top:440px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-5" style="left:680px; top:440px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-6" style="left:0px; top:880px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-7" style="left:340px; top:880px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-8" style="left:680px; top:880px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-9" style="left:0px; top:1320px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-10" style="left:340px; top:1320px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-11" style="left:680px; top:1320px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-12" style="left:0px; top:1760px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-13" style="left:340px; top:1760px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-14" style="left:680px; top:1760px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-15" style="left:0px; top:2200px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-16" style="left:340px; top:2200px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-form f4-glass" id="f4-17" style="left:680px; top:2200px"><div class="f4-ft">Postuler</div><div class="f4-lab">Nom</div><div class="f4-fld"><div class="f4-val" style="width:52%"></div></div><div class="f4-lab">Prénom</div><div class="f4-fld"><div class="f4-val" style="width:44%"></div></div><div class="f4-lab">E-mail</div><div class="f4-fld"><div class="f4-val" style="width:78%"></div></div><div class="f4-lab">Pièce jointe</div><div class="f4-att"><div class="f4-cv">CV adapté.pdf</div></div></div>
+    <div class="f4-wave" id="f4-wave"></div>
+    </div></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const COLS = 3, FW = 300, FH = 400, GAP = 40, CENTER = 7;
+      const ORDER = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+      const fill = (i, t, speed) => {
+        const f = "#f4-" + i;
+        tl.to(f + " .f4-val", { scaleX: 1, duration: 0.07 * speed, stagger: 0.06 * speed, ease: "power2.out" }, t);
+        tl.to(f + " .f4-fld", { borderColor: "rgba(255,255,255,0.7)", duration: 0.08 * speed, stagger: 0.06 * speed }, t);
+        tl.fromTo(f + " .f4-cv", { opacity: 0, x: 120, scale: 1.3 }, { opacity: 1, x: 0, scale: 1, duration: 0.12 * speed, ease: "back.out(2.5)" }, t + 0.2 * speed);
+      };
+      const launch = (i, t) => tl.to("#f4-" + i, { z: -2600, y: "-=260", opacity: 0, duration: 0.42, ease: "power3.in" }, t);
+      // Gros plan sur un seul formulaire, qui se remplit tout seul.
+      tl.fromTo("#f4-grid", { scale: 2.9, rotationX: 0 }, { scale: 2.7, duration: 1.0, ease: "sine.out" }, 0);
+      fill(CENTER, 0.2, 2.2);
+      // La caméra recule et dévoile la grille.
+      tl.to("#f4-grid", { scale: 0.62, rotationX: 22, rotationZ: -4, duration: 0.85, ease: "expo.inOut" }, 1.0);
+      tl.to(".f4-form", { opacity: 1, duration: 0.4, stagger: 0.015 }, 1.15);
+      launch(CENTER, 1.7);
+      // L'onde lumineuse court de formulaire en formulaire : rempli, propulsé.
+      tl.set("#f4-wave", { opacity: 1 }, 1.8);
+      ORDER.forEach((i, k) => {
+        const t = 1.85 + k * 0.2;
+        const x = (i % COLS) * (FW + GAP) + FW / 2, y = Math.floor(i / COLS) * (FH + GAP) + FH / 2;
+        tl.to("#f4-wave", { x, y, duration: 0.12, ease: "power2.out" }, t - 0.08);
+        fill(i, t, 0.55);
+        launch(i, t + 0.24);
+      });
+      tl.to("#f4-wave", { opacity: 0, duration: 0.3 }, 5.5);
+      window.__timelines["04-formulaires"] = tl;
+    })();
+  </script>
+</template>
