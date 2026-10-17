@@ -2,16 +2,17 @@
 Abonnement hebdomadaire (Lemon Squeezy) et limites d'usage.
 
 Deux formules :
-  - gratuite : de quoi essayer Alice pour de vrai (quelques dossiers, une
-    mission par semaine) ;
+  - gratuite : un essai unique, sans remise à zéro (quelques dossiers et
+    quelques envois pour voir Alice travailler), puis l'abonnement ;
   - « Alice — semaine » : abonnement hebdomadaire sans engagement, résiliable
     en un clic ; ses plafonds ne sont là que contre les abus.
 
 Ce qui est compté dans `usage_events` : une candidature envoyée par Alice
 (c'est elle qui mesure la formule gratuite), un dossier rédigé (deux appels
-au modèle), une mission, un message à Alice, une candidature spontanée. Les
-fenêtres sont glissantes (7 jours, 24 heures) : pas de remise à zéro le lundi
-qui inviterait à tout consommer le dimanche.
+au modèle), une mission, un message à Alice, une candidature spontanée. Pour
+l'abonné, les fenêtres sont glissantes (7 jours, 24 heures). En gratuit,
+dossiers, envois et missions se comptent depuis l'inscription : c'est un essai,
+pas une formule qu'on peut étirer semaine après semaine.
 
 Sans configuration Lemon Squeezy, la facturation est éteinte : rien n'est
 limité, l'usage est seulement compté.
@@ -75,17 +76,33 @@ KINDS = {
 }
 
 
+#: En gratuit, ces usages se comptent depuis l'inscription (essai unique).
+TRIAL_KINDS = {"send", "pack", "mission", "spontaneous"}
+
+
+def window_for(kind: str, paid: bool) -> timedelta | None:
+    """Fenêtre de comptage ; None = depuis toujours (essai gratuit)."""
+    if not paid and kind in TRIAL_KINDS:
+        return None
+    return KINDS[kind][1]
+
+
 class LimitReached(Exception):
     """Limite de la formule atteinte : à montrer, avec de quoi s'abonner."""
 
     def __init__(self, kind: str, used: int, limit: int, paid: bool):
         self.kind, self.used, self.limit, self.paid = kind, used, limit, paid
         label, window = KINDS[kind][2], ("aujourd'hui" if KINDS[kind][1] == DAY else "cette semaine")
+        trial = not paid and kind in TRIAL_KINDS
         if paid:
             msg = (f"Tu as atteint le plafond de {limit} {label} {window}. "
                    "Il protège le service contre les abus ; il se libère au fil des jours.")
         elif limit == 0:
             msg = f"Les {label} font partie de l'abonnement Alice ({settings.billing_price_label})."
+        elif trial:
+            msg = (f"Tu as utilisé les {limit} {label} offerts pour découvrir Alice. "
+                   f"Pour que je continue, passe à l'abonnement ({settings.billing_price_label}, "
+                   "sans engagement, résiliable en un clic).")
         else:
             msg = (f"Tu as utilisé les {limit} {label} de la formule gratuite {window}. "
                    f"Avec l'abonnement ({settings.billing_price_label}, sans engagement), "
@@ -135,21 +152,24 @@ async def limits_for(session, candidate_id: UUID) -> tuple[Limits, bool]:
     return (paid_limits() if paid else free_limits()), paid
 
 
-async def used(session, candidate_id: UUID, kind: str) -> int:
+async def used(session, candidate_id: UUID, kind: str, paid: bool | None = None) -> int:
+    """Usages comptés dans la fenêtre de la formule (`paid` évite de la relire)."""
     from app.models.billing import UsageEvent
 
-    since = datetime.now(timezone.utc) - KINDS[kind][1]
-    return (await session.execute(
-        select(func.count(UsageEvent.id))
-        .where(UsageEvent.candidate_id == candidate_id)
-        .where(UsageEvent.kind == kind)
-        .where(UsageEvent.created_at >= since)
-    )).scalar() or 0
+    if paid is None:
+        _, paid = await limits_for(session, candidate_id)
+    query = (select(func.count(UsageEvent.id))
+             .where(UsageEvent.candidate_id == candidate_id)
+             .where(UsageEvent.kind == kind))
+    window = window_for(kind, paid)
+    if window is not None:
+        query = query.where(UsageEvent.created_at >= datetime.now(timezone.utc) - window)
+    return (await session.execute(query)).scalar() or 0
 
 
 async def remaining(session, candidate_id: UUID, kind: str) -> int:
-    limits, _ = await limits_for(session, candidate_id)
-    return max(0, getattr(limits, KINDS[kind][0]) - await used(session, candidate_id, kind))
+    limits, paid = await limits_for(session, candidate_id)
+    return max(0, getattr(limits, KINDS[kind][0]) - await used(session, candidate_id, kind, paid))
 
 
 async def check(session, candidate_id: UUID, kind: str, count: int = 1) -> None:
@@ -158,7 +178,7 @@ async def check(session, candidate_id: UUID, kind: str, count: int = 1) -> None:
         return
     limits, paid = await limits_for(session, candidate_id)
     limit = getattr(limits, KINDS[kind][0])
-    n = await used(session, candidate_id, kind)
+    n = await used(session, candidate_id, kind, paid)
     if n + count > limit:
         raise LimitReached(kind, n, limit, paid)
 
@@ -227,9 +247,10 @@ async def overview(session, candidate_id: UUID) -> dict:
     sub = await active_subscription(session, candidate_id) if settings.billing_enabled else None
     usage = {}
     for kind, (field, window, label) in KINDS.items():
-        usage[kind] = {"used": await used(session, candidate_id, kind),
+        w = window_for(kind, paid)
+        usage[kind] = {"used": await used(session, candidate_id, kind, paid),
                        "limit": getattr(limits, field), "label": label,
-                       "window": "day" if window == DAY else "week"}
+                       "window": "trial" if w is None else ("day" if w == DAY else "week")}
     return {
         "enabled": settings.billing_enabled,
         "plan": "weekly" if paid else "free",
