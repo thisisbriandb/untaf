@@ -796,3 +796,15 @@ def collect_csp():
         return loop.run_until_complete(collect())
     finally:
         _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_werecruit")
+def collect_werecruit():
+    """Quotidien : offres Werecruit nouvelles ou modifiées, au plus 1 500 pages par passage."""
+    from app.agents.discovery.werecruit import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)

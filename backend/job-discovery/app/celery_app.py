@@ -134,6 +134,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.collect_csp",
         "schedule": crontab(hour=3, minute=5),
     },
+    # Werecruit : ~9 000 offres récentes au premier passage, lues sur plusieurs
+    # jours (1 500 pages par passage, une par seconde : ~25 minutes).
+    "daily-collect-werecruit": {
+        "task": "app.agents.discovery.tasks.collect_werecruit",
+        "schedule": crontab(hour=1, minute=50),
+    },
     "daily-reengage": {
         "task": "app.agents.notifications.tasks.reengage",
         "schedule": crontab(hour=16, minute=50),
