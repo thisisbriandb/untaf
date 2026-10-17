@@ -784,3 +784,15 @@ def collect_taleez():
         return loop.run_until_complete(collect())
     finally:
         _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_csp")
+def collect_csp():
+    """Quotidien : offres de Choisir le service public des dernières 48 heures."""
+    from app.agents.discovery.csp import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)

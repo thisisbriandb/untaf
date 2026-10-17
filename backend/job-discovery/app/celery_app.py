@@ -128,6 +128,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.collect_taleez",
         "schedule": crontab(hour=2, minute=35),
     },
+    # Choisir le service public : la liste des 48 dernières heures (~1 200
+    # offres nouvelles par jour, une page par seconde : ~25 minutes).
+    "daily-collect-csp": {
+        "task": "app.agents.discovery.tasks.collect_csp",
+        "schedule": crontab(hour=3, minute=5),
+    },
     "daily-reengage": {
         "task": "app.agents.notifications.tasks.reengage",
         "schedule": crontab(hour=16, minute=50),

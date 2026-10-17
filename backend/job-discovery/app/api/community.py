@@ -137,6 +137,8 @@ def source_label(job: JobPosting) -> str:
         return "France Travail"
     if job.external_id.startswith("inrae:"):
         return "INRAE"
+    if job.external_id.startswith("csp:"):
+        return "Choisir le service public"
     if "welcometothejungle" in url:
         return "Welcome to the Jungle"
     return "Site carrière"
