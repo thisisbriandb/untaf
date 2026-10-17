@@ -93,7 +93,9 @@ def test_checkout_carries_candidate(monkeypatch):
 
 def test_limit_messages():
     free = billing.LimitReached("pack", 3, 3, paid=False)
-    assert "3 dossiers de candidature de la formule gratuite cette semaine" in str(free)
+    # Essai gratuit : pas de « cette semaine », rien ne se remet à zéro.
+    assert "3 dossiers de candidature offerts pour découvrir Alice" in str(free)
+    assert "semaine" not in str(free).split("abonnement")[0]
     assert "abonnement" in str(free)
     assert free.detail()["code"] == "plan_limit"
     assert "font partie de l'abonnement" in str(billing.LimitReached("spontaneous", 0, 0, paid=False))
@@ -117,7 +119,7 @@ def test_check_against_plan(monkeypatch, paid, used, ok):
     async def limits_for(session, cid):
         return (billing.paid_limits() if paid else billing.free_limits()), paid
 
-    async def used_(session, cid, kind):
+    async def used_(session, cid, kind, paid=None):
         return used
 
     monkeypatch.setattr(billing, "limits_for", limits_for)
@@ -172,12 +174,18 @@ def test_sync_keeps_only_alice_variant(monkeypatch):
 
 # ── La formule gratuite se mesure en candidatures envoyées ────────────────
 
-def test_free_plan_counts_sends_not_prepared_packs():
+def test_free_trial_counts_since_signup():
     free = billing.free_limits()
     assert billing.KINDS["send"][0] == "sends_per_week"
     assert free.sends_per_week == billing.settings.free_sends_per_week
-    # La préparation garde un plafond (coût du modèle), plus large que l'essai.
-    assert free.packs_per_week > free.sends_per_week
+    # Essai unique : dossiers, envois et missions se comptent depuis toujours ;
+    # les messages restent par jour, et l'abonné garde des fenêtres glissantes.
+    for kind in ("pack", "send", "mission"):
+        assert billing.window_for(kind, paid=False) is None
+        assert billing.window_for(kind, paid=True) == billing.WEEK
+    assert billing.window_for("message", paid=False) == billing.DAY
+    # Chaque dossier offert peut partir : autant d'envois que de dossiers.
+    assert free.sends_per_week >= free.packs_per_week
     msg = str(billing.LimitReached("send", 3, 3, paid=False))
     assert "candidatures envoyées par Alice" in msg and "abonnement" in msg
 
@@ -191,7 +199,7 @@ def test_send_limit(monkeypatch, used, ok):
     async def limits_for(session, cid):
         return billing.free_limits(), False
 
-    async def used_(session, cid, kind):
+    async def used_(session, cid, kind, paid=None):
         assert kind == "send"
         return used
 

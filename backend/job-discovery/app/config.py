@@ -266,15 +266,16 @@ class Settings(BaseSettings):
     #: Prix affiché dans l'application ; le prix facturé est celui de Lemon Squeezy.
     billing_price_label: str = "4,90 € / semaine"
 
-    #: Limites, par candidat. Gratuit : de quoi essayer pour de vrai. Abonné :
-    #: des plafonds contre les abus, qu'un usage normal n'atteint pas.
-    #: La formule gratuite se mesure en candidatures réellement ENVOYÉES par
-    #: Alice : préparer un dossier que personne n'envoie ne devait pas épuiser
-    #: l'essai. Dossiers et missions gardent un plafond (coût du modèle).
+    #: Limites, par candidat. Gratuit : un ESSAI unique, sans remise à zéro —
+    #: Alice prouve ce qu'elle sait faire (quelques dossiers, quelques envois),
+    #: puis propose l'abonnement quand on en redemande. Abonné : des plafonds
+    #: hebdomadaires contre les abus, qu'un usage normal n'atteint pas.
+    #: (Les noms `free_*_per_week` restent pour la configuration existante ;
+    #: en gratuit, ils comptent depuis l'inscription, pas sur 7 jours.)
     free_sends_per_week: int = 3
     paid_sends_per_week: int = 60
-    free_packs_per_week: int = 10
-    free_missions_per_week: int = 3
+    free_packs_per_week: int = 3
+    free_missions_per_week: int = 2
     free_spontaneous_per_week: int = 0
     free_messages_per_day: int = 30
     paid_packs_per_week: int = 40

@@ -1,0 +1,38 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000;
+            font-family: "Geist", sans-serif; color: #F5F5F2; }
+    .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 96px;
+         text-align: center; opacity: 0; font-weight: 600; letter-spacing: -0.035em; line-height: 1.1; }
+    .halo { position: absolute; left: 40px; top: 360px; width: 1000px; height: 1200px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0) 68%); }
+    .screen { position: absolute; left: 60px; top: 280px; width: 960px; height: 1360px;
+      border-radius: 44px; overflow: hidden; background: #FAFAF8;
+      box-shadow: 0 0 0 1.5px rgba(255,255,255,0.35), 0 0 120px rgba(255,255,255,0.18), 0 60px 140px rgba(0,0,0,0.8); }
+    .cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .cam video { display: block; width: 960px; height: 1360px; object-fit: cover; }
+
+  </style>
+  <div id="root" data-composition-id="06-extension" data-width="1080" data-height="1920">
+    <div class="halo" id="halo"></div>
+    <div class="screen" id="scr" style="background:#FAFAF8"><div class="cam" id="cam"><video id="v-06-extension" class="clip" src="assets/video/framed/extension.mp4" muted playsinline data-start="0" data-duration="4.36" data-track-index="0"></video></div></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Cadrage : centre le point (fx, fy) de la vidéo (fractions) dans l'écran, au zoom s.
+      const frame = (vh) => (fx, fy, s) => ({ x: 960 / 2 - fx * 960 * s, y: 1360 / 2 - fy * vh * s, scale: s });
+      const F = frame(880.0);
+      tl.fromTo("#scr", { opacity: 0, scale: 0.94, y: 40 }, { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "expo.out" }, 0);
+      tl.fromTo("#halo", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 0);
+      tl.fromTo("#scr", { rotationX: 3, transformPerspective: 1800 }, { rotationX: -2, transformPerspective: 1800, duration: 4.36, ease: "none" }, 0);
+      tl.to("#scr", { opacity: 0, scale: 0.97, duration: 0.25, ease: "power2.in" }, 4.11);
+      window.__timelines["06-extension"] = tl;
+    })();
+  </script>
+</template>

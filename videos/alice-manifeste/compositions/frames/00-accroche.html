@@ -1,0 +1,70 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .h0-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .h0-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .h0-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .h0-l span { font-size: 112px; }
+    .h0-m span { font-size: 84px; }
+    .h0-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .h0-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .h0-ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+    .h0-ui .h0-glass { position: relative; opacity: 1; }
+    .h0-eyes { flex: none; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center; }
+    .h0-eyes svg { width: 70%; height: 70%; }
+    .h0-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    .h0-halo { position: absolute; left: 140px; top: 660px; width: 800px; height: 600px; border-radius: 50%; opacity: 0;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0) 70%); }
+    .h0-note { width: 900px; display: flex; align-items: center; gap: 30px; padding: 40px 44px; border-radius: 48px; }
+    .h0-ic { flex: none; width: 84px; height: 84px; border-radius: 24px; background: rgba(255,255,255,0.14);
+      display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 600; color: #F5F5F2; }
+    .h0-txt { flex: 1; }
+    .h0-from { font-size: 28px; font-weight: 500; color: #A9A9A4; }
+    .h0-msg { margin-top: 8px; font-size: 38px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    .h0-badge { flex: none; min-width: 76px; height: 76px; padding: 0 18px; border-radius: 38px; background: #F5F5F2; color: #000;
+      display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  </style>
+
+  <div id="root" data-composition-id="00-accroche" data-width="1080" data-height="1920">
+    <div class="h0-halo" id="h0-halo"></div>
+    <div class="h0-ui" id="h0-notif"><div class="h0-glass h0-note" id="h0-card"><div class="h0-ic">@</div><div class="h0-txt"><div class="h0-from">Plateforme emploi · à l'instant</div><div class="h0-msg">Votre candidature a bien été transmise.</div></div><div class="h0-badge" id="h0-n">1</div></div></div>
+    <div class="h0-t h0-xl" id="h0-zero"><span>0 réponse.</span></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const P = [0.3, 0.6, 0.852, 1.064, 1.241, 1.391, 1.516, 1.622, 1.71, 1.785, 1.847, 1.9, 1.944, 1.981, 2.016, 2.051, 2.086, 2.121, 2.156, 2.191], C = [1, 2, 3, 4, 5, 7, 9, 11, 14, 16, 19, 21, 24, 27, 30, 33, 37, 40, 43, 47];
+      const card = document.getElementById("h0-card"), badge = document.getElementById("h0-n");
+      // La même notification revient, de plus en plus vite : la boucle avant les mots.
+      tl.set(["#h0-notif", "#h0-halo"], { opacity: 1 }, P[0]);
+      const pr = { k: 0 };
+      tl.fromTo(pr, { k: 0 }, { k: P.length - 1, duration: P[P.length - 1] - P[0], ease: "none",
+        onUpdate: () => { let i = 0; const t = tl.time(); while (i + 1 < P.length && P[i + 1] <= t) i++; badge.textContent = C[i]; } }, P[0]);
+      P.forEach((a, i) => {
+        const d = Math.min(0.16, ((P[i + 1] || a + 0.2) - a) * 0.85);
+        tl.fromTo(card, { y: -26, scale: 1.03 }, { y: 0, scale: 1, duration: d, ease: "power3.out", immediateRender: false }, a);
+      });
+      tl.set(["#h0-notif", "#h0-halo"], { opacity: 0 }, 2.28);
+      const z = document.getElementById("h0-zero");
+      tl.set(z, { opacity: 1 }, 2.42);
+      tl.fromTo(z, { scale: 1.05 }, { scale: 1, duration: 0.6, ease: "expo.out" }, 2.42);
+      window.__timelines["00-accroche"] = tl;
+    })();
+  </script>
+</template>

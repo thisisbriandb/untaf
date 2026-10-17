@@ -1,0 +1,64 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    .n5-glass {
+      backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.17) 0%, rgba(255,255,255,0.04) 48%, rgba(255,255,255,0.10) 100%);
+      border: 1.5px solid rgba(255,255,255,0.26);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .n5-bar { height: 14px; border-radius: 7px; background: rgba(255,255,255,0.22); }
+    .n5-lit { background: #FFFFFF; box-shadow: 0 0 18px rgba(255,255,255,0.8); }
+
+    #n5-video { position: absolute; inset: 0; width: 1080px; height: 1920px; object-fit: cover; }
+    .n5-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.7); }
+    .n5-stack { position: absolute; left: 60px; top: 0; width: 960px; height: 1920px; }
+    .n5-note { position: absolute; left: 0; width: 960px; border-radius: 44px; padding: 32px 36px; display: flex; gap: 28px; align-items: flex-start; opacity: 0;
+      background: linear-gradient(150deg, rgba(40,40,44,0.55), rgba(20,20,24,0.45)); }
+    .n5-ic { flex: none; width: 84px; height: 84px; border-radius: 22px; background: #ECF4F0; display: flex; align-items: center; justify-content: center; }
+    .n5-ic svg { width: 64px; height: 32px; }
+    .n5-tx { flex: 1; }
+    .n5-top { display: flex; justify-content: space-between; font-size: 28px; color: #BDBDB8; }
+    .n5-top b { color: #F5F5F2; font-weight: 600; }
+    .n5-msg { margin-top: 8px; font-size: 38px; font-weight: 500; line-height: 1.25; letter-spacing: -0.015em; }
+    .n5-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+    .n5-logo { width: 220px; height: 220px; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 80px rgba(255,255,255,0.25); }
+    .n5-logo svg { width: 150px; height: 75px; }
+    .n5-name { margin-top: 36px; font-size: 120px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+    .n5-url { margin-top: 28px; padding: 22px 48px; border-radius: 60px; border: 1.5px solid rgba(255,255,255,0.35); font-size: 44px; font-weight: 600; }
+  </style>
+
+  <div id="root" data-composition-id="05-notifications" data-width="1080" data-height="1920">
+    <video id="n5-video" class="clip" src="assets/video/outro-recul.mp4" muted playsinline data-start="0" data-duration="6" data-track-index="0"></video>
+    <div class="n5-dim"></div>
+    <div class="n5-stack" id="n5-stack"><div class="n5-note n5-glass" id="n5-n0"><div class="n5-ic"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="n5-tx"><div class="n5-top"><b>Alice</b><span>maintenant</span></div><div class="n5-msg">Candidature transmise chez Doctolib (CV adapté + Lettre signée)</div></div></div><div class="n5-note n5-glass" id="n5-n1"><div class="n5-ic"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="n5-tx"><div class="n5-top"><b>Alice</b><span>maintenant</span></div><div class="n5-msg">Formulaire complété chez L'Oréal</div></div></div><div class="n5-note n5-glass" id="n5-n2"><div class="n5-ic"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="n5-tx"><div class="n5-top"><b>Alice</b><span>maintenant</span></div><div class="n5-msg">18 candidatures envoyées pendant ta pause.</div></div></div><div class="n5-note n5-glass" id="n5-n3"><div class="n5-ic"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="n5-tx"><div class="n5-top"><b>Alice</b><span>maintenant</span></div><div class="n5-msg">Atelier Nord vient de répondre : Proposition d'entretien.</div></div></div></div>
+    <div class="n5-end" id="n5-end"><div class="n5-logo"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="n5-name">Alice</div><div class="n5-url">alice-agent.fr</div></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Les notifications surgissent au centre et s'empilent en rafale (la plus récente en haut).
+      const T = [0.45, 0.95, 1.4, 1.85], H = 200, BASE = 760;
+      T.forEach((t, k) => {
+        const id = "#n5-n" + k;
+        tl.fromTo(id, { opacity: 0, y: BASE - 140, scale: 0.9 }, { opacity: 1, y: BASE, scale: 1, duration: 0.35, ease: "back.out(1.6)" }, t);
+        for (let j = 0; j < k; j++) tl.to("#n5-n" + j, { y: BASE + (k - j) * H, duration: 0.3, ease: "power3.out" }, t);
+        // Vibration du téléphone.
+        tl.fromTo(id, { x: -7 }, { x: 7, duration: 0.04, repeat: 5, yoyo: true, ease: "none", immediateRender: false }, t + 0.1);
+        tl.to(id, { x: 0, duration: 0.04 }, t + 0.34);
+      });
+      tl.to("#n5-stack", { y: -230, duration: 2.2, ease: "sine.inOut" }, 1.9);
+      // Fin : la pile s'efface, Alice signe.
+      tl.to("#n5-stack", { opacity: 0, scale: 0.94, duration: 0.35, ease: "power2.in" }, 4.3);
+      tl.fromTo("#n5-end", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.5, ease: "expo.out" }, 4.6);
+      window.__timelines["05-notifications"] = tl;
+    })();
+  </script>
+</template>

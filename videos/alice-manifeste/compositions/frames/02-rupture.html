@@ -1,0 +1,99 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .r2-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .r2-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .r2-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .r2-l span { font-size: 112px; }
+    .r2-m span { font-size: 84px; }
+    .r2-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .r2-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .r2-ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+    .r2-ui .r2-glass { position: relative; opacity: 1; }
+    .r2-eyes { flex: none; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center; }
+    .r2-eyes svg { width: 70%; height: 70%; }
+    .r2-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #r2-orb { left: 230px; top: 650px; width: 620px; height: 620px; border-radius: 50%; }
+    #r2-light { left: 190px; top: 660px; width: 700px; height: 600px; }
+    .r2-bar { width: 940px; height: 132px; border-radius: 66px; display: flex; align-items: center; gap: 22px; padding: 0 24px 0 30px; }
+    .r2-plus { flex: none; width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+      display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 400; color: #C9C9C4; line-height: 1; }
+    .r2-field { flex: 1; font-size: 40px; font-weight: 500; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; display: flex; align-items: center; }
+    .r2-ph { color: #8A8A86; }
+    .r2-caret { display: inline-block; width: 3px; height: 46px; background: #5FD3A6; margin: 0 4px 0 2px; }
+    .r2-send { flex: none; width: 88px; height: 88px; border-radius: 50%; background: #006045;
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 0 40px rgba(0,150,105,0.45); }
+    .r2-send svg { width: 46px; height: 46px; }
+    .r2-msg { width: 880px; }
+    .r2-who { display: flex; align-items: center; gap: 20px; }
+    .r2-name { font-size: 34px; font-weight: 600; color: #5FD3A6; }
+    .r2-time { font-size: 28px; font-weight: 500; color: #8A8A86; }
+    .r2-body { margin-top: 26px; font-size: 54px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.22; }
+  </style>
+
+  <div id="root" data-composition-id="02-rupture" data-width="1080" data-height="1920">
+    <div class="r2-light" id="r2-light"></div>
+    <div class="r2-t r2-l" id="r2-q"><span>Et si on changeait les règles ?</span></div>
+    <div class="r2-t r2-s" id="r2-s"><span>Si tu n'avais plus à t'épuiser<br>pour te faire remarquer ?</span></div>
+    <div class="r2-glass" id="r2-orb"></div>
+    <div class="r2-ui" id="r2-chat"><div class="r2-glass r2-bar" id="r2-bar"><div class="r2-plus">+</div><div class="r2-field"><span id="r2-typed"></span><span class="r2-caret"></span><span class="r2-ph" id="r2-ph">Dis-moi ce que tu cherches…</span></div><div class="r2-send" id="r2-send"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div></div>
+    <div class="r2-ui" id="r2-reply"><div class="r2-msg"><div class="r2-who"><div class="r2-eyes" style="width:72px;height:72px"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div class="r2-name">Alice</div><div class="r2-time">09:12</div></div><div class="r2-body">C'est parti — tu peux fermer l'onglet, je t'écris quand c'est fini.</div></div></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const orb = document.getElementById("r2-orb"), q = document.getElementById("r2-q"), light = document.getElementById("r2-light");
+      // Silence : le verre seul, qui se forme.
+      tl.fromTo(orb, { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 1.3, ease: "expo.out" }, 0.15);
+      // La question naît derrière le verre, floue ; le verre se lève, elle devient nette.
+      tl.set(q, { opacity: 1 }, 1.45);
+      tl.to(orb, { y: -1500, duration: 1.1, ease: "power3.inOut" }, 1.75);
+      tl.to(orb, { opacity: 0, duration: 0.3 }, 2.55);
+      tl.to(q, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, 2.62);
+      { const B = [["r2-s", 2.9, 5.55]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      // On parle à Alice : la vraie barre de chat, en verre.
+      const typed = document.getElementById("r2-typed"), ph = document.getElementById("r2-ph"), send = document.getElementById("r2-send");
+      const MSG = "Une alternance en marketing à Lyon";
+      tl.fromTo(light, { opacity: 0, scale: 0.6 }, { opacity: 0.55, scale: 1, duration: 1.2, ease: "sine.out" }, 5.6);
+      tl.fromTo("#r2-chat", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out" }, 5.6);
+      const ty = { n: 0 };
+      tl.fromTo(ty, { n: 0 }, { n: MSG.length, duration: 1.4, ease: "none", onUpdate: () => {
+        const n = Math.round(ty.n); typed.textContent = MSG.slice(0, n); ph.style.display = n > 0 ? "none" : "inline"; } }, 5.95);
+      tl.fromTo(send, { scale: 1 }, { scale: 0.86, duration: 0.08, ease: "power2.in" }, 7.45);
+      tl.to(send, { scale: 1, duration: 0.2, ease: "back.out(3)" }, 7.53);
+      tl.to("#r2-chat", { opacity: 0, y: -50, duration: 0.25, ease: "power2.in" }, 7.62);
+      // Alice répond, et elle s'en occupe.
+      tl.fromTo("#r2-reply", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 7.85);
+      tl.to(light, { opacity: 0.9, duration: 1.2, ease: "sine.inOut" }, 7.9);
+      tl.to("#r2-reply", { opacity: 0, duration: 0.25 }, 9.25);
+      window.__timelines["02-rupture"] = tl;
+    })();
+  </script>
+</template>

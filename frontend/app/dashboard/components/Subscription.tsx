@@ -114,7 +114,7 @@ export function PlanSection({ candidateId }: { candidateId: string | null }) {
           return (
             <div key={kind} className="py-2.5 flex items-center justify-between gap-4">
               <span className="text-xs text-[#1A1918]/60 tracking-tight first-letter:uppercase">
-                {u.label} {u.window === "day" ? "aujourd'hui" : "sur 7 jours"}
+                {u.label} {u.window === "day" ? "aujourd'hui" : u.window === "trial" ? "offerts" : "sur 7 jours"}
               </span>
               <span className="text-xs tabular-nums text-[#1A1918]/80">
                 {u.limit === 0 ? "avec l'abonnement" : `${u.used} / ${u.limit}`}
@@ -240,8 +240,8 @@ export function UpgradeDialog({ candidateId }: { candidateId: string | null }) {
 }
 
 /**
- * En bas de la barre latérale, pour la formule gratuite seulement : ce qu'il
- * reste cette semaine, et de quoi passer à l'abonnement.
+ * En bas de la barre latérale, pour l'essai gratuit seulement : les dossiers
+ * offerts qu'il reste, et de quoi passer à l'abonnement.
  */
 export function UpgradeCard({ candidateId }: { candidateId: string | null }) {
   const [billing, setBilling] = useState<Billing | null>(null);
@@ -261,16 +261,16 @@ export function UpgradeCard({ candidateId }: { candidateId: string | null }) {
   }, [candidateId]);
 
   if (!billing?.enabled || billing.plan !== "free") return null;
-  // La formule gratuite se compte en candidatures envoyées. L'encart ne pousse
-  // l'abonnement qu'après un premier envoi réussi : avant, rien à prolonger.
-  const sends = billing.usage.send;
-  if (!sends || sends.used === 0) return null;
-  const left = Math.max(0, sends.limit - sends.used);
+  // L'essai se compte en dossiers offerts. L'encart n'apparaît qu'après un
+  // premier dossier : avant, Alice n'a encore rien prouvé.
+  const packs = billing.usage.pack;
+  if (!packs || packs.used === 0) return null;
+  const left = Math.max(0, packs.limit - packs.used);
 
   return (
     <div className="mx-2 mb-2 rounded-xl border border-[#006045]/15 bg-[#006045]/[0.04] px-3 py-2.5 space-y-2">
       <p className="text-[11px] font-normal text-[#1A1918]/65 tracking-tight">
-        Formule gratuite · {left} candidature{left > 1 ? "s" : ""} restante{left > 1 ? "s" : ""} cette semaine
+        Essai gratuit · {left > 0 ? `${left} dossier${left > 1 ? "s" : ""} offert${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}` : "dossiers offerts utilisés"}
       </p>
       <button
         type="button"

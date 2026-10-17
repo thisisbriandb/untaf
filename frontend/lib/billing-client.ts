@@ -14,7 +14,7 @@ export interface Usage {
   used: number;
   limit: number;
   label: string;
-  window: "day" | "week";
+  window: "day" | "week" | "trial";
 }
 
 export interface Billing {

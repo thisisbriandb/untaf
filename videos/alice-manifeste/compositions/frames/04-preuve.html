@@ -1,0 +1,164 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .p4-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .p4-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .p4-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .p4-l span { font-size: 112px; }
+    .p4-m span { font-size: 84px; }
+    .p4-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .p4-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .p4-ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+    .p4-ui .p4-glass { position: relative; opacity: 1; }
+    .p4-eyes { flex: none; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center; }
+    .p4-eyes svg { width: 70%; height: 70%; }
+    .p4-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #p4-light { left: 190px; top: 610px; width: 700px; height: 700px; }
+    .p4-card { width: 880px; padding: 52px 56px; border-radius: 52px; }
+    .p4-mh { display: flex; align-items: center; gap: 18px; font-size: 30px; font-weight: 500; color: #B9B9B4; }
+    .p4-dot, .p4-gdot { width: 16px; height: 16px; border-radius: 50%; background: #2FC48F; box-shadow: 0 0 14px #2FC48F; }
+    .p4-num { margin-top: 34px; font-size: 150px; font-weight: 600; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .p4-lbl { margin-top: 12px; font-size: 36px; font-weight: 500; color: #9A9A96; }
+    .p4-line { margin-top: 34px; display: flex; align-items: center; gap: 18px; font-size: 38px; font-weight: 500; }
+    .p4-kept { position: absolute; left: 56px; bottom: 52px; margin: 0; opacity: 0; }
+    .p4-spin { width: 30px; height: 30px; border-radius: 50%; border: 4px solid rgba(47,196,143,0.25); border-top-color: #2FC48F; }
+    .p4-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 30px; }
+    .p4-title { font-size: 48px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.12; }
+    .p4-sub { margin-top: 10px; font-size: 32px; font-weight: 500; color: #A9A9A4; }
+    .p4-score { text-align: right; }
+    .p4-pct { font-size: 72px; font-weight: 600; color: #5FD3A6; letter-spacing: -0.03em; line-height: 1; }
+    .p4-mono { margin-top: 6px; font-size: 22px; font-weight: 500; letter-spacing: 0.12em; color: #9A9A96; }
+    .p4-tags, .p4-docs { display: flex; gap: 16px; margin-top: 34px; }
+    .p4-tags span { padding: 12px 26px; border-radius: 40px; border: 1.5px solid rgba(255,255,255,0.22); font-size: 28px; font-weight: 500; color: #D9D9D4; }
+    .p4-docs span { padding: 18px 32px; border-radius: 40px; border: 2px solid rgba(95,211,166,0.7); font-size: 32px; font-weight: 600; color: #5FD3A6; }
+    .p4-cap { margin-top: 28px; font-size: 28px; font-weight: 500; color: #9A9A96; }
+    .p4-btn { position: relative; width: 800px; height: 140px; border-radius: 70px; background: rgba(0,96,69,0.78);
+      border-color: rgba(95,211,166,0.5); box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), 0 0 80px rgba(0,150,105,0.45);
+      font-size: 50px; font-weight: 600; letter-spacing: -0.02em; }
+    .p4-btn span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #p4-btn-b { opacity: 0; }
+    .p4-win { width: 920px; height: 1320px; border-radius: 40px; overflow: hidden; }
+    .p4-bar { height: 86px; display: flex; align-items: center; gap: 14px; padding: 0 30px; border-bottom: 1.5px solid rgba(255,255,255,0.12); }
+    .p4-tl { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.25); }
+    .p4-url { margin-left: 24px; flex: 1; height: 50px; border-radius: 25px; background: rgba(255,255,255,0.08);
+      display: flex; align-items: center; padding: 0 24px; font-size: 24px; font-weight: 500; color: #B9B9B4; }
+    .p4-page { padding: 34px 50px; text-align: left; }
+    .p4-ph { font-size: 46px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 14px; }
+    .p4-flabel { margin-top: 14px; font-size: 24px; font-weight: 500; color: #A9A9A4; }
+    .p4-field { margin-top: 6px; height: 58px; border-radius: 16px; border: 1.5px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.04);
+      display: flex; align-items: center; padding: 0 22px; font-size: 28px; font-weight: 500; color: #E9E9E4; }
+    #p4-f5 { height: 92px; }
+    .p4-fv { opacity: 0; white-space: nowrap; overflow: hidden; }
+    .p4-ui .p4-ext { position: absolute; right: 34px; bottom: 30px; width: 600px; height: 200px; padding: 30px 32px; border-radius: 34px;
+      background: linear-gradient(150deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08)); text-align: left; }
+    .p4-eh { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 600; }
+    .p4-em { margin-top: 18px; font-size: 28px; font-weight: 500; line-height: 1.3; color: #ECECE8; }
+    #p4-em2 { position: absolute; left: 32px; right: 32px; top: 82px; opacity: 0; }
+    .p4-or { color: #F0A65A; }
+    .p4-mail { display: flex; align-items: center; gap: 34px; text-align: left; }
+    .p4-from { font-size: 30px; font-weight: 500; color: #A9A9A4; }
+    .p4-subj { margin-top: 10px; font-size: 46px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.18; }
+  </style>
+
+  <div id="root" data-composition-id="04-preuve" data-width="1080" data-height="1920">
+    <div class="p4-light" id="p4-light"></div>
+    <div class="p4-ui" id="p4-mission"><div class="p4-glass p4-card"><div class="p4-mh"><span class="p4-dot"></span>Alternance en marketing · Lyon</div><div class="p4-num" id="p4-num">0</div><div class="p4-lbl">offres passées en revue</div><div class="p4-line" id="p4-l1"><span class="p4-spin"></span>Je lis les annonces…</div><div class="p4-line p4-kept" id="p4-l2"><span class="p4-gdot"></span>J'en ai retenu 12.</div></div></div>
+    <div class="p4-t p4-l" id="p4-a"><span>Et frappe aux bonnes portes.</span></div>
+    <div class="p4-t p4-xl" id="p4-b"><span>Directement.</span></div>
+    <div class="p4-ui" id="p4-canvas"><div class="p4-glass p4-card"><div class="p4-row"><div><div class="p4-title">Alternance — Marketing digital</div><div class="p4-sub">Atelier Nord · Lyon</div></div><div class="p4-score"><div class="p4-pct">92%</div><div class="p4-mono">MATCH</div></div></div><div class="p4-tags"><span>Alternance</span><span>Hybride</span></div><div class="p4-docs"><span>CV adapté (PDF)</span><span>Voir la lettre</span></div><div class="p4-cap">Dossier prêt : CV adapté et lettre.</div></div></div>
+    <div class="p4-ui" id="p4-go"><div class="p4-glass p4-btn" id="p4-btn"><span id="p4-btn-a">➤ Valider et envoyer</span><span id="p4-btn-b">✓ Candidature envoyée</span></div></div>
+    <div class="p4-ui" id="p4-chrome"><div class="p4-glass p4-win"><div class="p4-bar"><span class="p4-tl"></span><span class="p4-tl"></span><span class="p4-tl"></span><div class="p4-url">🔒  …/carrieres/postuler</div></div><div class="p4-page"><div class="p4-ph">Postuler</div><div class="p4-flabel">Nom</div><div class="p4-field" id="p4-f0"><span class="p4-fv">Martin</span></div><div class="p4-flabel">Prénom</div><div class="p4-field" id="p4-f1"><span class="p4-fv">Camille</span></div><div class="p4-flabel">E-mail</div><div class="p4-field" id="p4-f2"><span class="p4-fv">camille.martin@…</span></div><div class="p4-flabel">Téléphone</div><div class="p4-field" id="p4-f3"><span class="p4-fv">06 •• •• •• ••</span></div><div class="p4-flabel">CV</div><div class="p4-field" id="p4-f4"><span class="p4-fv">CV-adapte.pdf</span></div><div class="p4-flabel">Lettre de motivation</div><div class="p4-field" id="p4-f5"><span class="p4-fv">Madame, Monsieur, votre atelier…</span></div><div class="p4-flabel">Disponibilité</div><div class="p4-field" id="p4-f6"><span class="p4-fv"></span></div></div><div class="p4-glass p4-ext" id="p4-ext"><div class="p4-eh"><div class="p4-eyes" style="width:52px;height:52px"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div>Alice</div><div class="p4-em" id="p4-em1">Je remplis…</div><div class="p4-em" id="p4-em2">J'ai rempli 6 champs, CV adapté joint.<br><span class="p4-or">1 à compléter toi-même, en orange.</span></div></div></div></div>
+    <div class="p4-t p4-l" id="p4-c"><span>Aussi sur Chrome.</span></div>
+    <div class="p4-ui" id="p4-mail"><div class="p4-glass p4-card p4-mail"><div class="p4-eyes" style="width:92px;height:92px"><svg viewBox="0 0 60 30"><circle cx="15" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/><circle cx="45" cy="15" r="10" fill="none" stroke="#006045" stroke-width="5"/></svg></div><div><div class="p4-from">Alice · à l'instant</div><div class="p4-subj">Atelier Nord t'a répondu : proposition d'entretien</div></div></div></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const show = (id, a, b) => {
+        tl.fromTo(id, { opacity: 0, y: 70, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "expo.out" }, a);
+        if (b) tl.to(id, { opacity: 0, y: -40, duration: 0.25, ease: "power2.in" }, b - 0.25);
+      };
+      const light = document.getElementById("p4-light");
+      // La mission en direct : elle lit les annonces.
+      const num = document.getElementById("p4-num"), c = { v: 0 };
+      const fmt = (n) => Math.round(n).toLocaleString("fr-FR").replace(/\s/g, "\u202F");
+      tl.fromTo(light, { opacity: 0 }, { opacity: 0.55, duration: 0.6 }, 0.25);
+      show("#p4-mission", 0.3, 3.0);
+      tl.fromTo(c, { v: 0 }, { v: 10000, duration: 2.0, ease: "power2.out", onUpdate: () => { num.textContent = fmt(c.v); } }, 0.4);
+      tl.fromTo(".p4-spin", { rotation: 0 }, { rotation: 1080, duration: 2.2, ease: "none" }, 0.3);
+      tl.to("#p4-l1", { opacity: 0, duration: 0.15 }, 2.15);
+      tl.fromTo("#p4-l2", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.25);
+      tl.to(light, { opacity: 0, duration: 0.3 }, 2.8);
+      { const B = [["p4-a", 3.15, 4.35]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      const dir = document.getElementById("p4-b");
+      tl.set(dir, { opacity: 1 }, 4.45);
+      tl.fromTo(dir, { scale: 1.08 }, { scale: 1, duration: 0.5, ease: "expo.out" }, 4.45);
+      tl.set(dir, { opacity: 0 }, 5.5);
+      // Les vrais écrans, un à la fois, sur la lumière d'Alice.
+      tl.to(light, { opacity: 0.9, duration: 0.6 }, 5.55);
+      tl.to(light, { x: 120, y: 40, duration: 7.8, ease: "sine.inOut" }, 5.6);
+      show("#p4-canvas", 5.6, 7.15);
+      show("#p4-go", 7.25, 8.65);
+      tl.fromTo("#p4-btn", { scale: 1 }, { scale: 0.94, duration: 0.09, ease: "power2.in" }, 7.8);
+      tl.to("#p4-btn", { scale: 1, duration: 0.25, ease: "back.out(3)" }, 7.89);
+      tl.to("#p4-btn-a", { opacity: 0, duration: 0.12 }, 7.9);
+      tl.to("#p4-btn-b", { opacity: 1, duration: 0.2 }, 7.98);
+      // L'extension Chrome remplit le formulaire : champs en vert, un en orange.
+      show("#p4-chrome", 8.75, 10.95);
+      tl.fromTo("#p4-ext", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 9.05);
+      for (let i = 0; i < 7; i++) {
+        const t = 9.3 + i * 0.12, f = "#p4-f" + i;
+        if (i < 6) {
+          tl.to(f, { borderColor: "#2FC48F", borderWidth: 3, duration: 0.12 }, t);
+          tl.to(f + " .p4-fv", { opacity: 1, duration: 0.12 }, t);
+        } else {
+          tl.to(f, { borderColor: "#F0A65A", borderStyle: "dashed", borderWidth: 3, duration: 0.12 }, t);
+        }
+      }
+      tl.to("#p4-em1", { opacity: 0, duration: 0.12 }, 10.15);
+      tl.to("#p4-em2", { opacity: 1, duration: 0.2 }, 10.2);
+      { const B = [["p4-c", 11.05, 11.85]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      // La réponse arrive.
+      show("#p4-mail", 11.95, null);
+      window.__timelines["04-preuve"] = tl;
+    })();
+  </script>
+</template>

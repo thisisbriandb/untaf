@@ -1,0 +1,69 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+    
+    #root { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: hidden;
+            background: #000; font-family: "Geist", sans-serif; color: #F5F5F2; }
+    /* Un seul élément à la fois, au centre absolu. */
+    .d3-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 0 96px; text-align: center; opacity: 0; }
+    .d3-t span { display: block; font-weight: 600; letter-spacing: -0.035em; line-height: 1.08; }
+    .d3-xl span { font-size: 150px; letter-spacing: -0.045em; }
+    .d3-l span { font-size: 112px; }
+    .d3-m span { font-size: 84px; }
+    .d3-s span { font-size: 68px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.18; }
+    /* Le verre : seul objet visuel. */
+    .d3-glass { position: absolute; opacity: 0;
+      backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+      background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.035) 48%, rgba(255,255,255,0.09) 100%);
+      border: 1.5px solid rgba(255,255,255,0.24);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10), 0 40px 90px rgba(0,0,0,0.7); }
+    .d3-ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+    .d3-ui .d3-glass { position: relative; opacity: 1; }
+    .d3-eyes { flex: none; border-radius: 50%; background: #ECF4F0; display: flex; align-items: center; justify-content: center; }
+    .d3-eyes svg { width: 70%; height: 70%; }
+    .d3-light { position: absolute; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, rgba(64,214,158,0.85) 0%, rgba(0,120,84,0.45) 32%, rgba(0,96,69,0) 68%); }
+
+    #d3-orb { left: 300px; top: 720px; width: 480px; height: 480px; border-radius: 50%; }
+    #d3-light { left: 290px; top: 710px; width: 500px; height: 500px; }
+  </style>
+
+  <div id="root" data-composition-id="03-deploiement" data-width="1080" data-height="1920">
+    <div class="d3-t d3-m" id="d3-a"><span>Pendant que tu vis,</span></div>
+    <div class="d3-t d3-m" id="d3-b"><span>que tu crées,</span></div>
+    <div class="d3-t d3-m" id="d3-c"><span>que tu respires…</span></div>
+    <div class="d3-light" id="d3-light"></div>
+    <div class="d3-t d3-l" id="d3-d"><span>une intelligence silencieuse travaille.</span></div>
+    <div class="d3-glass" id="d3-orb"></div>
+  </div>
+
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      { const B = [["d3-a", 0.35, 1.3], ["d3-b", 1.5, 2.3], ["d3-c", 2.4, 3.55]];
+      B.forEach(([id, a, b]) => {
+        const el = document.getElementById(id);
+        if ("soft" === "cut") {
+          tl.set(el, { opacity: 1 }, a);
+          tl.fromTo(el, { scale: 1.035 }, { scale: 1, duration: 0.22, ease: "power3.out" }, a);
+          tl.set(el, { opacity: 0 }, b);
+        } else {
+          tl.fromTo(el, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, a);
+          tl.to(el, { opacity: 0, y: -18, duration: 0.3, ease: "power2.in" }, b - 0.3);
+        }
+      }); }
+      // Le verre glisse à travers la phrase : elle travaille, sans bruit.
+      const d = document.getElementById("d3-d"), orb = document.getElementById("d3-orb"), light = document.getElementById("d3-light");
+      tl.fromTo(d, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 3.7);
+      tl.set(orb, { opacity: 1 }, 3.9);
+      tl.set(light, { opacity: 0.35 }, 3.9);
+      tl.fromTo([orb, light], { x: -900 }, { x: 900, duration: 1.6, ease: "sine.inOut" }, 3.9);
+
+      window.__timelines["03-deploiement"] = tl;
+    })();
+  </script>
+</template>

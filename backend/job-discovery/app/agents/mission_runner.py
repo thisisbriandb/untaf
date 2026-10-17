@@ -209,6 +209,25 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
         except Exception as e:  # noqa: BLE001 — on travaille sur le stock déjà noté
             logger.warning("Re-notation impossible pendant la mission : %s", e)
             kept = 0
+        # En essai gratuit, la mission se règle d'avance sur les dossiers qui
+        # restent : elle prépare les meilleures offres dans cette limite, sans
+        # en parler. Quand il n'en reste plus, c'est que l'utilisateur en
+        # redemande : c'est là qu'on lui propose l'abonnement.
+        from app import billing
+        async with async_session() as session:
+            _, paid = await billing.limits_for(session, candidate_id)
+            left = None if paid else await billing.remaining(session, candidate_id, "pack")
+        if left == 0:
+            async with async_session() as session:
+                limits, _ = await billing.limits_for(session, candidate_id)
+                done = await billing.used(session, candidate_id, "pack", False)
+            limit = billing.LimitReached("pack", done, limits.packs_per_week, False)
+            await _say(run_id, candidate_id, MissionEventKind.ERROR, str(limit),
+                       {"plan_limit": limit.detail()})
+            await finalize_run(run_id, candidate_id, RunStatus.COMPLETED)
+            return
+        if left is not None:
+            count = min(count, left)
         targets = await _targets(
             candidate_id, count, sendable_first=objective == "apply",
             sendable_only=await _is_first_run(run_id),
@@ -223,7 +242,7 @@ async def execute_run(run_id: UUID, candidate_id: UUID) -> None:
             from app.agents.spontaneous import prepare_spontaneous
             async with async_session() as session:
                 limits, paid = await billing.limits_for(session, candidate_id)
-                done = await billing.used(session, candidate_id, "spontaneous")
+                done = await billing.used(session, candidate_id, "spontaneous", paid)
             allowed = min(spontaneous, max(0, limits.spontaneous_per_week - done))
             try:
                 extra = await prepare_spontaneous(candidate_id, allowed) if allowed else []
