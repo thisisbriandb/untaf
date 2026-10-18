@@ -137,6 +137,8 @@ def source_label(job: JobPosting) -> str:
         return "France Travail"
     if job.external_id.startswith("inrae:"):
         return "INRAE"
+    if job.external_id.startswith("csp:"):
+        return "Choisir le service public"
     if "welcometothejungle" in url:
         return "Welcome to the Jungle"
     return "Site carrière"
@@ -254,9 +256,10 @@ def dedup_key(offer: CommunityOffer) -> tuple[str, str, str]:
 # ── Lecture, mise en cache ─────────────────────────────────────────────────
 
 #: Taleez : mentions légales qui interdisent la reproduction sans accord écrit.
+#: Werecruit : pas de licence de réutilisation.
 #: La bonne alternance : reprise publique refusée par l'opérateur (octobre 2026) ;
 #: ses offres restent proposées aux candidats dans Alice.
-NOT_REPUBLISHED = ("taleez:", "lba:")
+NOT_REPUBLISHED = ("taleez:", "lba:", "werecruit:")
 
 _cache: dict[str, tuple[float, CommunityList]] = {}
 

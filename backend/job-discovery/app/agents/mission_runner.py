@@ -119,7 +119,7 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool,
     Alice doit être une candidature qui part, pas un dossier à finir ailleurs.
     """
     from app.agents.alice_state import OPEN_STATUSES
-    from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode
+    from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode, direct_first
     from app.models.company import Company
     from app.models.dispatch import ApplicationDispatch, DispatchStatus
 
@@ -134,7 +134,10 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool,
             .where(Application.status.in_(OPEN_STATUSES))
             .where(Application.match_score >= settings.match_min_score)
             .where(JobPosting.status == PostingStatus.ACTIVE)
-            .order_by(Application.match_score.desc())
+            # Ce qu'Alice envoie elle-même d'abord, dès la requête : sinon une
+            # source abondante où le candidat finit seul remplit la fenêtre.
+            .order_by(*((direct_first(),) if sendable_first or sendable_only else ()),
+                      Application.match_score.desc())
             .limit(count * (40 if sendable_only else 8))
         )).all()
         settled = set((await session.execute(

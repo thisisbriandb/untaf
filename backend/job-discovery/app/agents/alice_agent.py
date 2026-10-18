@@ -31,7 +31,7 @@ from app.agents.discovery.cv_editor import merge_entries, structure_cv_entries
 from app.agents.mission_log import get_or_create_mission
 from app.agents.persona import IDENTITY
 from app.agents.alice_state import OPEN_STATUSES, load_state
-from app.agents.application.feasibility import apply_mode
+from app.agents.application.feasibility import apply_mode, direct_first
 from app.schemas.candidate import ParsedCandidateProfile
 from app.schemas.matching import MatchingCriteria
 
@@ -409,7 +409,8 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
             .where(Application.candidate_id == candidate_id)
             .where(JobPosting.status == PostingStatus.ACTIVE)
             .where(Application.status.in_(OPEN_STATUSES))
-            .order_by(Application.match_score.desc())
+            # Les offres où Alice postule elle-même passent devant.
+            .order_by(direct_first(), Application.match_score.desc())
             .limit(limit)
         )
 

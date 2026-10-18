@@ -312,6 +312,9 @@ async def prepare_dispatch(
             verdict = Decision(False, "CV adapté indisponible pour l'instant, rien n'est parti",
                                verdict.channel, verdict.destination)
         letter_body = _plain_text(letter, candidate, job.title, company_name or "")
+        # Objet imposé par l'employeur (« <référence> - <intitulé> ») : repris
+        # tel quel, sinon la candidature peut ne jamais être rapprochée du poste.
+        required_subject = ((job.contact_json or {}).get("email_subject") or "").strip() or None
 
         fields = dict(
             run_id=run_id,
@@ -327,11 +330,12 @@ async def prepare_dispatch(
                 "has_resume": bool(cv_bytes),
                 "resume_filename": cv_name if cv_bytes else None,
                 "resume_mode": cv_mode,
+                "required_subject": bool(required_subject),
             },
             resume_blob=cv_bytes,
             resume_name=cv_name if cv_bytes else None,
-            letter_subject=(letter or {}).get("subject")
-            or f"Candidature — {job.title}"[:500],
+            letter_subject=(required_subject or (letter or {}).get("subject")
+                            or f"Candidature — {job.title}")[:500],
             letter_body=letter_body or None,
         )
 
@@ -374,6 +378,11 @@ async def offer_still_open(job: JobPosting, company_domain: str | None) -> bool 
 
     if job.status in (PostingStatus.CLOSED, PostingStatus.EXPIRED):
         return False
+    if (company_domain or "").endswith(".csp.source") and job.source_url:
+        from app.agents.discovery.csp import still_online
+        online = await still_online(job.source_url)
+        if online is not None:
+            return online
     if (company_domain or "").endswith(".francetravail.local") and job.external_id:
         from app.agents.discovery.france_travail import FranceTravailClient
         client = FranceTravailClient()
@@ -547,6 +556,7 @@ async def send_dispatch(dispatch_id: UUID) -> ApplicationDispatch | None:
             resume=dispatch.resume_blob,
             resume_name=dispatch.resume_name,
             spontaneous=bool(application and (application.metadata_json or {}).get("spontaneous")),
+            subject=dispatch.letter_subject if (dispatch.documents or {}).get("required_subject") else None,
         )
     elif (dispatch.destination or "").startswith(LBA_PREFIX):
         result = await _send_via_lba(dispatch, candidate)

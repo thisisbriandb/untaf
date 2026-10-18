@@ -67,6 +67,19 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
     if not has_resume:
         blockers.append("Aucun CV enregistré — dépose-le dans l'éditeur.")
 
+    # ── Pièces qu'Alice n'a pas (Choisir le service public) ──
+    extra = contact.get("extra_documents") or []
+    if extra:
+        subject = contact.get("email_subject")
+        blockers.append(f"L'employeur demande aussi : {', '.join(extra)}.")
+        return Feasibility(
+            "medium", False,
+            "Ton CV et ta lettre sont prêts. Ajoute les pièces demandées et envoie "
+            + (f"à {email}" if email else "ta candidature")
+            + (f" avec l'objet « {subject} »." if subject else "."),
+            blockers, link, channel,
+        )
+
     # ── Email : envoi direct, le chemin le plus sûr ───────
     if channel == "email" or email:
         if not email:
@@ -125,6 +138,19 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
             blockers, link, channel,
         )
 
+    # ── Werecruit : civilité et accord, au candidat seul ──
+    if channel == "web_form" and contact.get("werecruit") is not None:
+        blockers.append(
+            "Le formulaire demande ta civilité et ton accord pour que l'employeur garde "
+            "tes données : c'est à toi de les donner, pas à moi."
+        )
+        return Feasibility(
+            "medium", False,
+            "Ton dossier est prêt. L'extension Alice remplit le formulaire de l'employeur, "
+            "tu indiques ta civilité, tu coches l'accord et tu envoies.",
+            blockers, link, channel,
+        )
+
     # ── Formulaire web quelconque ─────────────────────────
     if channel == "web_form":
         # Sans schéma publié, on travaille au socle commun : ça couvre les
@@ -147,14 +173,22 @@ def assess(job: JobPosting, has_resume: bool = True) -> Feasibility:
 
     # ── Portail authentifié ───────────────────────────────
     if channel == "external_link":
-        blockers.append(
-            "Candidature via le portail France Travail : elle exige un compte "
-            "candidat authentifié. Je ne manipule pas tes identifiants."
-        )
+        if "francetravail" in (link or "") or "pole-emploi" in (link or ""):
+            blockers.append(
+                "Candidature via le portail France Travail : elle exige un compte "
+                "candidat authentifié. Je ne manipule pas tes identifiants."
+            )
+            return Feasibility(
+                "impossible", False,
+                "Celle-ci se postule depuis ton espace France Travail. "
+                "Je prépare tout, tu valides là-bas.",
+                blockers, link, channel,
+            )
+        blockers.append("Candidature sur le site de l'employeur : je n'y envoie pas à ta place.")
         return Feasibility(
             "impossible", False,
-            "Celle-ci se postule depuis ton espace France Travail. "
-            "Je prépare tout, tu valides là-bas.",
+            "Celle-ci se termine sur le site de l'employeur. Ton dossier est prêt, "
+            "tu n'as plus qu'à l'y déposer.",
             blockers, link, channel,
         )
 
@@ -189,6 +223,9 @@ def apply_mode(job: JobPosting) -> str:
         return "auto" if settings.lba_apply_enabled else "manual"
     if channel in ("recruitee_api", "taleez_api"):
         return "auto"
+    if contact.get("extra_documents"):
+        # L'annonce exige des pièces qu'Alice n'a pas : le candidat envoie lui-même.
+        return "manual"
     if is_valid_email(contact.get("email")):
         return "auto" if settings.can_send_email else "assisted"
     # Greenhouse, Lever, Ashby, Workable : envoi protégé (captcha) → l'extension.
@@ -196,3 +233,26 @@ def apply_mode(job: JobPosting) -> str:
     # le lire de façon fiable depuis son serveur. Le candidat finit sur le
     # site (extension ou « Finir sur le site ») avec le dossier prêt.
     return "manual"
+
+
+#: Canaux par lesquels Alice envoie elle-même, sans le candidat.
+_DIRECT_CHANNELS = (ApplyChannel.EMAIL, ApplyChannel.RECRUITEE_API, ApplyChannel.TALEEZ_API)
+
+
+def direct_first():
+    """
+    Clé de tri SQL : 0 pour une offre où Alice postule elle-même, 1 sinon.
+
+    Placée avant le score dans les `ORDER BY` : les sources où le candidat
+    finit seul (Werecruit, sites employeurs…) sont nombreuses et ne doivent
+    jamais faire sortir de la sélection celles où Alice envoie. Approximation
+    en base de `apply_mode` (qui reste la référence pour l'affichage).
+    """
+    from sqlalchemy import and_, case, not_, or_
+
+    channels = _DIRECT_CHANNELS + ((ApplyChannel.LBA_API,) if settings.lba_apply_enabled else ())
+    by_email = and_(
+        JobPosting.contact_json["email"].astext.is_not(None),
+        not_(JobPosting.contact_json.has_key("extra_documents")),
+    ) if settings.can_send_email else False
+    return case((or_(JobPosting.apply_channel.in_(channels), by_email), 0), else_=1)

@@ -784,3 +784,27 @@ def collect_taleez():
         return loop.run_until_complete(collect())
     finally:
         _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_csp")
+def collect_csp():
+    """Quotidien : offres de Choisir le service public des dernières 48 heures."""
+    from app.agents.discovery.csp import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)
+
+
+@celery_app.task(name="app.agents.discovery.tasks.collect_werecruit")
+def collect_werecruit():
+    """Quotidien : offres Werecruit nouvelles ou modifiées, au plus 1 500 pages par passage."""
+    from app.agents.discovery.werecruit import collect
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(collect())
+    finally:
+        _release(loop)

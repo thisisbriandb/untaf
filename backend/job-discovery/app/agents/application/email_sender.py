@@ -61,6 +61,7 @@ async def send_application_email(
     resume: bytes | None = None,
     resume_name: str | None = None,
     spontaneous: bool = False,
+    subject: str | None = None,
 ) -> dict:
     """
     Envoie la candidature. Ne lève jamais.
@@ -72,7 +73,8 @@ async def send_application_email(
     if not to_email:
         return {"ok": False, "real": False, "error": "aucune adresse destinataire"}
 
-    subject = (letter or {}).get("subject") or f"Candidature — {job_title}"
+    # `subject` : l'objet imposé par l'annonce, prioritaire sur celui de la lettre.
+    subject = subject or (letter or {}).get("subject") or f"Candidature — {job_title}"
     body = _plain_text(letter, candidate, job_title, company_name)
     if spontaneous:
         # Une candidature non sollicitée se refuse en un clic, et ce refus est
