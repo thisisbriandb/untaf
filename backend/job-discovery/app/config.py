@@ -168,18 +168,25 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.8-flash"
     anthropic_api_key: str = ""
     claude_model: str = "claude-opus-5-5"
-    #: « auto » : Gemini d'abord, Claude en secours (et Gemini mis de côté
-    #: 30 minutes dès qu'il répond « quota épuisé ») ; « claude » ou « gemini » :
-    #: un seul fournisseur, sans détour.
+    #: Groq : modèles ouverts, gratuits, sans entraînement sur les données.
+    #: Chaque modèle a sa propre limite par minute : le second prend le relais.
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_fallback_model: str = "qwen/qwen3.8-27b"
+    #: « auto » : Groq, puis Gemini, puis Claude, selon les clés présentes (un
+    #: fournisseur qui répond « quota épuisé » est mis de côté 30 minutes) ;
+    #: « groq », « gemini » ou « claude » : un seul fournisseur.
     llm_provider: str = "auto"
 
     @property
     def llm_configured(self) -> bool:
         """Au moins un modèle utilisable."""
         provider = self.llm_provider.strip().lower()
-        gemini = bool(self.gemini_api_key.strip()) and provider != "claude"
-        claude = bool(self.anthropic_api_key.strip()) and provider != "gemini"
-        return gemini or claude
+        keys = {"groq": self.groq_api_key, "gemini": self.gemini_api_key,
+                "claude": self.anthropic_api_key}
+        if provider in keys:
+            return bool(keys[provider].strip())
+        return any(k.strip() for k in keys.values())
 
     # ── Envoi de candidatures (SMTP) ─────────────────────
     # Tant que ces valeurs sont vides, aucune candidature ne peut partir : le
