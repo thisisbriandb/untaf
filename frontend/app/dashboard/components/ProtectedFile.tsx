@@ -47,7 +47,10 @@ export function DownloadLink({
 
 /** URL locale d'un fichier protégé, pour un aperçu intégré. */
 export function useProtectedBlobUrl(url: string | null): string | null {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  // Le fichier est rangé avec l'adresse qui l'a produit : à une nouvelle
+  // adresse, l'ancien n'est plus montré pendant le chargement (un aperçu de CV
+  // restait sur l'ancien modèle le temps du rendu).
+  const [loaded, setLoaded] = useState<{ url: string; blob: string } | null>(null);
 
   useEffect(() => {
     if (!url) return;
@@ -58,7 +61,7 @@ export function useProtectedBlobUrl(url: string | null): string | null {
       .then((blob) => {
         if (!alive || !blob) return;
         created = URL.createObjectURL(blob);
-        setBlobUrl(created);
+        setLoaded({ url, blob: created });
       })
       .catch(() => {});
     return () => {
@@ -67,5 +70,5 @@ export function useProtectedBlobUrl(url: string | null): string | null {
     };
   }, [url]);
 
-  return url ? blobUrl : null;
+  return url && loaded?.url === url ? loaded.blob : null;
 }

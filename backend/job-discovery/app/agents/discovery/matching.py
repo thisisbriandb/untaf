@@ -68,6 +68,31 @@ UNKNOWN_CONTRACT_CREDIT = 0.35
 #: Même logique pour la famille de métier.
 UNKNOWN_FAMILY_CREDIT = 0.3
 
+#: Métiers voisins : un métier déduit de l'ancien poste les laisse passer.
+#: Au-delà, l'offre n'est proposée que si les compétences du candidat couvrent
+#: vraiment ce qu'elle demande (voir les filtres durs).
+_ADJACENT = [
+    ("data", "software"), ("data", "product"), ("data", "finance"), ("data", "engineering"),
+    ("data", "marketing"),
+    ("software", "product"), ("software", "engineering"), ("software", "design"),
+    ("software", "support"),
+    ("product", "design"), ("product", "marketing"),
+    ("sales", "marketing"), ("sales", "support"),
+    ("marketing", "design"),
+    ("finance", "ops"), ("finance", "legal"), ("hr", "legal"), ("hr", "ops"),
+    ("ops", "engineering"), ("ops", "construction"), ("ops", "support"),
+    ("engineering", "construction"),
+]
+ADJACENT_FAMILIES: dict[str, set[str]] = {}
+for _a, _b in _ADJACENT:
+    ADJACENT_FAMILIES.setdefault(_a, set()).add(_b)
+    ADJACENT_FAMILIES.setdefault(_b, set()).add(_a)
+
+#: Un métier éloigné passe malgré tout si l'offre liste au moins autant de
+#: compétences et que le candidat en couvre au moins cette part.
+FAR_FAMILY_MIN_SKILLS = 3
+FAR_FAMILY_MIN_COVERAGE = 0.6
+
 
 def normalize_contract(value: str | None) -> str:
     return CONTRACT_ALIASES.get((value or "").strip().lower(), (value or "unknown").lower())
@@ -234,6 +259,25 @@ def evaluate_match(
     if criteria.job_families and family_known and not criteria.job_families_inferred:
         if job_family not in criteria.job_families:
             rejections.append(f"métier '{job_family}' hors du mandat")
+
+    # Métier déduit de l'ancien poste, pas choisi : les métiers voisins passent,
+    # un métier éloigné seulement si les compétences le justifient. Sans cela,
+    # un data analyst recevait des postes d'assistant commercial dès qu'ils
+    # citaient Excel. (Un métier choisi, lui, filtre ci-dessus ; une
+    # reconversion se déclare en choisissant son nouveau métier.)
+    if criteria.job_families and family_known and criteria.job_families_inferred:
+        near = set(criteria.job_families)
+        for f in criteria.job_families:
+            near |= ADJACENT_FAMILIES.get(f, set())
+        if job_family not in near:
+            required = canonical_set(tech_stack)
+            owned = canonical_set(candidate.skills)
+            coverage_ratio = skill_coverage(required, owned)[0] if required and owned else 0.0
+            if not (len(required) >= FAR_FAMILY_MIN_SKILLS and coverage_ratio >= FAR_FAMILY_MIN_COVERAGE):
+                rejections.append(
+                    f"métier '{job_family}' éloigné du parcours ({', '.join(criteria.job_families)}) : "
+                    "à choisir dans les critères pour en voir"
+                )
 
     contract_known = job_contract not in ("unknown", "other", "")
     if wanted_contracts and contract_known and job_contract not in wanted_contracts:

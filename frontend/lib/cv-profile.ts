@@ -207,6 +207,20 @@ export async function fetchCvDesign(candidateId: string): Promise<CvDesign | nul
   }
 }
 
+/**
+ * Annoncé après chaque changement de mise en page (modèle, couleur, photo).
+ * Le canevas CV et la fiche d'une offre gardent chacun leur copie : sans ce
+ * signal, l'un montrait encore l'ancien modèle jusqu'au rechargement.
+ * `detail` : la mise en page enregistrée, ou null s'il faut la relire.
+ */
+export const CV_DESIGN_EVENT = "alice:cv-design";
+
+function announceCvDesign(design: CvDesign | null) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent<CvDesign | null>(CV_DESIGN_EVENT, { detail: design }));
+  }
+}
+
 export async function saveCvDesign(
   candidateId: string,
   patch: Partial<Pick<CvDesign, "mode" | "template_id" | "color_hex" | "show_photo">>,
@@ -217,7 +231,10 @@ export async function saveCvDesign(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    return res.ok ? await res.json() : null;
+    if (!res.ok) return null;
+    const saved: CvDesign = await res.json();
+    announceCvDesign(saved);
+    return saved;
   } catch {
     return null;
   }
@@ -265,6 +282,7 @@ export async function uploadPhoto(candidateId: string, dataUrl: string): Promise
     const form = new FormData();
     form.append("file", blob, "photo.jpg");
     const res = await apiFetch(photoUrl(candidateId), { method: "PUT", body: form });
+    if (res.ok) announceCvDesign(null);
     return res.ok;
   } catch {
     return false;
@@ -273,7 +291,9 @@ export async function uploadPhoto(candidateId: string, dataUrl: string): Promise
 
 export async function deletePhoto(candidateId: string): Promise<boolean> {
   try {
-    return (await apiFetch(photoUrl(candidateId), { method: "DELETE" })).ok;
+    const ok = (await apiFetch(photoUrl(candidateId), { method: "DELETE" })).ok;
+    if (ok) announceCvDesign(null);
+    return ok;
   } catch {
     return false;
   }
