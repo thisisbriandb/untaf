@@ -997,6 +997,13 @@ async def chat_with_alice(
         return {"reply": final_text.strip(), "ui_blocks": ui_blocks}
 
     except Exception as e:
+        if llm.is_rate_limited(e):
+            logger.warning("Alice : modèle saturé (429) malgré un nouvel essai.")
+            return {
+                "reply": "Je suis très demandée à cet instant. Réessaie dans une minute, "
+                         "je reprends exactement là où on en était.",
+                "ui_blocks": [],
+            }
         logger.error("Alice agent error: %s", e, exc_info=True)
         return {
             "reply": "Désolée, j'ai rencontré un problème. Réessaie dans un instant.",

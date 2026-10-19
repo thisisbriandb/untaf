@@ -142,3 +142,37 @@ def test_llm_configure(monkeypatch):
     assert settings.llm_configured
     monkeypatch.setattr(settings, "llm_provider", "gemini")
     assert not settings.llm_configured
+
+
+def _per_minute(delay="2s"):
+    return genai_errors.ClientError(429, {"error": {
+        "code": 429, "status": "RESOURCE_EXHAUSTED", "message": "Quota exceeded",
+        "details": [{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": delay}]}})
+
+
+def test_limite_par_minute_on_attend_et_on_reessaie(keys, monkeypatch):
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
+    calls, waits = [], []
+
+    async def generate_content(**kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise _per_minute("2s")
+        return SimpleNamespace(text="ok")
+
+    async def fake_sleep(s):
+        waits.append(s)
+
+    fake_client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
+    monkeypatch.setattr(llm, "client", lambda: fake_client)
+    monkeypatch.setattr(llm.asyncio, "sleep", fake_sleep)
+    assert asyncio.run(llm.generate("x")) == "ok"
+    assert len(calls) == 2 and waits and waits[0] >= 2
+
+
+def test_limite_par_minute_ne_coupe_pas_gemini(keys):
+    # Une limite par minute n'est pas un crédit épuisé : pas de mise à l'écart de 30 min.
+    assert not llm._out_of_credit(_per_minute("10s"))
+    # Un quota du jour (délai long ou inconnu) l'est.
+    assert llm._out_of_credit(_per_minute("3600s"))
+    assert llm._out_of_credit(_quota())

@@ -13,6 +13,7 @@ Les appels passent par les clients asynchrones, pour ne pas bloquer la boucle
 d'événements de FastAPI pendant qu'un modèle réfléchit.
 """
 
+import asyncio
 import json as json_lib
 import logging
 import re
@@ -40,6 +41,11 @@ _SERVER_FALLBACK_MODELS = {"claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-
 _FALLBACK_BETA = "server-side-fallback-2026-07-01"
 MAX_TOKENS = 16000
 
+#: Une limite « par minute » (offre gratuite, deux personnes en même temps)
+#: se lève en quelques secondes : on attend une fois plutôt que d'échouer.
+#: Au-delà de ce délai, c'est un quota du jour : on n'attend pas.
+MAX_RATE_WAIT_S = 12.0
+
 _gemini_down_until = 0.0
 
 
@@ -63,12 +69,48 @@ def _claude_ok() -> bool:
     return _provider() != "gemini" and bool(settings.anthropic_api_key.strip())
 
 
+_RETRY_DELAY = re.compile(r"retryDelay['\"]?\s*:\s*['\"](\d+(?:\.\d+)?)s")
+
+
+def is_rate_limited(e: Exception) -> bool:
+    """Trop de demandes en même temps (429)."""
+    return isinstance(e, genai_errors.ClientError) and e.code == 429
+
+
+def _short_wait(e: Exception) -> float | None:
+    """Le délai annoncé par une limite « par minute », ou None si ce n'en est pas une."""
+    if not is_rate_limited(e):
+        return None
+    # Gemini annonce le délai des limites par minute ; sans délai, c'est un quota épuisé.
+    m = _RETRY_DELAY.search(str(e))
+    if not m:
+        return None
+    delay = float(m.group(1))
+    return delay if delay <= MAX_RATE_WAIT_S else None
+
+
+async def _with_rate_retry(call):
+    """Un appel Gemini ; sur limite par minute, une seconde tentative après le délai annoncé."""
+    try:
+        return await call()
+    except Exception as e:
+        delay = _short_wait(e)
+        if delay is None:
+            raise
+        logger.info("Gemini : limite par minute, nouvel essai dans %.0f s.", delay)
+        await asyncio.sleep(delay + 0.5)
+        return await call()
+
+
 def _out_of_credit(e: Exception) -> bool:
-    """Quota ou facturation épuisés, clé refusée : inutile de réessayer tout de suite."""
-    if isinstance(e, genai_errors.ClientError) and e.code in (401, 403, 429):
+    """Quota du jour ou facturation épuisés, clé refusée : inutile de réessayer tout de suite.
+    Une limite par minute n'en est pas un : elle se lève d'elle-même."""
+    if is_rate_limited(e):
+        return _short_wait(e) is None
+    if isinstance(e, genai_errors.ClientError) and e.code in (401, 403):
         return True
     text = str(e).upper()
-    return any(k in text for k in ("RESOURCE_EXHAUSTED", "QUOTA", "BILLING", "API_KEY_INVALID"))
+    return any(k in text for k in ("QUOTA", "BILLING", "API_KEY_INVALID"))
 
 
 def _gemini_failed(e: Exception) -> None:
@@ -123,9 +165,9 @@ async def _gemini_generate(prompt: str, json: bool, schema: type[BaseModel] | No
         response_mime_type="application/json" if (json or schema) else None,
         response_schema=schema,
     )
-    response = await client().aio.models.generate_content(
+    response = await _with_rate_retry(lambda: client().aio.models.generate_content(
         model=settings.gemini_model, contents=prompt, config=config,
-    )
+    ))
     return response.text or ""
 
 
@@ -180,9 +222,9 @@ async def generate_grounded(prompt: str) -> str:
     if _gemini_ok():
         try:
             config = types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())])
-            response = await client().aio.models.generate_content(
+            response = await _with_rate_retry(lambda: client().aio.models.generate_content(
                 model=settings.gemini_model, contents=prompt, config=config,
-            )
+            ))
             return response.text or ""
         except Exception as e:
             if not _claude_ok():
@@ -298,7 +340,8 @@ class Chat:
     async def send_message(self, message) -> ChatReply:
         if self._gemini is not None:
             try:
-                reply = _reply_from_gemini(await self._gemini.send_message(message))
+                reply = _reply_from_gemini(
+                    await _with_rate_retry(lambda: self._gemini.send_message(message)))
                 self._started = True
                 return reply
             except Exception as e:
