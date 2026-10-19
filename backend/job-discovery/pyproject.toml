@@ -19,6 +19,7 @@ dependencies = [
     "selectolax>=0.3",
     "python-dateutil>=2.9",
     "google-genai>=1.40",
+    "anthropic>=1.15",
     "email-validator>=2.0",
     "pypdf>=5.0.0",
     "python-multipart>=0.0.9",

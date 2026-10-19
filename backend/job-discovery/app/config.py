@@ -163,9 +163,23 @@ class Settings(BaseSettings):
     def jooble_configured(self) -> bool:
         return bool(self.jooble_api_key.strip())
 
-    # ── Gemini API (LLM) ─────────────────────────────────
+    # ── Modèles de langage (Gemini, Claude) ──────────────
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
+    anthropic_api_key: str = ""
+    claude_model: str = "claude-opus-5-5"
+    #: « auto » : Gemini d'abord, Claude en secours (et Gemini mis de côté
+    #: 30 minutes dès qu'il répond « quota épuisé ») ; « claude » ou « gemini » :
+    #: un seul fournisseur, sans détour.
+    llm_provider: str = "auto"
+
+    @property
+    def llm_configured(self) -> bool:
+        """Au moins un modèle utilisable."""
+        provider = self.llm_provider.strip().lower()
+        gemini = bool(self.gemini_api_key.strip()) and provider != "claude"
+        claude = bool(self.anthropic_api_key.strip()) and provider != "gemini"
+        return gemini or claude
 
     # ── Envoi de candidatures (SMTP) ─────────────────────
     # Tant que ces valeurs sont vides, aucune candidature ne peut partir : le

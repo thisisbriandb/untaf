@@ -88,7 +88,7 @@ def _heuristic(text: str) -> dict:
 
 async def extract_posting(text: str) -> dict:
     """Les champs de l'annonce. Ne lève jamais : repli heuristique sans LLM."""
-    if not settings.gemini_api_key:
+    if not settings.llm_configured:
         return _heuristic(text)
     try:
         raw = await llm.generate(PROMPT.format(text=text[:12000]), schema=ImportedPosting)

@@ -237,7 +237,7 @@ async def write_cover_letter(
             source=source,
         )
 
-    if not settings.gemini_api_key:
+    if not settings.llm_configured:
         logger.warning("GEMINI_API_KEY absente — lettre assemblée sans LLM.")
         return assemble(
             *_fallback_body(headline, skills, job_title, company_name, experiences),

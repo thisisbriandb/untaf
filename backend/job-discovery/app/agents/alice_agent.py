@@ -355,11 +355,9 @@ async def _execute_apply_to_job(candidate_id: UUID, args: dict) -> tuple[dict, d
     }, card
 
 
-def _parts(response: types.GenerateContentResponse) -> list[types.Part]:
+def _parts(response: llm.ChatReply) -> list:
     """Les morceaux de la réponse ; vide si le modèle n'a rien renvoyé."""
-    if not response.candidates or not response.candidates[0].content:
-        return []
-    return response.candidates[0].content.parts or []
+    return response.parts
 
 
 # ── Tool execution (server-side) ─────────────────────────────────────────────
@@ -794,9 +792,8 @@ async def chat_with_alice(
     L'historique porte le fil de la discussion ; les chiffres viennent
     toujours de la base. L'un ne remplace jamais l'autre.
     """
-    api_key = settings.gemini_api_key
-    if not api_key:
-        logger.warning("GEMINI_API_KEY not configured. Returning fallback.")
+    if not settings.llm_configured:
+        logger.warning("Aucune clé de modèle (Gemini ou Claude). Returning fallback.")
         return {
             "reply": "Je ne suis pas encore connectée. Configure la clé API Gemini.",
             "ui_blocks": [],
@@ -804,39 +801,30 @@ async def chat_with_alice(
 
     state = await load_state(candidate_id)
 
-    config = types.GenerateContentConfig(
-        tools=[_alice_tools],
-        # Les outils sont exécutés ici, à la main : le SDK ne doit pas tenter
-        # de les appeler lui-même.
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        system_instruction=(
-            SYSTEM_PROMPT.format(user_name=user_name)
-            + "\n\nÉTAT RÉEL DU SYSTÈME À CET INSTANT — ce sont les seuls "
-              "chiffres que tu as le droit de citer. S'il t'en manque un, "
-              "appelle l'outil qui le donne plutôt que de l'estimer :\n"
-            + json.dumps(state.as_facts(), ensure_ascii=False, indent=2)
-            + (f"\n\n{extra_context}" if extra_context else "")
-        ),
+    system = (
+        SYSTEM_PROMPT.format(user_name=user_name)
+        + "\n\nÉTAT RÉEL DU SYSTÈME À CET INSTANT — ce sont les seuls "
+          "chiffres que tu as le droit de citer. S'il t'en manque un, "
+          "appelle l'outil qui le donne plutôt que de l'estimer :\n"
+        + json.dumps(state.as_facts(), ensure_ascii=False, indent=2)
+        + (f"\n\n{extra_context}" if extra_context else "")
     )
 
     # L'historique n'inclut que les tours déjà joués, jamais le message courant.
-    gemini_history = []
+    past: list[tuple[str, str]] = []
     for turn in (history or [])[-12:]:
         text = (turn.get("text") or "").strip()
-        if not text:
-            continue
-        role = "user" if turn.get("sender") == "user" else "model"
-        gemini_history.append(
-            types.Content(role=role, parts=[types.Part.from_text(text=text)])
-        )
+        if text:
+            past.append(("user" if turn.get("sender") == "user" else "assistant", text))
 
-    # Gemini exige que l'historique commence par un tour utilisateur.
-    while gemini_history and gemini_history[0].role != "user":
-        gemini_history.pop(0)
+    # Les deux fournisseurs exigent un historique qui commence par l'utilisateur.
+    while past and past[0][0] != "user":
+        past.pop(0)
 
-    chat = llm.client().aio.chats.create(
-        model=settings.gemini_model, config=config, history=gemini_history,
-    )
+    try:
+        chat = llm.Chat(system, past, _alice_tools)
+    except llm.LLMError:
+        return {"reply": "Je ne suis pas encore connectée. Configure une clé de modèle.", "ui_blocks": []}
 
     try:
         # Step 1: Send user message to Gemini

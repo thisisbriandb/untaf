@@ -85,7 +85,7 @@ async def structure_cv_entries(raw: str, section: CvSection) -> list[dict]:
     if not raw.strip():
         return []
 
-    if not settings.gemini_api_key:
+    if not settings.llm_configured:
         return _fallback_experience(raw) if section == "experiences" else []
 
     try:

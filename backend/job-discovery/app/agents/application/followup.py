@@ -111,7 +111,7 @@ async def draft_followup(candidate, application: Application, job_title: str,
     """
     subject, body = _template(candidate.full_name or "", job_title, company, application.applied_at)
 
-    if settings.gemini_api_key:
+    if settings.llm_configured:
         try:
             from app import llm
             from app.agents.persona import IDENTITY

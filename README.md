@@ -124,8 +124,10 @@ Toutes dans `backend/job-discovery/.env`.
 | `ADMIN_EMAILS` | — | Comptes autorisés à déclencher scraping et seeding |
 | `REDIS_URL` | Celery | Courtier des tâches planifiées |
 | `DEBUG` | — | `true` crée les tables au démarrage |
-| `GEMINI_API_KEY` | oui | Conversation, qualification, rédaction |
-| `GEMINI_MODEL` | — | Défaut `gemini-1.5-flash` |
+| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | l'une des deux | Conversation, qualification, rédaction |
+| `GEMINI_MODEL` | — | Défaut `gemini-3.8-flash` |
+| `CLAUDE_MODEL` | — | Défaut `claude-opus-5-5` |
+| `LLM_PROVIDER` | — | `auto` (Gemini puis Claude en secours), `claude` ou `gemini` |
 | `IDENTIFIER_FRANCE_TRAVAIL` | offres | `client_id` (format `PAR_…`) |
 | `FRANCE_TRAVAIL_API` | offres | `client_secret` |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | envois | Sans eux, les candidatures sont **simulées** |
