@@ -67,13 +67,37 @@ def test_offer_far_too_senior_is_still_rejected():
 
 # ── Famille de métier ──────────────────────────────────────────────────────
 
-def test_inferred_family_scores_but_does_not_filter():
+def test_inferred_family_lets_neighbours_through_and_scores_them():
     c = _candidate()
     criteria = MatchingCriteria.resolve(c)
     assert criteria.job_families == ["ops"] and criteria.job_families_inferred
-    res = evaluate_match(c, _job("Infirmier de bloc"), parsed={}, company_name="")
+    # Logistique → contrôle de gestion : métier voisin, proposé mais moins bien noté.
+    res = evaluate_match(c, _job("Contrôleur de gestion"), parsed={}, company_name="")
     assert res.accepted, res.rejections
     assert res.breakdown["family"]["ratio"] == 0.0
+
+
+def test_inferred_family_rejects_unrelated_jobs():
+    c = _candidate()
+    res = evaluate_match(c, _job("Infirmier de bloc"), parsed={}, company_name="")
+    assert not res.accepted and "éloigné" in res.rejections[0]
+
+
+def test_data_analyst_is_not_offered_a_sales_assistant_job():
+    c = _candidate(headline="Data Analyst", skills=["SQL", "Python", "Power BI", "Excel"],
+                   experience_years=3.0)
+    sales = _job("Assistant commercial H/F", tech_stack=["Excel", "CRM", "Pack Office"])
+    assert not evaluate_match(c, sales, parsed={}, company_name="").accepted
+    finance = _job("Analyste financier", tech_stack=["Excel", "SQL", "Power BI"])
+    assert evaluate_match(c, finance, parsed={}, company_name="").accepted
+
+
+def test_far_family_passes_when_skills_really_match():
+    c = _candidate(headline="Data Analyst", skills=["SQL", "Python", "Power BI", "Excel"],
+                   experience_years=3.0)
+    job = _job("Chargé d'affaires data", tech_stack=["SQL", "Python", "Power BI"])
+    res = evaluate_match(c, job, parsed={}, company_name="")
+    assert res.accepted, res.rejections
 
 
 def test_chosen_family_still_filters():

@@ -491,7 +491,7 @@ async def _write_report(
             f" {stats['awaiting_approval']} attendent ton feu vert dans Candidatures."
         )
 
-    if not settings.gemini_api_key:
+    if not settings.llm_configured:
         return fallback
 
     try:

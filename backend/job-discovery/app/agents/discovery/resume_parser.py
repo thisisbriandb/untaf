@@ -177,8 +177,7 @@ async def parse_resume(pdf_bytes: bytes, filename: str = "cv.pdf") -> ParsedCand
         # CV scanné : rien à lire, on le dit au lieu d'inventer un titre.
         return ParsedCandidateProfile(text_detected=False)
 
-    api_key = settings.gemini_api_key
-    if not api_key:
+    if not settings.llm_configured:
         logger.info("GEMINI_API_KEY not set. Using heuristic resume parsing.")
         return heuristic_extract_profile(raw_text)
 

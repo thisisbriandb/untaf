@@ -77,8 +77,7 @@ async def audit_candidate_profile(profile: ParsedCandidateProfile) -> CVAuditRes
     Audit a candidate profile for ATS optimization using Gemini 2.5 Flash.
     Falls back to heuristic rules if Gemini API is missing or fails.
     """
-    api_key = settings.gemini_api_key
-    if not api_key:
+    if not settings.llm_configured:
         logger.info("GEMINI_API_KEY not configured. Using heuristic ATS audit.")
         return heuristic_audit_profile(profile)
 

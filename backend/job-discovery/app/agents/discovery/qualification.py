@@ -111,8 +111,7 @@ async def qualify_job_description(title: str, description: str) -> dict:
     Qualify a job posting description using Gemini 1.5/2.5 Flash API.
     Falls back to simple regex/heuristic parsing if api_key is missing.
     """
-    api_key = settings.gemini_api_key
-    if not api_key:
+    if not settings.llm_configured:
         logger.warning("GEMINI_API_KEY not configured. Falling back to heuristic parsing.")
         return heuristic_qualify(title, description)
 

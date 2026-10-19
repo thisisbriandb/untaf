@@ -137,6 +137,14 @@ def _clean(text: str) -> str:
     return text.strip()
 
 
+#: Une ligne entière en gras (« **Accroche** ») : un titre, que la consigne interdit.
+_HEADING_LINE = re.compile(r"^\s*\*\*[^*\n]{1,40}\*\*\s*:?\s*$", re.MULTILINE)
+
+
+def _strip_headings(body: str) -> str:
+    return re.sub(r"\n{3,}", "\n\n", _HEADING_LINE.sub("", body)).strip()
+
+
 def _fallback_body(
     headline: str, skills: list[str], job_title: str, company_name: str,
     experiences: list[dict],
@@ -219,7 +227,8 @@ async def write_cover_letter(
 
     contact = [c for c in (email, phone, linkedin_url) if c]
 
-    def assemble(subject: str, body: str, closing: str, source: str) -> CoverLetterResult:
+    def assemble(subject: str, body: str, closing: str, source: str,
+                 unverified: list[str] | None = None) -> CoverLetterResult:
         return CoverLetterResult(
             sender_name=full_name,
             sender_contact=contact,
@@ -235,27 +244,32 @@ async def write_cover_letter(
             grounded_on_posting=bool(job_excerpt),
             grounded_on_experiences=bool(experiences),
             source=source,
+            unverified_claims=unverified or [],
         )
 
-    if not settings.gemini_api_key:
-        logger.warning("GEMINI_API_KEY absente — lettre assemblée sans LLM.")
+    if not settings.llm_configured:
+        logger.warning("Aucun modèle configuré — lettre assemblée sans LLM.")
         return assemble(
             *_fallback_body(headline, skills, job_title, company_name, experiences),
             "fallback",
         )
 
+    blocks = dict(
+        experiences=_format_experiences(experiences),
+        education="\n".join(
+            f"- {e.get('degree') or 'Diplôme'} — {e.get('institution') or ''} "
+            f"({e.get('endYear') or '?'})"
+            for e in education
+        ) or "Non renseignée",
+        skills=", ".join(skills) or "Non renseignées",
+        summary=summary or "Non renseignée",
+    )
+
     try:
         response = await llm.generate(PROMPT.format(
             identity=IDENTITY,
             writing_rules=WRITING_RULES,
-            experiences=_format_experiences(experiences),
-            education="\n".join(
-                f"- {e.get('degree') or 'Diplôme'} — {e.get('institution') or ''} "
-                f"({e.get('endYear') or '?'})"
-                for e in education
-            ) or "Non renseignée",
-            skills=", ".join(skills) or "Non renseignées",
-            summary=summary or "Non renseignée",
+            **blocks,
             job_title=job_title or "non précisé",
             company_name=company_name or (
                 "non communiquée par l'annonce : n'écris pas « pourquoi cette entreprise », "
@@ -267,16 +281,26 @@ async def write_cover_letter(
         ) + (SPONTANEOUS_NOTE if spontaneous else ""), json=True)
 
         data = json.loads(_clean(response))
-        body = _clean(data.get("body") or "")
+        body = _strip_headings(_clean(data.get("body") or ""))
         if len(body) < 150:
             raise ValueError("corps trop court")
+
+        # Relecture des faits : rien ne part qui ne soit prouvé par le parcours.
+        from app.agents.discovery.fact_check import checked, facts_block
+        body, unverified = await checked(body, facts_block(
+            parcours=blocks["experiences"], formation=blocks["education"],
+            competences=blocks["skills"], synthese=blocks["summary"],
+            candidat=f"{full_name} — {headline}".strip(" —"),
+            offre=f"{job_title} — {company_name} — {location}\n{(job_excerpt or '')[:3000]}",
+        ))
 
         return assemble(
             (data.get("subject") or f"Candidature — {job_title}").strip(),
             body,
             (data.get("closing") or
              "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.").strip(),
-            "llm",
+            "unverified" if unverified else "llm",
+            unverified,
         )
 
     except Exception as e:  # noqa: BLE001 — l'échec de rédaction ne doit pas

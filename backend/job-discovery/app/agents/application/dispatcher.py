@@ -473,6 +473,15 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
             return Hold(DispatchStatus.AWAITING_APPROVAL,
                         "lettre et CV rédigés sans mon assistant de rédaction (indisponible) : "
                         "relis-les avant que je les envoie")
+        # Des passages de la lettre restent non prouvés par le parcours : le
+        # candidat les relit (et corrige) avant que la lettre parte en son nom.
+        letter_meta = meta.get("cover_letter") or {}
+        if letter_meta.get("source") == "unverified" and not dispatch.approved_at:
+            doubts = letter_meta.get("unverified_claims") or []
+            return Hold(DispatchStatus.AWAITING_APPROVAL,
+                        "ta lettre contient des passages que ton parcours ne prouve pas"
+                        + (f" (« {doubts[0][:80]} »)" if doubts else "")
+                        + " : relis-la avant que je l'envoie")
 
     # Candidature spontanée : désinscription et plafonds, sans exception.
     if application and (application.metadata_json or {}).get("spontaneous"):

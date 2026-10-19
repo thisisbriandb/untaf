@@ -194,7 +194,7 @@ def _fallback(req: CvContentRequest) -> CvContentResult:
 
 async def write_cv_content(req: CvContentRequest) -> CvContentResult:
     """Renvoie une accroche et une synthèse ancrées sur le parcours. Ne lève jamais."""
-    if not settings.gemini_api_key:
+    if not settings.llm_configured:
         logger.warning("GEMINI_API_KEY absente — contenu CV assemblé sans LLM.")
         return _fallback(req)
 

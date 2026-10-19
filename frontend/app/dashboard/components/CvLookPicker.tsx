@@ -15,7 +15,7 @@ import { Camera, Check, ChevronDown, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { colorSwatches, cvTemplates } from "@/app/onboarding/types";
 import {
-  deletePhoto, fetchCvDesign, saveCvDesign, shrinkPhoto, uploadPhoto, type CvDesign,
+  CV_DESIGN_EVENT, deletePhoto, fetchCvDesign, saveCvDesign, shrinkPhoto, uploadPhoto, type CvDesign,
 } from "@/lib/cv-profile";
 import { tailoredCvUrl } from "@/lib/tailor-client";
 import { useProtectedBlobUrl } from "./ProtectedFile";
@@ -47,7 +47,18 @@ export function CvLookPicker({
   useEffect(() => {
     let alive = true;
     void fetchCvDesign(candidateId).then((d) => alive && setDesign(d));
-    return () => { alive = false; };
+    // Changement fait ici ou ailleurs (canevas CV) : mise en page et aperçu suivent.
+    const onChange = (e: Event) => {
+      const saved = (e as CustomEvent<CvDesign | null>).detail;
+      if (saved) setDesign(saved);
+      else void fetchCvDesign(candidateId).then((d) => alive && d && setDesign(d));
+      setVersion((v) => v + 1);
+    };
+    window.addEventListener(CV_DESIGN_EVENT, onChange);
+    return () => {
+      alive = false;
+      window.removeEventListener(CV_DESIGN_EVENT, onChange);
+    };
   }, [candidateId]);
 
   // L'aperçu est le vrai CV adapté, recomposé après chaque changement.
@@ -60,9 +71,7 @@ export function CvLookPicker({
     setBusy(true);
     const saved = await saveCvDesign(candidateId, { mode: "template", ...patch });
     setBusy(false);
-    if (!saved) return toast("Je n'ai pas pu enregistrer ce choix.", "warning");
-    setDesign(saved);
-    setVersion((v) => v + 1);
+    if (!saved) toast("Je n'ai pas pu enregistrer ce choix.", "warning");
   };
 
   const onPhoto = async (file: File | undefined) => {
@@ -71,8 +80,6 @@ export function CvLookPicker({
     try {
       const ok = await uploadPhoto(candidateId, await shrinkPhoto(file));
       if (!ok) throw new Error();
-      setDesign(await fetchCvDesign(candidateId));
-      setVersion((v) => v + 1);
       toast("Photo ajoutée à tes CV.");
     } catch {
       toast("Photo refusée : choisis une image JPEG ou PNG.", "warning");
@@ -85,9 +92,7 @@ export function CvLookPicker({
     setBusy(true);
     const ok = await deletePhoto(candidateId);
     setBusy(false);
-    if (!ok) return toast("Je n'ai pas pu retirer la photo.", "warning");
-    setDesign(await fetchCvDesign(candidateId));
-    setVersion((v) => v + 1);
+    if (!ok) toast("Je n'ai pas pu retirer la photo.", "warning");
   };
 
   if (!design) return null;

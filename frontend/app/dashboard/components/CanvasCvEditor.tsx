@@ -21,6 +21,7 @@ import { LanguagesForm } from "@/app/onboarding/components/editor/LanguagesForm"
 import { CandidateCvPreview } from "@/app/onboarding/components/CandidateCvPreview";
 import {
   downloadCvPdf,
+  CV_DESIGN_EVENT,
   fetchCvDesign,
   fetchPhotoDataUrl,
   loadCvProfile,
@@ -306,6 +307,18 @@ export function CanvasCvEditor({
       alive = false;
     };
   }, [candidateId, initialPane]);
+
+  // Mise en page changée ailleurs (fiche d'une offre, photo) : le canevas suit.
+  useEffect(() => {
+    if (!candidateId) return;
+    const onChange = (e: Event) => {
+      const saved = (e as CustomEvent<CvDesign | null>).detail;
+      if (saved) setDesign(saved);
+      else void fetchCvDesign(candidateId).then((d) => d && setDesign(d));
+    };
+    window.addEventListener(CV_DESIGN_EVENT, onChange);
+    return () => window.removeEventListener(CV_DESIGN_EVENT, onChange);
+  }, [candidateId]);
 
   /** Un changement de présentation est toujours un geste explicite. */
   const updateDesign = useCallback(

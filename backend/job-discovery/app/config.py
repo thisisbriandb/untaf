@@ -163,9 +163,30 @@ class Settings(BaseSettings):
     def jooble_configured(self) -> bool:
         return bool(self.jooble_api_key.strip())
 
-    # ── Gemini API (LLM) ─────────────────────────────────
+    # ── Modèles de langage (Gemini, Claude) ──────────────
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
+    anthropic_api_key: str = ""
+    claude_model: str = "claude-opus-5-5"
+    #: Groq : modèles ouverts, gratuits, sans entraînement sur les données.
+    #: Chaque modèle a sa propre limite par minute : le second prend le relais.
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_fallback_model: str = "qwen/qwen3.8-27b"
+    #: « auto » : Gemini, puis Groq, puis Claude, selon les clés présentes (un
+    #: fournisseur qui répond « quota épuisé » est mis de côté 30 minutes) ;
+    #: « groq », « gemini » ou « claude » : un seul fournisseur.
+    llm_provider: str = "auto"
+
+    @property
+    def llm_configured(self) -> bool:
+        """Au moins un modèle utilisable."""
+        provider = self.llm_provider.strip().lower()
+        keys = {"groq": self.groq_api_key, "gemini": self.gemini_api_key,
+                "claude": self.anthropic_api_key}
+        if provider in keys:
+            return bool(keys[provider].strip())
+        return any(k.strip() for k in keys.values())
 
     # ── Envoi de candidatures (SMTP) ─────────────────────
     # Tant que ces valeurs sont vides, aucune candidature ne peut partir : le

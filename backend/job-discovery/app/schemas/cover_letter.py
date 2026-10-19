@@ -39,7 +39,11 @@ class CoverLetterResult(BaseModel):
     # ── Traçabilité ────────────────────────────────────────
     grounded_on_posting: bool = False
     grounded_on_experiences: bool = False
+    #: « llm », « fallback » (rédigée sans modèle) ou « unverified » (des
+    #: passages restent non prouvés après relecture : le candidat relit avant envoi).
     source: str = "llm"
+    #: Les passages que la relecture n'a pas pu prouver.
+    unverified_claims: list[str] = Field(default_factory=list)
 
 
 class SignatureUpdate(BaseModel):
