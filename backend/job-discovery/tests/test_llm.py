@@ -213,20 +213,31 @@ class FakeGroq:
 
 @pytest.fixture
 def groq_only(keys, monkeypatch):
+    monkeypatch.setattr(settings, "gemini_api_key", "")
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
     monkeypatch.setattr(settings, "groq_api_key", "gsk_test")
     monkeypatch.setattr(settings, "groq_model", "openai/gpt-oss-120b")
     monkeypatch.setattr(settings, "groq_fallback_model", "qwen/qwen3.8-27b")
 
 
-def test_groq_en_premier(groq_only, monkeypatch):
-    fake = FakeGroq([_completion("bonjour")])
+def test_gemini_en_premier_groq_en_secours(keys, monkeypatch):
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
+    monkeypatch.setattr(settings, "groq_api_key", "gsk_test")
+    fake = FakeGroq([_completion("groq")])
     monkeypatch.setattr(llm, "groq", lambda: fake)
 
-    async def never(*a, **k):
-        raise AssertionError("Gemini ne doit pas être appelé")
+    async def gemini_ok(*a, **k):
+        return "gemini"
 
-    monkeypatch.setattr(llm, "_gemini_generate", never)
-    assert asyncio.run(llm.generate("salut")) == "bonjour"
+    monkeypatch.setattr(llm, "_gemini_generate", gemini_ok)
+    assert asyncio.run(llm.generate("salut")) == "gemini"
+    assert fake.calls == []
+
+    async def gemini_down(*a, **k):
+        raise _quota()
+
+    monkeypatch.setattr(llm, "_gemini_generate", gemini_down)
+    assert asyncio.run(llm.generate("salut")) == "groq"
     assert fake.calls[0]["model"] == "openai/gpt-oss-120b"
 
 
@@ -250,17 +261,15 @@ def test_groq_tous_satures_on_attend_puis_on_reessaie(groq_only, monkeypatch):
     assert waits and 2 <= waits[0] < 4
 
 
-def test_groq_quota_du_jour_bascule_sur_gemini(groq_only, monkeypatch):
+def test_groq_quota_du_jour_bascule_sur_claude(groq_only, monkeypatch):
+    monkeypatch.setattr(settings, "anthropic_api_key", "a")
     fake = FakeGroq([_groq_429("7200"), _groq_429("7200")])
+    claude_fake = FakeClaude([_message(_text("claude")), _message(_text("claude"))])
     monkeypatch.setattr(llm, "groq", lambda: fake)
-
-    async def gemini(*a, **k):
-        return "gemini"
-
-    monkeypatch.setattr(llm, "_gemini_generate", gemini)
-    assert asyncio.run(llm.generate("x")) == "gemini"
+    monkeypatch.setattr(llm, "claude", lambda: claude_fake)
+    assert asyncio.run(llm.generate("x")) == "claude"
     # Groq mis de côté : l'appel suivant ne le retente pas.
-    assert asyncio.run(llm.generate("y")) == "gemini"
+    assert asyncio.run(llm.generate("y")) == "claude"
     assert len(fake.calls) == 2
 
 

@@ -2,11 +2,11 @@
 Accès aux modèles de langage — point unique pour tout le backend.
 
 Trois fournisseurs, essayés dans cet ordre quand leur clé est configurée :
-  1. Groq (API compatible OpenAI, SDK `openai`) : modèles ouverts, rapides,
-     gratuits, sans entraînement sur les données envoyées. Deux modèles, chacun
+  1. Gemini (SDK `google-genai`), en offre payante : le modèle principal ;
+  2. Groq (API compatible OpenAI, SDK `openai`), en secours gratuit : modèles
+     ouverts, sans entraînement sur les données envoyées. Deux modèles, chacun
      avec sa propre limite par minute : quand le premier sature, le second
      prend le relais ;
-  2. Gemini (SDK `google-genai`) ;
   3. Claude (SDK `anthropic`).
 
 `LLM_PROVIDER` : « auto » (défaut) suit cet ordre ; « groq », « gemini » ou
@@ -39,7 +39,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-PROVIDERS = ("groq", "gemini", "claude")
+PROVIDERS = ("gemini", "groq", "claude")
 #: Après un « quota épuisé » ou une clé refusée, le fournisseur est mis de côté.
 COOLDOWN_S = 30 * 60
 #: Modèles Claude qui acceptent le repli automatique côté serveur (refus de
@@ -310,7 +310,7 @@ async def generate(
         except Exception as e:
             last = e
             _failed(p, e)
-    raise last or LLMError("aucun modèle configuré (GROQ_API_KEY, GEMINI_API_KEY ou ANTHROPIC_API_KEY)")
+    raise last or LLMError("aucun modèle configuré (GEMINI_API_KEY, GROQ_API_KEY ou ANTHROPIC_API_KEY)")
 
 
 async def _gemini_grounded(prompt: str) -> str:
@@ -505,7 +505,7 @@ class Chat:
         self._chain = _chain()
         self._impl = None
         if not self._chain:
-            raise LLMError("aucun modèle configuré (GROQ_API_KEY, GEMINI_API_KEY ou ANTHROPIC_API_KEY)")
+            raise LLMError("aucun modèle configuré (GEMINI_API_KEY, GROQ_API_KEY ou ANTHROPIC_API_KEY)")
 
     async def send_message(self, message) -> ChatReply:
         if self._impl is not None:

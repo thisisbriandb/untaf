@@ -173,7 +173,7 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
     groq_fallback_model: str = "qwen/qwen3.8-27b"
-    #: « auto » : Groq, puis Gemini, puis Claude, selon les clés présentes (un
+    #: « auto » : Gemini, puis Groq, puis Claude, selon les clés présentes (un
     #: fournisseur qui répond « quota épuisé » est mis de côté 30 minutes) ;
     #: « groq », « gemini » ou « claude » : un seul fournisseur.
     llm_provider: str = "auto"
