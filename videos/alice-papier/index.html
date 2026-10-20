@@ -12,11 +12,11 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-duration="6.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 8}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
-      <div id="scene" class="clip" data-start="0" data-duration="6.5" data-track-index="0">
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-duration="3.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 8}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
+      <div id="scene" class="clip" data-start="0" data-duration="3.5" data-track-index="0">
         <canvas id="paper3d" width="1080" height="1350"></canvas>
       </div>
-      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="6.5" data-track-index="5" data-volume="1"></audio>
+      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="3.5" data-track-index="5" data-volume="1"></audio>
     </div>
 
     <script type="module">
@@ -29,7 +29,7 @@
       renderer.setPixelRatio(1);
       renderer.setClearColor(0xf6f5f2, 1);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.VSMShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.NeutralToneMapping;
 
@@ -91,42 +91,45 @@
       const mat = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
         roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
       const sheet = new THREE.Mesh(geo, mat);
-      sheet.castShadow = true; sheet.receiveShadow = true;
+      sheet.castShadow = true; sheet.receiveShadow = false;
       const group = new THREE.Group(); group.add(sheet); scene.add(group);
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.16 }));
-      ground.position.z = -0.004; ground.receiveShadow = true; scene.add(ground);
+      ground.position.z = -0.035; ground.receiveShadow = true; scene.add(ground);
+
+      // Ombre de contact : un halo très doux sous les bords, qui suit la taille de la feuille.
+      const cs = document.createElement("canvas"); cs.width = 256; cs.height = 256;
+      { const g = cs.getContext("2d"); g.filter = "blur(18px)"; g.fillStyle = "rgba(60,52,40,1)"; g.fillRect(40, 40, 176, 176); }
+      const contactTex = new THREE.CanvasTexture(cs);
+      const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.2, depthWrite: false }));
+      contact.position.z = -0.034; scene.add(contact);
 
       scene.add(new THREE.HemisphereLight(0xffffff, 0xe4e0d8, 2.3));
       const sun = new THREE.DirectionalLight(0xfffaf2, 1.9);
       sun.position.set(-4.2, 2.6, 3.6); sun.castShadow = true;
-      sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 9; sun.shadow.blurSamples = 16;
+      sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.015;
       Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 20 });
       scene.add(sun);
 
-      // ---------- les plis ----------
-      // Ordre de pliage : f1 (y=0), f2 (x=0), f3 (y=-0.7425), f4 (x=-0.525). On déplie à l'envers.
+      // ---------- les plis : une lettre pliée en trois ----------
+      // Pliage : le tiers du bas remonte (f1), puis le tiers du haut se rabat dessus (f2).
+      // Dépliage dans l'ordre inverse : le haut s'ouvre, le bas suit aussitôt.
+      const T3 = SH / 6; // 0.495
       const FOLDS = [
-        { axis: "y", c: 0.0, gap: 0.002 },
-        { axis: "x", c: 0.0, gap: 0.004 },
-        { axis: "y", c: -0.7425, gap: 0.008 },
-        { axis: "x", c: -0.525, gap: 0.014 },
+        { c: -T3, sgn: -1, gap: 0.002 },
+        { c: T3, sgn: 1, gap: 0.004 },
       ];
-      // Lignes de pli dans la feuille à plat (mémoire du papier) : signe = montagne / vallée.
-      const CREASES = [
-        { k: 0, axis: "y", c: 0.0, s: 1 },
-        { k: 1, axis: "x", c: 0.0, s: -1 },
-        { k: 2, axis: "y", c: -0.7425, s: -1 }, { k: 2, axis: "y", c: 0.7425, s: 1 },
-        { k: 3, axis: "x", c: -0.525, s: 1 }, { k: 3, axis: "x", c: 0.525, s: 1 },
-      ];
+      const CREASES = [ { k: 0, c: -T3, s: 1 }, { k: 1, c: T3, s: -1 } ];
       const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-      // Chaque pli s'ouvre de π vers 0 avec un léger dépassement qui retombe.
+      // Le rabat se lève franchement, se pose à plat, rebondit à peine.
       function opening(t, t0, d) {
         const u = Math.min(Math.max((t - t0) / d, 0), 1);
-        const settle = Math.sin(Math.min(Math.max((t - t0 - d) / 0.45, 0), 1) * Math.PI) * 0.05;
-        return Math.PI * (1 - ease(u)) - (u >= 1 ? settle : 0) ;
+        const lift = u < 1 ? Math.PI * (1 - ease(u)) : 0;
+        const b = Math.min(Math.max((t - t0 - d) / 0.28, 0), 1);
+        return lift + (u >= 1 ? Math.sin(b * Math.PI) * 0.035 : 0);
       }
-      const SCHEDULE = [ [4.0, 1.25], [2.85, 0.95], [1.85, 0.85], [0.95, 0.8] ]; // f1..f4 : [début, durée]
+      const SCHEDULE = [ [1.02, 0.62], [0.55, 0.58] ]; // f1 (bas), f2 (haut) : [début, durée]
 
       // Bruit doux déterministe (ondulations du papier).
       const R = rng(7);
@@ -137,7 +140,7 @@
       const STEP = 0.025;
       function arc(a, L) {
         const n = Math.ceil(L / STEP) + 2, ys = new Float32Array(n), zs = new Float32Array(n), th = new Float32Array(n);
-        const B = 0.55 * Math.sin(Math.max(Math.min(a, Math.PI), 0));
+        const B = 0.32 * Math.sin(Math.max(Math.min(a, Math.PI), 0));
         let y = 0, z = 0;
         for (let j = 0; j < n; j++) {
           const sj = j * STEP, t0 = a + B * Math.pow(Math.min(sj / L, 1), 2);
@@ -147,7 +150,7 @@
         }
         return { ys, zs, th, n };
       }
-      const LEN = [1.485, 1.05, 0.7425, 0.525];
+      const LEN = [0.99, 0.99];
 
       function shape(t) {
         const angles = SCHEDULE.map(([t0, d]) => opening(t, t0, d));
@@ -161,19 +164,19 @@
           for (const cr of CREASES) {
             const open = 1 - Math.abs(angles[cr.k]) / Math.PI;
             if (open <= 0) continue;
-            const d = Math.abs((cr.axis === "y" ? y0 : x0) - cr.c);
-            z += cr.s * 0.085 * open * (Math.min(d, 0.45) - (Math.min(d, 0.45) ** 2) / 0.9);
+            const d = Math.abs(y0 - cr.c);
+            z += cr.s * 0.07 * open * (Math.min(d, 0.5) - (Math.min(d, 0.5) ** 2) / 1.0);
           }
           let x = x0, y = y0;
-          for (let k = 0; k < 4; k++) {
+          for (let k = 0; k < FOLDS.length; k++) {
             const A = arcs[k]; if (!A) continue;
             const f = FOLDS[k], h = f.gap;
-            const coord = f.axis === "y" ? y : x;
-            if (coord > f.c + 1e-6) {
-              const ry = coord - f.c, rz = z - h;
+            const ry = f.sgn * (y - f.c);
+            if (ry > 1e-6) {
+              const rz = z - h;
               const j = Math.min(Math.round(ry / STEP), A.n - 1);
               const ny = A.ys[j] - rz * Math.sin(A.th[j]), nz = A.zs[j] + rz * Math.cos(A.th[j]);
-              if (f.axis === "y") y = f.c + ny; else x = f.c + ny;
+              y = f.c + f.sgn * ny;
               z = h + nz;
             }
           }
@@ -181,18 +184,17 @@
         }
         geo.attributes.position.needsUpdate = true;
         geo.computeVertexNormals();
+        // L'ombre de contact couvre la partie posée sur la table.
+        let lo = Infinity, hi = -Infinity;
+        for (let i = 0; i < pos.length; i += 3) if (pos[i + 2] < 0.03) { lo = Math.min(lo, pos[i + 1]); hi = Math.max(hi, pos[i + 1]); }
+        contact.scale.set(SW * 1.45, (hi - lo) * 1.32 + SW * 0.12, 1);
+        contact.position.set(0.035, (lo + hi) / 2 - 0.03, -0.034);
       }
 
-      // Caméra presque fixe : elle part près du petit paquet et recule doucement pendant que la feuille s'ouvre.
-      const smooth = (a, b, u) => a + (b - a) * u;
-      function frame(t) {
-        const u = ease(Math.min(Math.max((t - 0.4) / 5.4, 0), 1));
-        const cx = smooth(-0.79, 0, u), cy = smooth(-1.11, 0, u);
-        const dist = smooth(4.6, 8.4, u);
-        const tilt = smooth(0.34, 0.16, u);
-        camera.position.set(cx + 0.12 * Math.sin(t * 0.35), cy - dist * Math.sin(tilt), dist * Math.cos(tilt));
-        camera.lookAt(cx, cy, 0);
-      }
+      // Caméra fixe, presque à la verticale : un plan produit, rien ne flotte.
+      camera.position.set(0, -8.6 * Math.sin(0.1), 8.6 * Math.cos(0.1));
+      camera.lookAt(0, 0.05, 0);
+      function frame(t) {}
 
       function renderAt(t) {
         shape(t);

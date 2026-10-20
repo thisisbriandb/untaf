@@ -11,7 +11,7 @@ import numpy as np
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-DUR = 6.5
+DUR = 3.5
 HERE = Path(__file__).parent
 N = int(SR * DUR)
 
@@ -46,16 +46,10 @@ def put(name, s0, d, t, gain=1.0, pan=0.0, fade=0.03):
     mix[:, i:i + n] += y[:, :n] * gain
 
 
-# Le bout de papier : un froissement serré, nerveux, qui se calme quand il s'ouvre.
-put("2379", 0.4, 1.3, 0.0, 0.35, -0.1, fade=0.25)
-put("2385", 0.0, 1.0, 0.25, 0.25, 0.15, fade=0.2)
-# Chaque pli qui s'ouvre : un son de feuille net, de plus en plus ample.
-put("2380", 0.0, 0.9, 0.92, 0.42, 0.25)
-put("2386", 0.0, 1.2, 1.82, 0.5, -0.2)
-put("1530", 0.15, 0.95, 2.86, 0.55, 0.2)
-put("1105", 0.0, 0.86, 4.02, 0.75, -0.05)
-# La feuille se pose.
-put("2384", 0.0, 0.39, 5.3, 0.22, 0.0)
+# Le haut se lève (frottement court), le bas suit, la feuille se pose.
+put("2380", 0.0, 0.9, 0.5, 0.5, 0.15)
+put("2386", 0.0, 1.0, 0.98, 0.55, -0.1)
+put("2384", 0.0, 0.39, 1.6, 0.25, 0.0)
 
 # Petite pièce : une réverbération courte, sèche, qui donne l'espace de la table.
 r = np.random.default_rng(3)
