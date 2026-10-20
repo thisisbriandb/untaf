@@ -1380,5 +1380,16 @@
         "attribution": "unversioned"
       }
     ]
-  }
+  },
+  "renders": {
+    "latest": {
+      "id": "529e510d-9961-45bd-8496-32f37e5657d2",
+      "completedAt": 1792528268366,
+      "output": "/home/user/untaf/videos/alice-avion/renders/video.mp4",
+      "status": "completed",
+      "revision": null
+    },
+    "retainedRevisions": []
+  },
+  "pendingArtifactCleanup": []
 }
