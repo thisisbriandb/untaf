@@ -11,7 +11,7 @@ import numpy as np
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-DUR = 11.5
+DUR = 21.5
 HERE = Path(__file__).parent
 N = int(SR * DUR)
 
@@ -66,6 +66,57 @@ gate = np.convolve(gate, np.ones(k) / k, "same")
 mix += bed[:, :N] * gate * 1.0
 put("2376", 0.0, 0.25, ST[0]["t0"] - 0.02, 0.18, 0.1)   # la pointe touche le papier
 put("2380", 0.0, 0.6, 1.95, 0.18, 0.4)                  # le stylo glisse dans le champ
+
+# ---------- deuxième moitié ----------
+def hp(x, f):
+    return sosfilt(butter(2, f, "highpass", fs=SR, output="sos"), x)
+
+
+def felt(freqs, d=2.6, gain=0.1, t=0.0, pan=0.0):
+    """Piano feutré, très doux : harmoniques qui s'éteignent vite, attaque amortie."""
+    tt = np.arange(int(d * SR)) / SR
+    x = np.zeros_like(tt)
+    for f in freqs:
+        for h, a in [(1, 1.0), (2, 0.35), (3, 0.12), (4, 0.05)]:
+            x += a * np.sin(2 * np.pi * f * h * tt) * np.exp(-tt * (1.6 + 1.2 * h))
+    x *= np.minimum(tt / 0.012, 1)
+    x = sosfilt(butter(2, 2600, "lowpass", fs=SR, output="sos"), x)
+    x /= np.abs(x).max()
+    a = (pan + 1) * np.pi / 4
+    i = int(t * SR); n = min(len(x), N - i)
+    mix[0, i:i + n] += x[:n] * np.cos(a) * gain * 1.41
+    mix[1, i:i + n] += x[:n] * np.sin(a) * gain * 1.41
+
+
+put("2380", 0.0, 0.7, 10.55, 0.2, 0.5)                    # le stylo s'en va
+# La déchirure : une fibre qui cède, des craquements qui s'accélèrent, puis s'arrêtent net.
+put("2384", 0.0, 0.3, 11.5, 0.35, 0.0)
+tr = clip(load("2389"), 0.0, 0.55, fade=0.01)
+tr = np.stack([hp(c, 1200) for c in tr])
+env = np.linspace(0.5, 1.0, tr.shape[1]) ** 1.5
+env[-int(0.04 * SR):] *= np.linspace(1, 0, int(0.04 * SR))
+tr = tr * env / np.abs(tr).max()
+i0 = int(11.55 * SR); mix[:, i0:i0 + tr.shape[1]] += tr * 0.75
+put("2996", 0.0, 0.35, 11.62, 0.3, -0.15)
+put("2384", 0.0, 0.39, 12.38, 0.16, 0.2)                 # les morceaux retombent
+# Alice : un silence, puis une note douce ; le clignement à peine audible.
+felt([587.33], d=2.2, gain=0.06, t=12.78, pan=0.0)
+put("2376", 0.0, 0.12, 13.27, 0.05, 0.0)
+# Les morceaux se rejoignent, la lettre se réécrit.
+put("1530", 0.1, 0.9, 13.58, 0.4, -0.2)
+put("2386", 0.0, 1.0, 13.95, 0.35, 0.2)
+# Pliage en trois, puis l'enveloppe.
+put("2380", 0.0, 0.8, 15.2, 0.45, 0.15)
+put("2386", 0.0, 0.9, 15.62, 0.45, -0.15)
+put("2384", 0.0, 0.39, 16.06, 0.25, 0.0)
+put("1530", 0.15, 0.9, 16.0, 0.4, 0.0)
+put("2379", 1.2, 0.55, 16.75, 0.35, 0.0, fade=0.08)      # la lettre glisse dans la poche
+put("1105", 0.0, 0.7, 17.32, 0.5, 0.0)                   # le rabat se ferme
+put("2384", 0.0, 0.3, 17.72, 0.22, 0.0)
+put("2386", 0.0, 1.0, 18.0, 0.55, 0.4)                   # elle part
+put("2380", 0.0, 0.8, 18.15, 0.35, 0.6)
+felt([587.33, 739.99, 880.0], d=2.4, gain=0.07, t=18.75, pan=0.0)
+felt([293.66, 440.0, 587.33], d=3.0, gain=0.08, t=19.75, pan=0.0)
 
 # Petite pièce : une réverbération courte, sèche, qui donne l'espace de la table.
 r = np.random.default_rng(3)

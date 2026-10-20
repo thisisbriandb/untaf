@@ -3,23 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1350" />
+    <script src="assets/vendor/gsap.min.js"></script>
     <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
       #root { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
       .clip { position: absolute; inset: 0; width: 1080px; height: 1350px; }
       #paper3d { position: absolute; inset: 0; width: 1080px; height: 1350px; display: block; }
+      #overlay { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #1A1918; pointer-events: none; }
+      #eyes { position: absolute; left: 430px; top: 128px; width: 220px; height: 110px; opacity: 0; }
+      #eyes .eye { transform-box: fill-box; transform-origin: 50% 50%; }
+      .cap { position: absolute; left: 0; width: 1080px; top: 150px; text-align: center; font-size: 46px; font-weight: 500;
+             letter-spacing: -0.02em; opacity: 0; }
+      .green { color: #006045; }
+      #logo { position: absolute; left: 440px; top: 420px; width: 200px; height: 200px; opacity: 0; }
+      #end-name { position: absolute; left: 0; width: 1080px; top: 650px; text-align: center; font-size: 112px; font-weight: 600; letter-spacing: -0.035em; opacity: 0; }
+      #end-url { position: absolute; left: 0; width: 1080px; top: 800px; text-align: center; font-size: 40px; font-weight: 500; color: #006045; opacity: 0; }
+      #end-tag { position: absolute; left: 0; width: 1080px; top: 862px; text-align: center; font-size: 30px; color: #6B6A66; opacity: 0; }
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-duration="11.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 8}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
-      <div id="scene" class="clip" data-start="0" data-duration="11.5" data-track-index="0">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="21.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 8}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
+      <div id="scene" class="clip" data-start="0" data-duration="21.5" data-track-index="0">
         <canvas id="paper3d" width="1080" height="1350"></canvas>
+        <div id="overlay">
+          <svg id="eyes" viewBox="0 0 220 110"><g class="eye" id="eyeL"><circle cx="55" cy="55" r="34" fill="none" stroke="#006045" stroke-width="13"/></g><g class="eye" id="eyeR"><circle cx="165" cy="55" r="34" fill="none" stroke="#006045" stroke-width="13"/></g></svg>
+          <div class="cap" id="cap1">Alice écrit une lettre <span class="green">pour chaque offre.</span></div>
+          <div class="cap" id="cap2" style="top: 600px; font-size: 64px;"><span class="green">Envoyée.</span></div>
+          <img id="logo" src="assets/brand/alice-eyes.svg" alt="Alice" />
+          <div id="end-name">Alice</div>
+          <div id="end-url">alice-agent.fr</div>
+          <div id="end-tag">Gratuit pour commencer</div>
+        </div>
       </div>
-      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="11.5" data-track-index="5" data-volume="1"></audio>
+      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="21.5" data-track-index="5" data-volume="1"></audio>
     </div>
 
     <script src="assets/handwriting/strokes.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      // Les yeux d'Alice s'ouvrent au-dessus de la feuille déchirée, clignent, puis s'effacent.
+      tl.fromTo("#eyes", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 12.75);
+      tl.fromTo(".eye", { scaleY: 0.06 }, { scaleY: 1, duration: 0.32, ease: "power3.out" }, 12.75);
+      tl.to(".eye", { scaleY: 0.08, duration: 0.08, ease: "power2.in" }, 13.25);
+      tl.to(".eye", { scaleY: 1, duration: 0.14, ease: "power2.out" }, 13.33);
+      tl.to("#eyes", { scale: 0.88, duration: 0.6, ease: "power2.inOut" }, 13.55);
+      tl.to("#eyes", { opacity: 0, duration: 0.3 }, 14.3);
+      tl.fromTo("#cap1", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 14.6);
+      tl.to("#cap1", { opacity: 0, y: -10, duration: 0.3, ease: "power2.in" }, 16.0);
+      tl.fromTo("#cap2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 18.75);
+      tl.to("#cap2", { opacity: 0, y: -12, duration: 0.3, ease: "power2.in" }, 19.55);
+      tl.fromTo("#logo", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, 19.75);
+      tl.fromTo("#end-name", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 20.0);
+      tl.fromTo("#end-url", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 20.25);
+      tl.fromTo("#end-tag", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 20.45);
+      window.__timelines["main"] = tl;
+    </script>
     <script type="module">
       import * as THREE from "./assets/vendor/three.module.min.js";
 
@@ -86,8 +129,17 @@
       const ink = document.createElement("canvas"); ink.width = TW; ink.height = TH;
       const ictx = ink.getContext("2d");
       const STROKES = window.STROKES.strokes;
+      const typed = new Image(); typed.src = "assets/letter/typed.png";
+      let lastT = 0;
+      typed.onload = () => renderAt(lastT);
       function inkAt(t) {
         ictx.drawImage(col, 0, 0);
+        // La lettre se réécrit de haut en bas pendant que les morceaux se rejoignent.
+        const sweep = Math.min(Math.max((t - REWRITE[0]) / (REWRITE[1] - REWRITE[0]), 0), 1) * TH;
+        if (sweep > 0 && typed.complete && typed.naturalWidth) {
+          ictx.save(); ictx.beginPath(); ictx.rect(0, 0, TW, sweep); ictx.clip(); ictx.drawImage(typed, 0, 0, TW, TH); ictx.restore();
+        }
+        ictx.save(); ictx.beginPath(); ictx.rect(0, sweep, TW, TH - sweep); ictx.clip();
         ictx.lineCap = "round"; ictx.lineJoin = "round";
         for (const s of STROKES) {
           if (t <= s.t0) break;
@@ -101,6 +153,14 @@
             ictx.strokeStyle = "rgba(27,36,74,0.93)";
             ictx.beginPath(); ictx.moveTo(P[j - 1][0], P[j - 1][1]); ictx.lineTo(x1, y1); ictx.stroke();
           }
+        }
+        ictx.restore();
+        // Le bord déchiré : un liseré de fibres blanches, là où la déchirure est passée.
+        const tp = tearParams(t);
+        if (tp.on) {
+          const front = (0.5 - tp.yf / SH) * TH;
+          ictx.fillStyle = "rgba(255,255,253,0.9)";
+          for (let cy = 0; cy < Math.min(front, TH); cy++) { const jx = JX[cy]; ictx.fillRect(jx - 2.5 - RAG2[cy], cy, 5 + RAG2[cy] * 2, 1); }
         }
         map.needsUpdate = true;
       }
@@ -127,15 +187,51 @@
       const map = new THREE.CanvasTexture(ink); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
       const normalMap = new THREE.CanvasTexture(nor);
 
+      // ---------- la déchirure : un bord irrégulier, deux masques complémentaires ----------
+      const SW0 = 2.1, SH0 = 2.97;
+      const J = (y) => 0.035 + 0.05 * Math.sin(1.7 * y + 0.4) + 0.025 * Math.sin(4.3 * y + 1.1) + 0.012 * Math.sin(11 * y + 2.3);
+      const JX = new Float32Array(TH), RAG2 = new Float32Array(TH);
+      {
+        const r = rng(99); let n = 0;
+        for (let cy = 0; cy < TH; cy++) {
+          n = n * 0.82 + (r() - 0.5) * 1.6;
+          JX[cy] = TW / 2 + (J((0.5 - cy / TH) * SH0) / SW0) * TW + n * 2.2 + (r() - 0.5) * 1.4;
+          RAG2[cy] = r() * 1.8;
+        }
+      }
+      function maskCanvas(left) {
+        const c = document.createElement("canvas"); c.width = TW; c.height = TH;
+        const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, TW, TH); g.fillStyle = "#fff";
+        for (let cy = 0; cy < TH; cy++) left ? g.fillRect(0, cy, JX[cy], 1) : g.fillRect(JX[cy], cy, TW - JX[cy], 1);
+        return new THREE.CanvasTexture(c);
+      }
+      const maskL = maskCanvas(true), maskR = maskCanvas(false);
+
       // ---------- la feuille : A4, maillage aligné sur les plis ----------
       const SW = 2.1, SH = 2.97;
       const geo = new THREE.PlaneGeometry(SW, SH, 84, 120);
       const base = geo.attributes.position.array.slice();
-      const mat = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
-        roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
-      const sheet = new THREE.Mesh(geo, mat);
-      sheet.castShadow = true; sheet.receiveShadow = true;
-      const group = new THREE.Group(); group.add(sheet); scene.add(group);
+      // Le dos de la feuille reste vierge : la face arrière lit la texture du papier sans encre.
+      const backTex = new THREE.CanvasTexture(col); backTex.colorSpace = THREE.SRGBColorSpace;
+      const paperMat = (alphaMap) => {
+        const m = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
+          roughness: 0.92, metalness: 0, side: THREE.DoubleSide, alphaMap: alphaMap || null, alphaTest: alphaMap ? 0.5 : 0 });
+        m.onBeforeCompile = (sh) => {
+          sh.uniforms.uBack = { value: backTex };
+          sh.fragmentShader = "uniform sampler2D uBack;\n" + sh.fragmentShader.replace("#include <map_fragment>",
+            "vec4 sampledDiffuseColor = gl_FrontFacing ? texture2D( map, vMapUv ) : texture2D( uBack, vMapUv );\ndiffuseColor *= sampledDiffuseColor;");
+        };
+        return m;
+      };
+      const depthMat = (alphaMap) => new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaMap, alphaTest: 0.5, side: THREE.DoubleSide });
+      const matFull = paperMat(null), matL = paperMat(maskL), matR = paperMat(maskR);
+      const depthL = depthMat(maskL), depthR = depthMat(maskR);
+      const geoR = geo.clone();
+      const sheet = new THREE.Mesh(geo, matFull), sheetR = new THREE.Mesh(geoR, matR);
+      for (const m of [sheet, sheetR]) { m.castShadow = true; m.receiveShadow = true; }
+      const carrier = new THREE.Group(); scene.add(carrier);       // emporte lettre + enveloppe au départ
+      const group = new THREE.Group(); group.add(sheet, sheetR); carrier.add(group);
+      const F = new Float32Array(base.length);                      // feuille pliée/dépliée, avant déchirure
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.16 }));
       ground.position.z = -0.035; ground.receiveShadow = true; scene.add(ground);
@@ -188,6 +284,31 @@
       }
       scene.add(pen);
 
+      // ---------- l'enveloppe : dos, poche (avec ses plis), rabat articulé ----------
+      const env = new THREE.Group(); carrier.add(env);
+      const flapPivot = new THREE.Group();
+      {
+        const EW = 2.36, EH = 1.2;
+        const envMat = new THREE.MeshStandardMaterial({ color: 0xf1ece2, roughness: 0.9, normalMap, normalScale: new THREE.Vector2(0.4, 0.4), side: THREE.DoubleSide });
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), envMat); back.position.z = 0.0005;
+        const pc = document.createElement("canvas"); pc.width = 1024; pc.height = 520;
+        { const g = pc.getContext("2d"); g.fillStyle = "#f3eee5"; g.fillRect(0, 0, 1024, 520);
+          g.strokeStyle = "rgba(90,80,60,0.10)"; g.lineWidth = 3;
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(512, 300); g.lineTo(1024, 0); g.stroke();
+          g.beginPath(); g.moveTo(0, 520); g.lineTo(430, 270); g.moveTo(1024, 520); g.lineTo(594, 270); g.stroke(); }
+        const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace;
+        const pocket = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), new THREE.MeshStandardMaterial({ map: pt, roughness: 0.9, normalMap, normalScale: new THREE.Vector2(0.4, 0.4), side: THREE.DoubleSide }));
+        pocket.position.z = 0.026;
+        const fg = new THREE.BufferGeometry();
+        fg.setAttribute("position", new THREE.Float32BufferAttribute([-EW / 2, 0, 0, EW / 2, 0, 0, 0, 0.66, 0], 3));
+        fg.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+        fg.computeVertexNormals();
+        const flap = new THREE.Mesh(fg, envMat);
+        flapPivot.position.set(0, EH / 2, 0.03); flapPivot.add(flap);
+        for (const m of [back, pocket, flap]) { m.castShadow = true; m.receiveShadow = m !== flap; }
+        env.add(back, pocket, flapPivot);
+      }
+
       // ---------- les plis : une lettre pliée en trois ----------
       // Pliage : le tiers du bas remonte (f1), puis le tiers du haut se rabat dessus (f2).
       // Dépliage dans l'ordre inverse : le haut s'ouvre, le bas suit aussitôt.
@@ -234,10 +355,45 @@
       }
       const LEN = [0.99, 0.99];
 
+      // Repli en trois après la réécriture : le bas remonte, le haut se rabat.
+      const REFOLD = [ [15.2, 0.45], [15.62, 0.45] ];
+      const REWRITE = [13.7, 14.5];
+      function angleAt(k, t) {
+        const [f0, fd] = REFOLD[k];
+        if (t >= f0) return Math.PI * ease(Math.min((t - f0) / fd, 1));
+        return opening(t, SCHEDULE[k][0], SCHEDULE[k][1]);
+      }
+
+      // Paramètres de la déchirure : front qui descend, écart, angle, envol, puis retour.
+      const sm = (a, b, x) => { const u = Math.min(Math.max((x - a) / (b - a), 0), 1); return u * u * (3 - 2 * u); };
+      function tearParams(t) {
+        const T0 = 11.55, T1 = 12.05, T2 = 12.6, R0 = 13.55, R1 = 14.3;
+        if (t < T0 || t >= R1) return { on: false, yf: 9, phi: 0, d: 0, lift: 0 };
+        const yf = 1.65 + (-1.9 - 1.65) * sm(T0, T1, t);
+        const back = sm(R0, R1, t);
+        const phi = (0.11 * sm(T0, T1, t) + 0.03 * sm(T1, T2, t)) * (1 - back);
+        const d = (0.16 * sm(T0, T1, t) + 0.14 * sm(T1, T2, t)) * (1 - back);
+        const lift = 0.09 * Math.sin(Math.PI * Math.min(Math.max((t - T0) / (T2 - T0), 0), 1)) + 0.11 * Math.sin(Math.PI * back);
+        return { on: true, yf, phi, d, lift };
+      }
+      function tear(src, dst, side, tp) {
+        const py = Math.max(Math.min(tp.yf, SH / 2), -SH / 2), px = J(py);
+        for (let i = 0; i < src.length; i += 3) {
+          let x = src[i], y = src[i + 1], z = src[i + 2];
+          const w = sm(tp.yf - 0.25, tp.yf + 0.25, y);
+          const th = -side * tp.phi * w, c = Math.cos(th), sn = Math.sin(th);
+          const rx = x - px, ry = y - py;
+          x = px + rx * c - ry * sn + side * tp.d * w;
+          y = py + rx * sn + ry * c;
+          z += tp.lift * w + 0.035 * w * (tp.phi / 0.14) * Math.exp(-Math.abs(src[i] - J(src[i + 1])) / 0.12);
+          dst[i] = x; dst[i + 1] = y; dst[i + 2] = z;
+        }
+      }
+
       function shape(t) {
-        const angles = SCHEDULE.map(([t0, d]) => opening(t, t0, d));
+        const angles = [0, 1].map((k) => angleAt(k, t));
         const arcs = angles.map((a, k) => (Math.abs(a) > 1e-4 ? arc(a, LEN[k]) : null));
-        const pos = geo.attributes.position.array;
+        const pos = F;
         for (let i = 0; i < pos.length; i += 3) {
           const x0 = base[i], y0 = base[i + 1];
           // Mémoire des plis : chaque pli ouvert garde un léger angle (10° environ), plus les ondulations du papier.
@@ -264,20 +420,48 @@
           }
           pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
         }
-        geo.attributes.position.needsUpdate = true;
-        geo.computeVertexNormals();
+        const tp = tearParams(t);
+        const PL = geo.attributes.position.array, PR = geoR.attributes.position.array;
+        if (tp.on) { tear(F, PL, 1 * -1, tp); tear(F, PR, 1, tp); } else PL.set(F);
+        sheet.material = tp.on ? matL : matFull; sheet.customDepthMaterial = tp.on ? depthL : undefined;
+        sheetR.visible = tp.on; sheetR.customDepthMaterial = depthR;
+        for (const g of tp.on ? [geo, geoR] : [geo]) { g.attributes.position.needsUpdate = true; g.computeVertexNormals(); }
         // L'ombre de contact couvre la partie posée sur la table.
         let lo = Infinity, hi = -Infinity;
         for (let i = 0; i < pos.length; i += 3) if (pos[i + 2] < 0.03) { lo = Math.min(lo, pos[i + 1]); hi = Math.max(hi, pos[i + 1]); }
         contact.scale.set(SW * 1.45, (hi - lo) * 1.32 + SW * 0.12, 1);
         contact.position.set(0.035, (lo + hi) / 2 - 0.03, -0.034);
+        contact.scale.x = SW * 1.45 + (tp.on ? tp.d * 2 : 0);
+        contact.visible = t < 16.05;
       }
 
-      // Caméra : plan fixe sur la feuille, puis un seul mouvement vers l'écriture.
+      // La lettre pliée monte, glisse dans l'enveloppe, le rabat se ferme, tout part.
+      function envelopeAt(t) {
+        const inE = 1 - Math.pow(1 - sm(16.0, 16.65, t), 2);
+        env.position.set(0, -3.6 + (3.45) * inE, 0);
+        const up = sm(16.1, 16.6, t), ins = sm(16.75, 17.25, t);
+        group.position.set(0, 1.12 * up - 1.27 * ins, 0.008 * (up > 0 ? 1 : 0) + 0.05 * Math.sin(Math.PI * up) * (1 - ins));
+        flapPivot.rotation.x = Math.PI * ease(Math.min(Math.max((t - 17.32) / 0.4, 0), 1));
+        flapPivot.position.z = 0.003 + 0.031 * sm(17.32, 17.5, t);   // ouvert sous la lettre, fermé par-dessus la poche
+        const go = Math.min(Math.max((t - 18.0) / 0.8, 0), 1), g2 = go * go * go;
+        const press = Math.sin(Math.PI * Math.min(Math.max((t - 17.72) / 0.2, 0), 1)) * 0.006;
+        carrier.position.set(5.2 * g2, 3.8 * g2, 0.5 * Math.sin(Math.PI * Math.min(go * 1.4, 1)) - press);
+        carrier.rotation.z = -0.22 * g2;
+        env.visible = t > 15.95;
+      }
+
+      // Caméra : plans fixes, reliés par quelques mouvements francs.
       const mix = (a, b, u) => a + (b - a) * u;
+      const CAM = [ // t, cx, cy, distance, inclinaison
+        [0, 0, 0.05, 8.6, 0.1], [1.9, 0, 0.05, 8.6, 0.1], [3.2, 0.02, 0.33, 5.4, 0.2],
+        [10.55, 0.02, 0.33, 5.4, 0.2], [11.45, 0, 0.0, 9.4, 0.1], [12.55, 0, 0.0, 9.4, 0.1], [13.4, 0, -0.12, 10.5, 0.1],
+      ];
       function frame(t) {
-        const u = ease(Math.min(Math.max((t - 1.9) / 1.3, 0), 1));
-        const cx = mix(0, 0.02, u), cy = mix(0.05, 0.33, u), dist = mix(8.6, 5.4, u), tilt = mix(0.1, 0.2, u);
+        let k = CAM.length - 1;
+        for (let i = 0; i < CAM.length - 1; i++) if (t < CAM[i + 1][0]) { k = i; break; }
+        const A = CAM[k], B = CAM[Math.min(k + 1, CAM.length - 1)];
+        const u = B === A ? 0 : ease(Math.min(Math.max((t - A[0]) / (B[0] - A[0]), 0), 1));
+        const cx = mix(A[1], B[1], u), cy = mix(A[2], B[2], u), dist = mix(A[3], B[3], u), tilt = mix(A[4], B[4], u);
         camera.position.set(cx, cy - dist * Math.sin(tilt), dist * Math.cos(tilt));
         camera.lookAt(cx, cy, 0);
       }
@@ -287,14 +471,17 @@
         const tip = tipAt(t);
         const x = (tip.x / TW - 0.5) * SW, y = (0.5 - tip.y / TH) * SH;
         const enter = 1 - Math.pow(1 - Math.min(Math.max((t - 1.85) / 0.9, 0), 1), 3);
-        const lift = 0.045 * tip.up + (1 - enter) * 0.22;
-        pen.position.set(x + (1 - enter) * 2.2, y - (1 - enter) * 2.4, flatZ(x, y) + 0.004 + lift);
+        const exit = sm(10.5, 11.15, t);
+        const lift = 0.045 * tip.up + (1 - enter) * 0.22 + exit * 0.25;
+        pen.position.set(x + (1 - enter) * 2.2 + exit * 2.8, y - (1 - enter) * 2.4 - exit * 2.6, flatZ(x, y) + 0.004 + lift);
         pen.rotation.set(0.02 * Math.sin(t * 5.3), 0.025 * Math.sin(t * 3.7 + 1), 0.04 * Math.sin(t * 2.1));
-        pen.visible = t > 1.85;
+        pen.visible = t > 1.85 && t < 11.2;
       }
 
       function renderAt(t) {
+        lastT = t;
         shape(t);
+        envelopeAt(t);
         inkAt(t);
         penAt(t);
         frame(t);
