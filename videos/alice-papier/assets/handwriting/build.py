@@ -19,11 +19,10 @@ LINES = [  # (texte, x, y de la ligne de base, taille de l'em en px)
     ("Madame, Monsieur,", 112, 430, 60),
     ("Actuellement à la recherche d'une alternance,", 112, 540, 50),
     ("je me permets de vous adresser ma candidature", 112, 612, 50),
-    ("pour le poste de chargée de marketing digital.", 112, 684, 50),
 ]
-T_START = 2.75                  # premier contact du stylo (s)
-LINE_DUR = [2.3, 2.0, 1.5, 1.15]  # durée de chaque ligne : la main accélère, on écrit encore et encore
-LINE_GAP = [0.35, 0.2, 0.15]      # retour à la ligne
+T_START = 6.5                   # premier contact du stylo (s), après la recherche d'offres
+LINE_DUR = [2.0, 1.6, 1.2]       # durée de chaque ligne : la main accélère, on écrit encore et encore
+LINE_GAP = [0.35, 0.2]      # retour à la ligne
 LIFT_FRAC = 0.22                # part de la ligne passée stylo levé
 
 
