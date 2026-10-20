@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1350" />
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1350px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #000;
+              font-family: "Geist", sans-serif; color: #F5F5F2; }
+      .clip { position: absolute; inset: 0; width: 1080px; height: 1350px; }
+
+      /* Caméra : une seule prise. #world porte toute la scène, la caméra le déplace. */
+      #cam { position: absolute; inset: 0; perspective: 1700px; overflow: hidden; }
+      #rig { position: absolute; inset: 0; transform-style: preserve-3d; }
+      #world { position: absolute; left: 0; top: 0; width: 3000px; height: 3600px; transform-origin: 0 0; transform-style: preserve-3d; }
+      #scene::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse 75% 65% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.75) 100%); }
+
+      .halo { position: absolute; width: 1000px; height: 1000px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.06) 38%, rgba(255,255,255,0) 68%); }
+      .glass { position: absolute; border-radius: 32px;
+        background: linear-gradient(150deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.045) 48%, rgba(255,255,255,0.09) 100%);
+        border: 1.5px solid rgba(255,255,255,0.24);
+        box-shadow: inset 0 2px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(255,255,255,0.08), 0 40px 90px rgba(0,0,0,0.7); }
+      .muted { color: #A9A9A4; }
+      .lbl { font-size: 20px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9A95; }
+      .chips { position: absolute; display: flex; gap: 12px; }
+      .chip { height: 46px; padding: 0 20px; border-radius: 23px; display: flex; align-items: center;
+        font-size: 22px; font-weight: 500; border: 1.5px solid rgba(255,255,255,0.32); color: #E8E8E4; background: rgba(255,255,255,0.04); }
+      .chip.lit { background: #F5F5F2; color: #0B0B0A; border-color: #F5F5F2; box-shadow: 0 0 26px rgba(255,255,255,0.55); }
+      .bar { height: 12px; border-radius: 6px; background: rgba(255,255,255,0.20); margin-top: 20px; }
+      .green { color: #45D49A; }
+
+      /* 1. L'offre */
+      #offer { left: 320px; top: 480px; width: 760px; height: 440px; padding: 44px; }
+      #offer .t { margin-top: 18px; font-size: 40px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+      #offer .co { margin-top: 12px; font-size: 26px; font-weight: 500; }
+      #offer .lbl.k { position: absolute; left: 44px; top: 300px; }
+      #offer .chips { left: 44px; top: 340px; }
+
+      /* 2. Le CV */
+      #cv { left: 390px; top: 1100px; width: 620px; height: 820px; padding: 48px; }
+      #cv .name { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+      #cv .role { margin-top: 6px; font-size: 22px; font-weight: 500; }
+      #cv .lbl.k { position: absolute; left: 48px; top: 205px; }
+      #cv .chips { left: 48px; top: 250px; }
+      #cv .sec { position: absolute; left: 48px; right: 48px; }
+      #cv-badge { position: absolute; right: 40px; top: 48px; height: 44px; padding: 0 18px; border-radius: 22px;
+        display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; color: #0B0B0A; background: #45D49A;
+        box-shadow: 0 0 30px rgba(69,212,154,0.55); }
+      #cv-scan { position: absolute; left: 0; width: 100%; top: 0; height: 5px; background: #fff; opacity: 0;
+        box-shadow: 0 0 30px 12px rgba(255,255,255,0.7), 0 0 100px 34px rgba(255,255,255,0.25); }
+      .bar.lit { background: rgba(255,255,255,0.62); box-shadow: 0 0 14px rgba(255,255,255,0.45); }
+
+      /* 3. La lettre (sous le CV : elle en sort) */
+      #letter { left: 1080px; top: 1160px; width: 540px; height: 740px; padding: 44px; }
+      #letter .open { margin-top: 28px; font-size: 26px; font-weight: 500; }
+      #letter .bar { transform-origin: 0 50%; }
+      #letter svg { position: absolute; right: 40px; bottom: 44px; width: 200px; height: 74px;
+        filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
+
+      /* 4. Le dossier */
+      #dossier { left: 745px; top: 1420px; width: 520px; height: 200px; padding: 36px 40px; display: flex; align-items: center; gap: 28px; }
+      #dossier .ic { position: relative; width: 92px; height: 120px; flex: none; }
+      #dossier .ic div { position: absolute; width: 74px; height: 98px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+      #dossier .h { font-size: 34px; font-weight: 600; letter-spacing: -0.015em; }
+      #dossier .s { margin-top: 6px; font-size: 22px; font-weight: 500; }
+
+      /* 5. Le formulaire de l'employeur */
+      #browser { left: 650px; top: 2350px; width: 900px; height: 760px; overflow: hidden; border-radius: 30px; }
+      #browser .top { height: 64px; display: flex; align-items: center; gap: 10px; padding: 0 26px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+      #browser .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.25); }
+      #browser .url { margin-left: 18px; height: 36px; padding: 0 18px; border-radius: 18px; background: rgba(255,255,255,0.08);
+        display: flex; align-items: center; font-size: 19px; color: #A9A9A4; }
+      #browser .title { position: absolute; left: 40px; top: 80px; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; }
+      .field { position: absolute; }
+      .field .fl { position: absolute; left: 0; top: -32px; font-size: 19px; font-weight: 500; color: #A9A9A4; }
+      .field .box { position: absolute; inset: 0; border-radius: 14px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.25); }
+      .field .v { position: absolute; left: 20px; top: 0; height: 60px; display: flex; align-items: center; font-size: 23px; font-weight: 500; white-space: nowrap; }
+      .field .ck { position: absolute; right: 16px; top: 14px; width: 32px; height: 32px; border-radius: 50%; background: #45D49A; display: flex; align-items: center; justify-content: center; }
+      .field .ck svg { width: 18px; height: 18px; }
+      #f3 .v { top: 18px; height: auto; display: block; white-space: normal; width: 720px; font-size: 19px; font-weight: 400; line-height: 1.45; color: #DADAD5; }
+      #send { position: absolute; left: 40px; top: 668px; height: 60px; padding: 0 30px; border-radius: 14px; background: #F5F5F2; color: #0B0B0A;
+        display: flex; align-items: center; font-size: 22px; font-weight: 600; }
+      #pill { position: absolute; right: 40px; top: 672px; height: 52px; padding: 0 22px; border-radius: 26px; border: 1.5px solid rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.06); display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 500; }
+      #pill .pd { width: 12px; height: 12px; border-radius: 50%; background: #45D49A; box-shadow: 0 0 12px #45D49A; }
+      #pill .pt { position: relative; width: 210px; height: 26px; }
+      #pill .pt span { position: absolute; left: 0; top: 0; white-space: nowrap; }
+      #cursor { position: absolute; left: 840px; top: 3040px; width: 44px; height: 44px; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+
+      /* 6. La traînée, puis les notifications */
+      #spark { position: absolute; left: 1070px; top: 2700px; width: 60px; height: 60px; border-radius: 50%;
+        background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0.9) 25%, rgba(255,255,255,0) 70%); }
+      #streak { position: absolute; left: 1100px; top: 2722px; width: 1100px; height: 16px; border-radius: 8px;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 60%, #fff 100%);
+        box-shadow: 0 0 30px rgba(255,255,255,0.5); }
+      .notif { left: 1810px; width: 780px; height: 150px; padding: 0 34px; border-radius: 30px; display: flex; align-items: center; gap: 24px; }
+      .notif .ni { width: 74px; height: 74px; border-radius: 22px; flex: none; }
+      .notif .nh { font-size: 20px; font-weight: 500; color: #A9A9A4; }
+      .notif .nt { margin-top: 6px; font-size: 27px; font-weight: 600; letter-spacing: -0.01em; }
+      .notif .nck { margin-left: auto; width: 46px; height: 46px; border-radius: 50%; background: #45D49A; flex: none;
+        display: flex; align-items: center; justify-content: center; box-shadow: 0 0 24px rgba(69,212,154,0.6); }
+      .notif .nck svg { width: 24px; height: 24px; }
+
+      #h2, #h3, #h4, #cv, #letter, #dossier, #browser, #cursor, #spark, #streak, .notif, #end, #cv-badge,
+      #gc0, #gc1, #gc2, #gc3, .field .ck, #pt2 { opacity: 0; }
+
+      /* Légendes (écran) et fin */
+      .cap { position: absolute; left: 0; width: 1080px; top: 118px; text-align: center; font-size: 58px; font-weight: 500;
+             letter-spacing: -0.02em; line-height: 1.1; opacity: 0; }
+      #cE { font-size: 52px; }
+      #end { position: absolute; left: 0; top: 0; width: 1080px; height: 1350px; }
+      #logo { position: absolute; left: 430px; top: 400px; width: 220px; height: 220px; }
+      #end-name { position: absolute; left: 0; width: 1080px; top: 660px; text-align: center; font-size: 120px; font-weight: 600; letter-spacing: -0.035em; }
+      #end-url { position: absolute; left: 0; width: 1080px; top: 815px; text-align: center; font-size: 42px; font-weight: 500; color: #45D49A; }
+      #end-tag { position: absolute; left: 0; width: 1080px; top: 880px; text-align: center; font-size: 32px; font-weight: 400; color: #A9A9A4; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="22" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -20, "ratio": 2.5, "attack": 12, "release": 180, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 9}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
+      <div id="scene" class="clip" data-start="0" data-duration="22" data-track-index="0">
+        <div id="cam">
+          <div id="rig">
+            <div id="world" data-layout-allow-occlusion data-layout-allow-overlap>
+              <div class="halo" id="h1" style="left:200px;top:200px"></div>
+              <div class="halo" id="h2" style="left:505px;top:1020px"></div>
+              <div class="halo" id="h3" style="left:600px;top:2230px"></div>
+              <div class="halo" id="h4" style="left:1700px;top:2230px"></div>
+
+              <!-- 1. L'offre -->
+              <div class="glass" id="offer">
+                <div class="lbl">Offre · Lyon 2e</div>
+                <div class="t">Alternance — Chargée de marketing digital</div>
+                <div class="co muted">Atelier Nord</div>
+                <div class="lbl k">Compétences demandées</div>
+                <div class="chips">
+                  <div class="chip" id="oc0">Instagram</div><div class="chip" id="oc1">Canva</div><div class="chip" id="oc2">GA4</div><div class="chip" id="oc3">Meta Ads</div>
+                </div>
+              </div>
+
+              <!-- 3. La lettre, rangée sous le CV -->
+              <div class="glass" id="letter">
+                <div class="lbl">Lettre · Atelier Nord</div>
+                <div class="open">Madame, Monsieur,</div>
+                <div class="bar" id="lb0" style="width:94%"></div><div class="bar" id="lb1" style="width:88%"></div>
+                <div class="bar" id="lb2" style="width:96%"></div><div class="bar" id="lb3" style="width:72%"></div>
+                <div class="bar" id="lb4" style="width:90%"></div><div class="bar" id="lb5" style="width:84%"></div>
+                <div class="bar" id="lb6" style="width:93%"></div><div class="bar" id="lb7" style="width:58%"></div>
+                <svg viewBox="0 0 220 80"><path id="sig" d="M 10 62 C 22 20, 40 8, 46 30 C 52 52, 30 70, 26 54 C 22 38, 60 30, 70 44 C 78 56, 74 66, 82 52 C 90 38, 96 40, 98 52 C 100 62, 108 60, 114 46 C 120 32, 126 36, 128 50 C 130 64, 142 58, 150 40 C 156 28, 162 34, 160 48 C 158 62, 176 60, 196 30 M 60 74 C 100 70, 150 66, 206 58" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900"/></svg>
+              </div>
+
+              <!-- 2. Le CV -->
+              <div class="glass" id="cv">
+                <div class="name">Camille Martin</div>
+                <div class="role muted">Alternance · Marketing digital</div>
+                <div id="cv-badge"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Adapté à l'offre</div>
+                <div class="lbl k">Compétences</div>
+                <div class="chips" id="cv-old"><div class="chip">Word</div><div class="chip">Excel</div><div class="chip">PowerPoint</div></div>
+                <div class="chips" id="cv-new">
+                  <div class="chip lit" id="gc0">Instagram</div><div class="chip lit" id="gc1">Canva</div><div class="chip lit" id="gc2">GA4</div><div class="chip lit" id="gc3">Meta Ads</div>
+                </div>
+                <div class="sec" style="top:350px">
+                  <div class="lbl">Expériences</div>
+                  <div class="bar" id="cb0" style="width:90%"></div><div class="bar" id="cb1" style="width:76%"></div>
+                  <div class="bar" id="cb2" style="width:84%"></div><div class="bar" id="cb3" style="width:62%"></div>
+                </div>
+                <div class="sec" style="top:580px">
+                  <div class="lbl">Formation</div>
+                  <div class="bar" style="width:80%"></div><div class="bar" style="width:66%"></div><div class="bar" style="width:72%"></div>
+                </div>
+                <div id="cv-scan"></div>
+              </div>
+
+              <!-- 4. Le dossier -->
+              <div class="glass" id="dossier">
+                <div class="ic"><div style="left:0;top:0"></div><div style="left:18px;top:22px;background:rgba(255,255,255,0.16)"></div></div>
+                <div><div class="h">Dossier prêt</div><div class="s muted">CV adapté · Lettre signée</div></div>
+              </div>
+
+              <!-- 5. Le formulaire de l'employeur -->
+              <div class="glass" id="browser">
+                <div class="top"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="url">atelier-nord.fr/carrieres</div></div>
+                <div class="title">Postuler — Chargée de marketing digital</div>
+                <div class="field" id="f0" style="left:40px;top:160px;width:400px;height:60px"><div class="fl">Prénom</div><div class="box"></div><div class="v">Camille</div><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div class="field" id="f1" style="left:460px;top:160px;width:400px;height:60px"><div class="fl">Nom</div><div class="box"></div><div class="v">Martin</div><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div class="field" id="f2" style="left:40px;top:270px;width:820px;height:60px"><div class="fl">CV</div><div class="box"></div><div class="v">CV_Camille_Martin.pdf</div><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div class="field" id="f3" style="left:40px;top:380px;width:820px;height:140px"><div class="fl">Lettre de motivation</div><div class="box"></div><div class="v">Madame, Monsieur, votre atelier fait du contenu un levier de croissance : c'est ce que j'ai appris à piloter en stage chez Maison Calme, où mes campagnes e-mailing ont gagné 18 % de taux d'ouverture.</div><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div class="field" id="f4" style="left:40px;top:568px;width:400px;height:60px"><div class="fl">Niveau d'études</div><div class="box"></div><div class="v">Bac +3</div><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div id="send">Envoyer ma candidature</div>
+                <div id="pill"><div class="pd"></div><div class="pt"><span id="pt1">Alice remplit…</span><span id="pt2">Alice a tout rempli</span></div></div>
+              </div>
+              <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2.5l15 9.2-6.6 1.5 3.9 7.3-2.9 1.5-3.9-7.4L4.6 19z" fill="#fff" stroke="#0B0B0A" stroke-width="1.2" stroke-linejoin="round"/></svg>
+
+              <!-- 6. La traînée et les notifications -->
+              <div id="streak"></div>
+              <div id="spark"></div>
+              <div class="glass notif" id="n3" style="top:2275px"><img class="ni" src="assets/brand/alice-eyes.svg" alt="" /><div><div class="nh">Alice · à l'instant</div><div class="nt">Atelier Nord t'a répondu</div></div></div>
+              <div class="glass notif" id="n1" style="top:2465px"><img class="ni" src="assets/brand/alice-eyes.svg" alt="" /><div><div class="nh">Alice · à l'instant</div><div class="nt">Formulaire rempli chez Maison Brume</div></div></div>
+              <div class="glass notif" id="n2" style="top:2845px"><img class="ni" src="assets/brand/alice-eyes.svg" alt="" /><div><div class="nh">Alice · à l'instant</div><div class="nt">Candidature envoyée à Studio Ferro</div></div></div>
+              <div class="glass notif" id="n4" style="top:3035px"><img class="ni" src="assets/brand/alice-eyes.svg" alt="" /><div><div class="nh">Alice · à l'instant</div><div class="nt">Candidature envoyée à Collectif Lune</div></div></div>
+              <div class="glass notif" id="n0" style="top:2655px"><img class="ni" src="assets/brand/alice-eyes.svg" alt="" /><div><div class="nh">Alice · à l'instant</div><div class="nt">Candidature envoyée à Atelier Nord</div></div><div class="nck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0B0B0A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="cap" id="cA">Une offre te plaît.</div>
+        <div class="cap" id="cB">Ton CV <span class="green">s'adapte.</span></div>
+        <div class="cap" id="cC">Ta lettre <span class="green">s'écrit.</span></div>
+        <div class="cap" id="cD">Ton dossier est prêt.</div>
+        <div class="cap" id="cE">L'extension <span class="green">remplit</span> le formulaire.</div>
+        <div class="cap" id="cF">Tu relis. Tu envoies.</div>
+        <div class="cap" id="cG"><span class="green">Envoyée.</span></div>
+        <div class="cap" id="cH">Et la suivante. Et la suivante.</div>
+
+        <div id="end">
+          <img id="logo" src="assets/brand/alice-eyes.svg" alt="Alice" />
+          <div id="end-name">Alice</div>
+          <div id="end-url">alice-agent.fr</div>
+          <div id="end-tag">Postuler, c'est facile.</div>
+        </div>
+      </div>
+
+      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="22" data-track-index="5" data-volume="1"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const out = "power3.out", io = "power2.inOut";
+      const C = (px, py, s) => ({ x: 540 - px * s, y: 675 - py * s, scale: s });
+      const cam = (t, px, py, s, d, ease) => tl.to("#world", { ...C(px, py, s), duration: d, ease: ease || io }, t);
+      const capIn = (id, t) => tl.fromTo(id, { opacity: 0, y: 18, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: out }, t);
+      const capOut = (id, t) => tl.to(id, { opacity: 0, y: -14, filter: "blur(8px)", duration: 0.3, ease: "power2.in" }, t);
+      const cap = (id, a, b) => { capIn(id, a); capOut(id, b); };
+      const fill = (id, t, d, vertical) => {
+        tl.fromTo(id + " .v", { clipPath: vertical ? "inset(0% 0% 100% 0%)" : "inset(0% 100% 0% 0%)" },
+          { clipPath: "inset(0% 0% 0% 0%)", duration: d, ease: vertical ? "none" : "power1.out" }, t);
+        tl.to(id + " .box", { borderColor: "rgba(69,212,154,0.85)", boxShadow: "0 0 22px rgba(69,212,154,0.25)", duration: 0.25 }, t);
+        tl.fromTo(id + " .ck", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.4)" }, t + d * 0.8);
+      };
+
+      // ---- état initial ----
+      tl.set("#world", C(700, 700, 1.5), 0);
+
+      // La caméra flotte pendant toute la prise.
+      tl.fromTo("#rig", { rotationY: -5, rotationX: 4 }, { rotationY: 4, rotationX: -3, duration: 19, ease: "sine.inOut" }, 0);
+
+      // ===== 0 – 2.3 : une offre naît d'un point de lumière =====
+      tl.fromTo("#h1", { opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1, duration: 1.2, ease: "sine.out" }, 0);
+      tl.fromTo("#offer", { opacity: 0, z: -900, rotationX: 14, scale: 0.6 }, { opacity: 1, z: 0, rotationX: 0, scale: 1, duration: 1.2, ease: "expo.out" }, 0.15);
+      cam(0, 700, 760, 1.08, 2.4, "power2.out");
+      ["#oc0", "#oc1", "#oc2", "#oc3"].forEach((c, i) => {
+        tl.to(c, { backgroundColor: "#F5F5F2", color: "#0B0B0A", borderColor: "#F5F5F2", boxShadow: "0 0 26px rgba(255,255,255,0.55)", duration: 0.18 }, 1.25 + i * 0.16);
+      });
+      cap("#cA", 0.6, 2.2);
+
+      // ===== 2.3 – 4.6 : les compétences de l'offre descendent dans le CV =====
+      cam(2.3, 700, 1470, 0.95, 1.3);
+      tl.to("#h1", { opacity: 0, duration: 1 }, 2.4);
+      tl.to("#offer", { opacity: 0, filter: "blur(6px)", duration: 0.5, ease: "power1.in" }, 2.55);
+      tl.to("#h2", { opacity: 1, duration: 1 }, 2.4);
+      tl.fromTo("#cv", { opacity: 0, z: -600, rotationY: -12 }, { opacity: 1, z: 0, rotationY: 0, duration: 1.1, ease: out }, 2.35);
+      ["#gc0", "#gc1", "#gc2", "#gc3"].forEach((c, i) => {
+        tl.fromTo(c, { x: -74, y: -530, opacity: 1, rotation: (i - 1.5) * 4 },
+          { x: 0, y: 0, rotation: 0, duration: 1.05, ease: "power3.inOut" }, 2.45 + i * 0.07);
+      });
+      tl.to("#cv-old", { opacity: 0, y: 14, filter: "blur(6px)", duration: 0.35 }, 3.1);
+      tl.set("#cv-scan", { opacity: 1 }, 3.55);
+      tl.fromTo("#cv-scan", { y: 0 }, { y: 815, duration: 0.7, ease: "power1.inOut" }, 3.55);
+      tl.set("#cv-scan", { opacity: 0 }, 4.25);
+      ["#cb0", "#cb2", "#cb1"].forEach((b, i) => tl.to(b, { backgroundColor: "rgba(255,255,255,0.62)", boxShadow: "0 0 14px rgba(255,255,255,0.45)", duration: 0.2 }, 3.8 + i * 0.08));
+      tl.fromTo("#cv-badge", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 4.2);
+      cap("#cB", 2.6, 4.6);
+
+      // ===== 4.6 – 7.4 : la lettre sort de sous le CV et s'écrit =====
+      cam(4.5, 1005, 1530, 0.82, 1.2);
+      tl.fromTo("#letter", { opacity: 0, x: -420, rotationY: 18, z: -120 }, { opacity: 1, x: 0, rotationY: 0, z: 0, duration: 1.0, ease: out }, 4.7);
+      for (let i = 0; i < 8; i++) tl.fromTo("#lb" + i, { scaleX: 0 }, { scaleX: 1, duration: 0.22, ease: "power1.out" }, 5.45 + i * 0.16);
+      tl.to("#sig", { strokeDashoffset: 0, duration: 0.65, ease: "power1.inOut" }, 6.75);
+      cap("#cC", 5.0, 7.3);
+
+      // ===== 7.4 – 8.6 : CV et lettre se replient en un dossier =====
+      cam(7.4, 1005, 1520, 1.06, 1.1);
+      tl.to("#cv", { x: 305, y: 0, scale: 0.4, opacity: 0, rotationY: 20, duration: 0.7, ease: "power3.in" }, 7.4);
+      tl.to("#letter", { x: -345, y: -20, scale: 0.4, opacity: 0, rotationY: -20, duration: 0.7, ease: "power3.in" }, 7.45);
+      tl.fromTo("#dossier", { opacity: 0, scale: 0.5, z: -200 }, { opacity: 1, scale: 1, z: 0, duration: 0.6, ease: "back.out(1.6)" }, 7.95);
+      cap("#cD", 7.75, 9.25);
+
+      // ===== 8.6 – 9.9 : on suit le dossier jusqu'au site de l'employeur =====
+      cam(8.6, 1100, 2740, 1.0, 1.35);
+      tl.to("#dossier", { x: 95, y: 1060, duration: 1.2, ease: io }, 8.6);
+      tl.to("#dossier", { scale: 0.35, opacity: 0, duration: 0.3, ease: "power2.in" }, 9.65);
+      tl.to("#h2", { opacity: 0, duration: 0.8 }, 8.7);
+      tl.to("#h3", { opacity: 1, duration: 0.8 }, 9.0);
+      tl.fromTo("#browser", { opacity: 0, z: -350, rotationX: 10 }, { opacity: 1, z: 0, rotationX: 0, duration: 0.8, ease: out }, 9.15);
+
+      // ===== 9.9 – 12.6 : l'extension remplit le formulaire =====
+      cam(9.95, 1100, 2760, 1.04, 3.6, "sine.inOut");
+      fill("#f0", 10.0, 0.3);
+      fill("#f1", 10.35, 0.3);
+      fill("#f2", 10.75, 0.4);
+      fill("#f3", 11.2, 0.75, true);
+      fill("#f4", 12.05, 0.25);
+      tl.to("#pt1", { opacity: 0, y: -10, duration: 0.2 }, 12.35);
+      tl.fromTo("#pt2", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25 }, 12.4);
+      cap("#cE", 9.75, 12.65);
+
+      // ===== 12.8 – 14.0 : tu relis, tu cliques =====
+      tl.fromTo("#cursor", { opacity: 0, x: 520, y: 170 }, { opacity: 1, x: 0, y: 0, duration: 0.95, ease: io }, 12.85);
+      tl.to("#cursor", { scale: 0.82, duration: 0.08 }, 13.85);
+      tl.to("#cursor", { scale: 1, duration: 0.14 }, 13.93);
+      tl.to("#send", { scale: 0.95, backgroundColor: "#45D49A", duration: 0.08 }, 13.85);
+      tl.to("#send", { scale: 1, duration: 0.14 }, 13.93);
+      cap("#cF", 12.9, 14.15);
+
+      // ===== 14.0 – 15.1 : la candidature file en traînée de lumière =====
+      tl.to(["#browser", "#cursor"], { scale: 0.03, opacity: 0, duration: 0.32, ease: "power4.in" }, 14.05);
+      tl.to("#h3", { opacity: 0, duration: 0.5 }, 14.1);
+      tl.fromTo("#spark", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1.6, duration: 0.15, ease: "power2.out" }, 14.3);
+      tl.to("#spark", { x: 1100, duration: 0.7, ease: "power3.inOut" }, 14.4);
+      tl.fromTo("#streak", { opacity: 1, scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: 0.7, ease: "power3.inOut" }, 14.4);
+      tl.set("#streak", { transformOrigin: "100% 50%" }, 15.1);
+      tl.to("#streak", { scaleX: 0, duration: 0.35, ease: "power2.in" }, 15.1);
+      cam(14.35, 2200, 2730, 1.1, 0.8, "power3.inOut");
+      tl.to("#h4", { opacity: 1, duration: 0.6 }, 14.8);
+      tl.to("#spark", { scale: 5, opacity: 0, duration: 0.35, ease: "power2.out" }, 15.08);
+      tl.fromTo("#n0", { opacity: 0, scale: 0.7, z: -200 }, { opacity: 1, scale: 1, z: 0, duration: 0.55, ease: "back.out(1.7)" }, 15.08);
+      tl.fromTo("#n0 .nck", { scale: 0 }, { scale: 1, duration: 0.4, ease: "back.out(2.6)" }, 15.35);
+      cap("#cG", 15.1, 16.55);
+
+      // ===== 16.6 – 18.4 : d'autres suivent =====
+      cam(16.6, 2200, 2730, 0.64, 1.8);
+      ["#n1", "#n2", "#n3", "#n4"].forEach((n, i) => {
+        tl.fromTo(n, { opacity: 0, scale: 0.85, z: -260 }, { opacity: 1, scale: 1, z: 0, duration: 0.5, ease: out }, 16.85 + i * 0.3);
+      });
+      cap("#cH", 16.95, 18.5);
+
+      // ===== 18.4 – 22 : elles se rassemblent en Alice =====
+      [["#n3", 455], ["#n1", 265], ["#n0", 75], ["#n2", -115], ["#n4", -305]].forEach(([n, dy], i) => {
+        tl.to(n, { y: dy, scale: 0.25, opacity: 0, duration: 0.6, ease: "power3.in" }, 18.45 + i * 0.04);
+      });
+      tl.to("#h4", { opacity: 0, duration: 0.6 }, 18.7);
+      tl.set("#end", { opacity: 1 }, 18.9);
+      tl.fromTo("#logo", { opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1, duration: 0.8, ease: "expo.out" }, 18.95);
+      tl.fromTo("#end-name", { opacity: 0, y: 30, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: out }, 19.3);
+      tl.fromTo("#end-url", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: out }, 19.65);
+      tl.fromTo("#end-tag", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: out }, 19.9);
+      tl.fromTo("#end", { scale: 1.04 }, { scale: 1, duration: 3, ease: "sine.out" }, 18.95);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
