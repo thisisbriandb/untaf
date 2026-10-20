@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1350" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
+      #root { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
+      .clip { position: absolute; inset: 0; width: 1080px; height: 1350px; }
+      #paper3d { position: absolute; inset: 0; width: 1080px; height: 1350px; display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-duration="6.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 8}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
+      <div id="scene" class="clip" data-start="0" data-duration="6.5" data-track-index="0">
+        <canvas id="paper3d" width="1080" height="1350"></canvas>
+      </div>
+      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="6.5" data-track-index="5" data-volume="1"></audio>
+    </div>
+
+    <script type="module">
+      import * as THREE from "./assets/vendor/three.module.min.js";
+
+      const W = 1080, H = 1350;
+      const canvas = document.getElementById("paper3d");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(W, H, false);
+      renderer.setPixelRatio(1);
+      renderer.setClearColor(0xf6f5f2, 1);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.VSMShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.NeutralToneMapping;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 100);
+
+      // ---------- hasard déterministe ----------
+      function rng(seed) {
+        return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      }
+
+      // ---------- texture de papier (fibres + grain) et relief ----------
+      const TW = 1024, TH = 1448;
+      function paperCanvases() {
+        const r = rng(20261020);
+        const height = new Float32Array(TW * TH);
+        // grain fin
+        for (let i = 0; i < height.length; i++) height[i] = (r() - 0.5) * 0.35;
+        // fibres : courts traits orientés au hasard
+        for (let k = 0; k < 9000; k++) {
+          let x = r() * TW, y = r() * TH; const a = r() * Math.PI, len = 6 + r() * 26, s = (r() - 0.4) * 0.9;
+          for (let j = 0; j < len; j++) {
+            const xi = x | 0, yi = y | 0;
+            if (xi >= 0 && yi >= 0 && xi < TW && yi < TH) height[yi * TW + xi] += s;
+            x += Math.cos(a); y += Math.sin(a);
+          }
+        }
+        // flou léger 3x3
+        const h2 = new Float32Array(height.length);
+        for (let y = 1; y < TH - 1; y++) for (let x = 1; x < TW - 1; x++) {
+          let s = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += height[(y + dy) * TW + x + dx];
+          h2[y * TW + x] = s / 9;
+        }
+        const col = document.createElement("canvas"); col.width = TW; col.height = TH;
+        const nor = document.createElement("canvas"); nor.width = TW; nor.height = TH;
+        const ci = col.getContext("2d").createImageData(TW, TH), ni = nor.getContext("2d").createImageData(TW, TH);
+        for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+          const i = y * TW + x, h = h2[i];
+          const v = 246 + h * 10;
+          ci.data[i * 4] = v; ci.data[i * 4 + 1] = v - 1.5; ci.data[i * 4 + 2] = v - 5; ci.data[i * 4 + 3] = 255;
+          const hx = h2[y * TW + Math.min(x + 1, TW - 1)] - h2[y * TW + Math.max(x - 1, 0)];
+          const hy = h2[Math.min(y + 1, TH - 1) * TW + x] - h2[Math.max(y - 1, 0) * TW + x];
+          const k = 1.6, nx = -hx * k, ny = -hy * k, nz = 1, l = Math.hypot(nx, ny, nz);
+          ni.data[i * 4] = (nx / l * 0.5 + 0.5) * 255; ni.data[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255;
+          ni.data[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; ni.data[i * 4 + 3] = 255;
+        }
+        col.getContext("2d").putImageData(ci, 0, 0); nor.getContext("2d").putImageData(ni, 0, 0);
+        return { col, nor };
+      }
+      const { col, nor } = paperCanvases();
+      const map = new THREE.CanvasTexture(col); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
+      const normalMap = new THREE.CanvasTexture(nor);
+
+      // ---------- la feuille : A4, maillage aligné sur les plis ----------
+      const SW = 2.1, SH = 2.97;
+      const geo = new THREE.PlaneGeometry(SW, SH, 84, 120);
+      const base = geo.attributes.position.array.slice();
+      const mat = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
+        roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+      const sheet = new THREE.Mesh(geo, mat);
+      sheet.castShadow = true; sheet.receiveShadow = true;
+      const group = new THREE.Group(); group.add(sheet); scene.add(group);
+
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.16 }));
+      ground.position.z = -0.004; ground.receiveShadow = true; scene.add(ground);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xe4e0d8, 2.3));
+      const sun = new THREE.DirectionalLight(0xfffaf2, 1.9);
+      sun.position.set(-4.2, 2.6, 3.6); sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 9; sun.shadow.blurSamples = 16;
+      Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 20 });
+      scene.add(sun);
+
+      // ---------- les plis ----------
+      // Ordre de pliage : f1 (y=0), f2 (x=0), f3 (y=-0.7425), f4 (x=-0.525). On déplie à l'envers.
+      const FOLDS = [
+        { axis: "y", c: 0.0, gap: 0.002 },
+        { axis: "x", c: 0.0, gap: 0.004 },
+        { axis: "y", c: -0.7425, gap: 0.008 },
+        { axis: "x", c: -0.525, gap: 0.014 },
+      ];
+      // Lignes de pli dans la feuille à plat (mémoire du papier) : signe = montagne / vallée.
+      const CREASES = [
+        { k: 0, axis: "y", c: 0.0, s: 1 },
+        { k: 1, axis: "x", c: 0.0, s: -1 },
+        { k: 2, axis: "y", c: -0.7425, s: -1 }, { k: 2, axis: "y", c: 0.7425, s: 1 },
+        { k: 3, axis: "x", c: -0.525, s: 1 }, { k: 3, axis: "x", c: 0.525, s: 1 },
+      ];
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      // Chaque pli s'ouvre de π vers 0 avec un léger dépassement qui retombe.
+      function opening(t, t0, d) {
+        const u = Math.min(Math.max((t - t0) / d, 0), 1);
+        const settle = Math.sin(Math.min(Math.max((t - t0 - d) / 0.45, 0), 1) * Math.PI) * 0.05;
+        return Math.PI * (1 - ease(u)) - (u >= 1 ? settle : 0) ;
+      }
+      const SCHEDULE = [ [4.0, 1.25], [2.85, 0.95], [1.85, 0.85], [0.95, 0.8] ]; // f1..f4 : [début, durée]
+
+      // Bruit doux déterministe (ondulations du papier).
+      const R = rng(7);
+      const WAVES = Array.from({ length: 7 }, () => ({ fx: 0.6 + R() * 1.8, fy: 0.6 + R() * 1.8, ph: R() * 6.28, a: 0.0015 + R() * 0.0025 }));
+      const wobble = (x, y) => WAVES.reduce((z, w) => z + w.a * Math.sin(w.fx * x * 3.1 + w.ph) * Math.sin(w.fy * y * 2.7 + w.ph * 0.7), 0);
+
+      // Un rabat se soulève en se courbant : l'angle croît vers la pointe (intégré le long du rabat, donc sans étirement).
+      const STEP = 0.025;
+      function arc(a, L) {
+        const n = Math.ceil(L / STEP) + 2, ys = new Float32Array(n), zs = new Float32Array(n), th = new Float32Array(n);
+        const B = 0.55 * Math.sin(Math.max(Math.min(a, Math.PI), 0));
+        let y = 0, z = 0;
+        for (let j = 0; j < n; j++) {
+          const sj = j * STEP, t0 = a + B * Math.pow(Math.min(sj / L, 1), 2);
+          th[j] = t0; ys[j] = y; zs[j] = z;
+          const t1 = a + B * Math.pow(Math.min((sj + STEP) / L, 1), 2), tm = (t0 + t1) / 2;
+          y += STEP * Math.cos(tm); z += STEP * Math.sin(tm);
+        }
+        return { ys, zs, th, n };
+      }
+      const LEN = [1.485, 1.05, 0.7425, 0.525];
+
+      function shape(t) {
+        const angles = SCHEDULE.map(([t0, d]) => opening(t, t0, d));
+        const arcs = angles.map((a, k) => (Math.abs(a) > 1e-4 ? arc(a, LEN[k]) : null));
+        const pos = geo.attributes.position.array;
+        for (let i = 0; i < pos.length; i += 3) {
+          const x0 = base[i], y0 = base[i + 1];
+          // Mémoire des plis : chaque pli ouvert garde un léger angle (10° environ), plus les ondulations du papier.
+          const flat = Math.min(...angles.map((a) => 1 - Math.abs(a) / Math.PI));
+          let z = wobble(x0, y0) * flat;
+          for (const cr of CREASES) {
+            const open = 1 - Math.abs(angles[cr.k]) / Math.PI;
+            if (open <= 0) continue;
+            const d = Math.abs((cr.axis === "y" ? y0 : x0) - cr.c);
+            z += cr.s * 0.085 * open * (Math.min(d, 0.45) - (Math.min(d, 0.45) ** 2) / 0.9);
+          }
+          let x = x0, y = y0;
+          for (let k = 0; k < 4; k++) {
+            const A = arcs[k]; if (!A) continue;
+            const f = FOLDS[k], h = f.gap;
+            const coord = f.axis === "y" ? y : x;
+            if (coord > f.c + 1e-6) {
+              const ry = coord - f.c, rz = z - h;
+              const j = Math.min(Math.round(ry / STEP), A.n - 1);
+              const ny = A.ys[j] - rz * Math.sin(A.th[j]), nz = A.zs[j] + rz * Math.cos(A.th[j]);
+              if (f.axis === "y") y = f.c + ny; else x = f.c + ny;
+              z = h + nz;
+            }
+          }
+          pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
+        }
+        geo.attributes.position.needsUpdate = true;
+        geo.computeVertexNormals();
+      }
+
+      // Caméra presque fixe : elle part près du petit paquet et recule doucement pendant que la feuille s'ouvre.
+      const smooth = (a, b, u) => a + (b - a) * u;
+      function frame(t) {
+        const u = ease(Math.min(Math.max((t - 0.4) / 5.4, 0), 1));
+        const cx = smooth(-0.79, 0, u), cy = smooth(-1.11, 0, u);
+        const dist = smooth(4.6, 8.4, u);
+        const tilt = smooth(0.34, 0.16, u);
+        camera.position.set(cx + 0.12 * Math.sin(t * 0.35), cy - dist * Math.sin(tilt), dist * Math.cos(tilt));
+        camera.lookAt(cx, cy, 0);
+      }
+
+      function renderAt(t) {
+        shape(t);
+        frame(t);
+        renderer.render(scene, camera);
+      }
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>
