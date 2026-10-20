@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1350" />
+    <title>Alice — Postuler, c'est facile</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1350px; overflow: hidden; background: #FAFAF8; }
+      #root { position: relative; width: 1080px; height: 1350px; overflow: hidden;
+              font-family: "Geist", system-ui, sans-serif; color: #1A1918; }
+      .clip { position: absolute; inset: 0; }
+      #bg { background: #FAFAF8; }
+      .g { color: #006045; }
+      .muted { color: #8A8986; }
+
+      /* Plan 1 — l'accroche : un seul message à la fois, au centre. */
+      .hook { position: absolute; left: 90px; right: 90px; text-align: center;
+              font-weight: 500; letter-spacing: -0.022em; line-height: 1.12; }
+      #h1 { top: 540px; font-size: 80px; }
+      #h1-strike { position: absolute; left: 190px; right: 190px; top: 650px; height: 5px;
+                   background: #1A1918; border-radius: 4px; transform-origin: left center; }
+      #h2 { top: 560px; font-size: 88px; opacity: 0; }
+
+      /* Légendes au-dessus de l'appareil. */
+      .cap { position: absolute; left: 70px; right: 70px; text-align: center;
+             font-size: 56px; font-weight: 500; letter-spacing: -0.018em; line-height: 1.15; }
+      .cap span { display: inline-block; }
+
+      /* Un seul appareil à l'écran : la vraie capture, jamais redessinée. */
+      .device { position: absolute; overflow: hidden; background: #FFFFFF; opacity: 0;
+                border: 2px solid rgba(26,25,24,0.10);
+                box-shadow: 0 40px 90px rgba(26,25,24,0.14), 0 8px 24px rgba(26,25,24,0.06); }
+      #phone { left: 300px; top: 262px; width: 480px; height: 960px; border-radius: 54px; }
+      #phone video { position: absolute; left: 0; top: 0; width: 480px; height: 960px; }
+      #browser { left: 60px; top: 470px; width: 960px; height: 558px; border-radius: 28px; }
+      #browser video { position: absolute; left: 0; top: 0; width: 960px; height: 558px; }
+      /* Le geste du doigt, sur les vrais boutons. */
+      .tap { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
+             background: rgba(0,96,69,0.22); border: 3px solid rgba(0,96,69,0.55); opacity: 0; transform: scale(0.4); }
+
+      /* Plan 4. */
+      .beat { position: absolute; left: 80px; right: 80px; text-align: center;
+              font-size: 92px; font-weight: 500; letter-spacing: -0.022em; line-height: 1.1; opacity: 0; }
+      #b1 { top: 450px; } #b2 { top: 565px; } #b3 { top: 680px; }
+
+      /* Plan 5 — la fin. */
+      #eyes { position: absolute; left: 465px; top: 380px; width: 150px; height: 150px; opacity: 0; }
+      #name { position: absolute; left: 0; right: 0; top: 560px; text-align: center;
+              font-size: 120px; font-weight: 600; letter-spacing: -0.035em; opacity: 0; }
+      #url { position: absolute; left: 0; right: 0; top: 740px; text-align: center;
+             font-size: 44px; font-weight: 500; letter-spacing: -0.012em; color: #006045; opacity: 0; }
+      #free { position: absolute; left: 0; right: 0; top: 812px; text-align: center;
+              font-size: 32px; font-weight: 400; letter-spacing: 0; color: #8A8986; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1350" data-duration="23.4">
+      <div id="bg" class="clip" data-start="0" data-duration="23.4" data-track-index="0"></div>
+
+      <!-- Plan 1 — l'accroche -->
+      <section id="s1" class="clip" data-start="0" data-duration="2.7" data-track-index="1">
+        <div id="h1" class="hook">Postuler prenait<br />des soirées entières.</div>
+        <div id="h1-strike"></div>
+        <div id="h2" class="hook">Maintenant :<br /><span class="g">un clic.</span></div>
+      </section>
+
+      <!-- Plan 2 — une vraie candidature qui part -->
+      <section id="s2" class="clip" data-start="2.7" data-duration="8.5" data-track-index="1">
+        <div id="c2a" class="cap" style="top: 100px;">Tu valides.</div>
+        <div id="c2b" class="cap g" style="top: 166px;">Alice envoie.</div>
+      </section>
+      <div id="phone" class="device">
+        <video id="v-envoi" src="assets/video/app-envoi.mp4" muted playsinline
+               data-start="3.0" data-duration="8.0" data-track-index="2"></video>
+        <div id="tap1" class="tap" style="left: 240px; top: 269px;"></div>
+        <div id="tap2" class="tap" style="left: 240px; top: 736px;"></div>
+        <div id="tap3" class="tap" style="left: 378px; top: 595px;"></div>
+      </div>
+
+      <!-- Plan 3 — l'extension remplit le formulaire de l'employeur -->
+      <section id="s3" class="clip" data-start="11.2" data-duration="6.4" data-track-index="1">
+        <div id="c3a" class="cap" style="top: 280px;">Sur le site de l'employeur ?</div>
+        <div id="c3b" class="cap g" style="top: 346px;">L'extension remplit tout.</div>
+      </section>
+      <div id="browser" class="device">
+        <video id="v-ext" src="assets/video/extension-remplit.mp4" muted playsinline
+               data-start="11.5" data-duration="6.0" data-track-index="3"></video>
+      </div>
+
+      <!-- Plan 4 — la promesse honnête -->
+      <section id="s4" class="clip" data-start="17.6" data-duration="2.3" data-track-index="1">
+        <div id="b1" class="beat">Tu relis.</div>
+        <div id="b2" class="beat">Tu envoies.</div>
+        <div id="b3" class="beat g">C'est facile.</div>
+      </section>
+
+      <!-- Plan 5 — la fin -->
+      <section id="s5" class="clip" data-start="19.9" data-duration="3.5" data-track-index="1">
+        <img id="eyes" src="assets/brand/alice-eyes.svg" alt="" />
+        <div id="name">Alice</div>
+        <div id="url">alice-agent.fr</div>
+        <div id="free">Gratuit pour commencer</div>
+      </section>
+
+      <!-- Son : la musique de la première vidéo, et des effets calés sur les gestes. -->
+      <audio id="bgm" src="assets/audio/bed.wav" data-start="0" data-duration="23.4" data-track-index="10" data-volume="0.8"></audio>
+      <audio id="sfx-1" src="assets/audio/sfx/whoosh.wav" data-start="0.12" data-duration="0.40" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="sfx-2" src="assets/audio/sfx/tick.wav" data-start="1.05" data-duration="0.06" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-3" src="assets/audio/sfx/pop.wav" data-start="1.62" data-duration="0.12" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-4" src="assets/audio/sfx/swipe.wav" data-start="2.7" data-duration="0.30" data-track-index="12" data-volume="0.4"></audio>
+      <audio id="sfx-5" src="assets/audio/sfx/click.wav" data-start="3.5" data-duration="0.05" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-6" src="assets/audio/sfx/click.wav" data-start="5.42" data-duration="0.05" data-track-index="12" data-volume="0.7"></audio>
+      <audio id="sfx-7" src="assets/audio/sfx/click.wav" data-start="7.25" data-duration="0.05" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-8" src="assets/audio/sfx/check.wav" data-start="8.35" data-duration="0.25" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-9" src="assets/audio/sfx/chime.wav" data-start="8.45" data-duration="1.60" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-10" src="assets/audio/sfx/whoosh.wav" data-start="11.2" data-duration="0.40" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="sfx-11" src="assets/audio/sfx/click.wav" data-start="12.8" data-duration="0.05" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-12" src="assets/audio/sfx/shimmer.wav" data-start="13.1" data-duration="1.20" data-track-index="13" data-volume="0.5"></audio>
+      <audio id="sfx-13" src="assets/audio/sfx/pop.wav" data-start="17.75" data-duration="0.12" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="sfx-14" src="assets/audio/sfx/pop.wav" data-start="18.3" data-duration="0.12" data-track-index="12" data-volume="0.5"></audio>
+      <audio id="sfx-15" src="assets/audio/sfx/pop_hi.wav" data-start="18.85" data-duration="0.12" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-16" src="assets/audio/sfx/whoosh_up.wav" data-start="19.8" data-duration="0.60" data-track-index="12" data-volume="0.4"></audio>
+      <audio id="sfx-17" src="assets/audio/sfx/impact_bright.wav" data-start="20.05" data-duration="1.20" data-track-index="13" data-volume="0.55"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const out = "power3.out", io = "power3.inOut";
+
+      // Plan 1 — la phrase arrive, se barre, puis la promesse la remplace.
+      tl.fromTo("#h1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: out }, 0.12);
+      tl.fromTo("#h1-strike", { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: io, immediateRender: true }, 1.0);
+      tl.to("#h1", { color: "#92918F", duration: 0.3 }, 1.05);
+      tl.to(["#h1", "#h1-strike"], { opacity: 0, y: -40, duration: 0.3, ease: "power2.in" }, 1.45);
+      tl.fromTo("#h2", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 1.62);
+      tl.to("#h2", { opacity: 0, duration: 0.2 }, 2.48);
+
+      // Plan 2 — l'appareil s'installe ; trois gestes ; la candidature part.
+      tl.fromTo("#c2a", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: out }, 2.85);
+            tl.fromTo("#phone", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: out }, 2.75);
+      [["#tap1", 3.5], ["#tap2", 5.42], ["#tap3", 7.25]].forEach(([id, t]) => {
+        tl.fromTo(id, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.18, ease: out }, t - 0.12);
+        tl.to(id, { opacity: 0, scale: 1.5, duration: 0.35, ease: "power2.out" }, t + 0.08);
+      });
+      tl.fromTo("#c2b", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 8.35);
+      tl.to("#phone", { opacity: 0, duration: 0.25 }, 10.7);
+      tl.to(["#c2a", "#c2b"], { opacity: 0, duration: 0.25 }, 10.75);
+
+      // Plan 3 — la page de l'employeur ; le formulaire se remplit.
+      tl.fromTo("#c3a", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: out }, 11.35);
+      tl.fromTo("#browser", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: out }, 11.5);
+      tl.fromTo("#c3b", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 13.1);
+      tl.to(["#browser", "#c3a", "#c3b"], { opacity: 0, duration: 0.25 }, 17.2);
+
+      // Plan 4 — trois temps, un par battement.
+      tl.fromTo("#b1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: out }, 17.72);
+      tl.fromTo("#b2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: out }, 18.27);
+      tl.fromTo("#b3", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, 18.82);
+      tl.to(["#b1", "#b2", "#b3"], { opacity: 0, duration: 0.25 }, 19.6);
+
+      // Plan 5 — les yeux d'Alice, le nom, l'adresse ; puis immobile.
+      tl.fromTo("#eyes", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 20.0);
+      tl.fromTo("#name", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: out }, 20.25);
+      tl.fromTo("#url", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.45, ease: out }, 20.6);
+      tl.fromTo("#free", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: out }, 20.85);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
