@@ -11,7 +11,7 @@ import numpy as np
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-DUR = 3.5
+DUR = 11.5
 HERE = Path(__file__).parent
 N = int(SR * DUR)
 
@@ -50,6 +50,22 @@ def put(name, s0, d, t, gain=1.0, pan=0.0, fade=0.03):
 put("2380", 0.0, 0.9, 0.5, 0.5, 0.15)
 put("2386", 0.0, 1.0, 0.98, 0.55, -0.1)
 put("2384", 0.0, 0.39, 1.6, 0.25, 0.0)
+
+# Le stylo : un grattement de bille pendant chaque tracé, rien quand il est levé.
+import json
+ST = json.loads((HERE.parent / "handwriting" / "strokes.json").read_text())["strokes"]
+pen_src = [load(n) for n in ("2367", "3194", "2369")]
+bed = np.concatenate([x[:, int(0.05 * SR):-int(0.1 * SR)] for x in pen_src * 6], axis=1)
+bed = bed / (np.sqrt((bed ** 2).mean()) + 1e-9) * 0.05
+gate = np.zeros(N)
+for s in ST:
+    a, b = int(s["t0"] * SR), int(s["t1"] * SR)
+    gate[a:b] = 1
+k = int(0.012 * SR)
+gate = np.convolve(gate, np.ones(k) / k, "same")
+mix += bed[:, :N] * gate * 1.0
+put("2376", 0.0, 0.25, ST[0]["t0"] - 0.02, 0.18, 0.1)   # la pointe touche le papier
+put("2380", 0.0, 0.6, 1.95, 0.18, 0.4)                  # le stylo glisse dans le champ
 
 # Petite pièce : une réverbération courte, sèche, qui donne l'espace de la table.
 r = np.random.default_rng(3)
