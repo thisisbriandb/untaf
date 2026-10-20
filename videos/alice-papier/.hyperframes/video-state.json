@@ -1,7 +1,7 @@
 {
   "version": 1,
   "historyId": "f1175382-ddfb-4aad-a14f-e9fc4bef98e3",
-  "currentRevision": "458c92a5-07af-4e26-b4ed-3f837f1c191e",
+  "currentRevision": "1ed5c987-ac8b-4db5-8935-03c6a5c62e00",
   "pendingChanges": false,
   "files": {
     "AGENTS.md": {
@@ -133,8 +133,8 @@
       "content": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/a5/a537ca58d81830f49e6a90d93927cee71dbe0ee29a45148a03326f4296c95480"
     },
     "BRIEF.md": {
-      "hash": "e431ef721d7141b85d91288d319dd74daecdd311e15a69bf29b05a387e5893df",
-      "content": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/e4/e431ef721d7141b85d91288d319dd74daecdd311e15a69bf29b05a387e5893df"
+      "hash": "8384df47a4c2b8c59e7889eb6aa85e23698973ea2538a8606c55e6734a7b4d9e",
+      "content": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/83/8384df47a4c2b8c59e7889eb6aa85e23698973ea2538a8606c55e6734a7b4d9e"
     },
     "assets/handwriting/build.py": {
       "hash": "94a7188629f941ef0c95851032a59f2747edadd621799e0f1bc044827d423b32",
@@ -555,6 +555,21 @@
         "index.html": {
           "before": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/e9/e95b44ee8fa9a825a663b5e739481513fd15e0ab55558beca84bd241a6392bca",
           "after": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/8e/8eeaf6e140f06998adc9e9215b92bd7856f59db7ec60a88ec6c6fa9e61bf523e"
+        }
+      }
+    },
+    "1ed5c987-ac8b-4db5-8935-03c6a5c62e00": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1792516253734,
+      "endedAt": 1792516253736,
+      "files": {
+        "BRIEF.md": {
+          "before": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/e4/e431ef721d7141b85d91288d319dd74daecdd311e15a69bf29b05a387e5893df",
+          "after": "/root/.cache/hyperframes/history/f1175382-ddfb-4aad-a14f-e9fc4bef98e3/blobs/83/8384df47a4c2b8c59e7889eb6aa85e23698973ea2538a8606c55e6734a7b4d9e"
         }
       }
     }
