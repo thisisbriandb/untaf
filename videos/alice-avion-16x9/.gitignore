@@ -1,0 +1,7 @@
+renders/
+snapshots/
+node_modules/
+.hyperframes/artifacts/
+.hyperframes/*-lock
+capture/*.mp4
+capture-ext/*.mp4
