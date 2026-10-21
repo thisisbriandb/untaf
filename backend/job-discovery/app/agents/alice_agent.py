@@ -6,6 +6,7 @@ decides which tool to call (search_jobs, get_applications_status, etc.),
 executes it server-side, and returns a structured response.
 """
 
+import asyncio
 import json
 import re
 import logging
@@ -26,6 +27,7 @@ from app.models.job_posting import JobPosting, PostingStatus
 from app.models.application import Application, ApplicationStatus
 from app.models.mission import MissionEvent, MissionEventKind
 from app.agents.discovery.cv_audit import audit_candidate_profile
+from app.agents.discovery.signals import training_org_evidence
 from app.agents.discovery.cover_letter import write_cover_letter
 from app.agents.discovery.cv_editor import merge_entries, structure_cv_entries
 from app.agents.mission_log import get_or_create_mission
@@ -364,7 +366,22 @@ def _parts(response: llm.ChatReply) -> list:
 
 #: Dernier rafraîchissement des offres demandé depuis la conversation.
 REFRESH_EVERY = timedelta(minutes=30)
+REFRESH_WAIT = 20
 _LAST_REFRESH: dict[UUID, datetime] = {}
+_REFRESHING: set = set()
+
+
+async def _refresh_offers(candidate_id: UUID) -> int:
+    """Import en direct (France Travail, La Bonne Alternance) puis re-notation du stock."""
+    # La donnée métier vit chez la source, pas dans notre copie locale.
+    from app.agents.discovery.france_travail_task import ingest_for_candidate
+    from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
+
+    report = await ingest_for_candidate(candidate_id)
+    if not report.get("ok"):
+        return 0
+    await _match_candidate_to_existing_jobs(candidate_id)
+    return report["processed"]
 
 
 async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
@@ -377,7 +394,12 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
       - les candidatures déjà envoyées sortent de la liste. « Montre-moi les
         offres » veut dire « ce qui reste à traiter », pas l'historique.
     """
-    limit = args.get("limit", 5)
+    # Les modèles passent souvent les nombres en flottants (5.0) : un découpage
+    # de liste avec 5.0 lève une erreur.
+    try:
+        limit = max(1, min(int(args.get("limit") or 5), 20))
+    except (TypeError, ValueError):
+        limit = 5
     query = (args.get("query") or "").strip()
 
     refreshed = 0
@@ -385,17 +407,18 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
     last = _LAST_REFRESH.get(candidate_id)
     # Rafraîchir (import + re-notation de tout le stock) prend du temps et
     # charge la base : une fois par demi-heure suffit, pas à chaque message.
+    # Et jamais plus de REFRESH_WAIT secondes d'attente : au-delà, la liste part
+    # avec le stock actuel et le rafraîchissement finit en arrière-plan (sinon
+    # la requête dépassait le délai et le candidat voyait « un problème »).
     if not last or now - last >= REFRESH_EVERY:
+        _LAST_REFRESH[candidate_id] = now
+        task = asyncio.create_task(_refresh_offers(candidate_id))
+        _REFRESHING.add(task)
+        task.add_done_callback(_REFRESHING.discard)
         try:
-            # La donnée métier vit chez la source, pas dans notre copie locale.
-            from app.agents.discovery.france_travail_task import ingest_for_candidate
-            from app.agents.discovery.tasks import _match_candidate_to_existing_jobs
-
-            report = await ingest_for_candidate(candidate_id)
-            if report.get("ok"):
-                refreshed = report["processed"]
-                await _match_candidate_to_existing_jobs(candidate_id)
-            _LAST_REFRESH[candidate_id] = now
+            refreshed = await asyncio.wait_for(asyncio.shield(task), REFRESH_WAIT)
+        except asyncio.TimeoutError:
+            logger.info("Rafraîchissement des offres encore en cours : on sert le stock")
         except Exception as e:  # noqa: BLE001 — on sert le stock plutôt que rien
             logger.warning("Rafraîchissement des offres impossible : %s", e)
 
@@ -419,7 +442,10 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
                 JobPosting.title.ilike(q) | JobPosting.location.ilike(q)
             )
 
-        rows = unique_offers((await session.execute(stmt)).all())[:limit]
+        # Les écoles connues sortent aussi des notations antérieures, sans
+        # attendre la prochaine re-notation du stock.
+        rows = [r for r in unique_offers((await session.execute(stmt)).all())
+                if training_org_evidence(r[2], "", None)[0] != "strong"][:limit]
 
         # Le total sert à dire la vérité quand on n'affiche qu'un extrait.
         total_stmt = (
