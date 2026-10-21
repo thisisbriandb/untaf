@@ -31,7 +31,7 @@ from app.agents.discovery.cv_editor import merge_entries, structure_cv_entries
 from app.agents.mission_log import get_or_create_mission
 from app.agents.persona import IDENTITY
 from app.agents.alice_state import OPEN_STATUSES, load_state
-from app.agents.application.feasibility import apply_mode, direct_first
+from app.agents.application.feasibility import apply_mode, direct_first, unique_offers
 from app.schemas.candidate import ParsedCandidateProfile
 from app.schemas.matching import MatchingCriteria
 
@@ -409,7 +409,8 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
             .where(Application.status.in_(OPEN_STATUSES))
             # Les offres où Alice postule elle-même passent devant.
             .order_by(direct_first(), Application.match_score.desc())
-            .limit(limit)
+            # de quoi retirer les doublons (même offre par deux sources) et garder `limit`
+            .limit(limit * 4)
         )
 
         if query:
@@ -418,7 +419,7 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
                 JobPosting.title.ilike(q) | JobPosting.location.ilike(q)
             )
 
-        rows = (await session.execute(stmt)).all()
+        rows = unique_offers((await session.execute(stmt)).all())[:limit]
 
         # Le total sert à dire la vérité quand on n'affiche qu'un extrait.
         total_stmt = (
@@ -444,6 +445,7 @@ async def _execute_search_jobs(candidate_id: UUID, args: dict) -> dict:
             "status": app.status.value,
             # Dire d'emblée qui envoie : Alice, un clic, ou le candidat sur le site.
             "apply_mode": apply_mode(job),
+            "warning": _job_card(app, job, company_name)["warning"],
         })
 
     return {

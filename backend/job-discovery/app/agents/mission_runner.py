@@ -21,10 +21,15 @@ from app.agents.company_name import chez, display_company
 from app.billing import LimitReached
 from app.config import settings
 from app.database import async_session
-from app.models.job_posting import JobPosting, PostingStatus
 from app.models.application import Application
+from app.models.job_posting import JobPosting, PostingStatus
 from app.models.mission import (
-    Mission, MissionEvent, MissionEventKind, MissionRun, RunStatus, RunStep,
+    Mission,
+    MissionEvent,
+    MissionEventKind,
+    MissionRun,
+    RunStatus,
+    RunStep,
 )
 
 logger = logging.getLogger(__name__)
@@ -119,7 +124,13 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool,
     Alice doit être une candidature qui part, pas un dossier à finir ailleurs.
     """
     from app.agents.alice_state import OPEN_STATUSES
-    from app.agents.application.feasibility import APPLY_MODE_RANK, apply_mode, direct_first
+    from app.agents.application.feasibility import (
+        APPLY_MODE_RANK,
+        GOOD_MATCH,
+        apply_mode,
+        direct_first,
+        unique_offers,
+    )
     from app.models.company import Company
     from app.models.dispatch import ApplicationDispatch, DispatchStatus
 
@@ -149,14 +160,15 @@ async def _targets(candidate_id: UUID, count: int, sendable_first: bool,
             )))
         )).scalars().all())
 
-    rows = [r for r in rows if r[0].id not in settled]
+    rows = unique_offers([r for r in rows if r[0].id not in settled])
     if sendable_only:
         direct = [r for r in rows if apply_mode(r[1]) != "manual"]
         if direct:
             rows = direct
     if sendable_first:
         # Mission « postuler » : d'abord ce qu'Alice peut réellement envoyer.
-        rows.sort(key=lambda r: (APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
+        # Mais seulement parmi les offres qui correspondent vraiment.
+        rows.sort(key=lambda r: (r[0].match_score < GOOD_MATCH, APPLY_MODE_RANK[apply_mode(r[1])], -r[0].match_score))
     return rows[:count]
 
 

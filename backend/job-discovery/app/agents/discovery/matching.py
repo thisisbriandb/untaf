@@ -82,6 +82,8 @@ _ADJACENT = [
     ("finance", "ops"), ("finance", "legal"), ("hr", "legal"), ("hr", "ops"),
     ("ops", "engineering"), ("ops", "construction"), ("ops", "support"),
     ("engineering", "construction"),
+    ("admin", "hr"), ("admin", "ops"), ("admin", "support"),
+    ("admin", "legal"),
 ]
 ADJACENT_FAMILIES: dict[str, set[str]] = {}
 for _a, _b in _ADJACENT:
@@ -92,6 +94,29 @@ for _a, _b in _ADJACENT:
 #: compétences et que le candidat en couvre au moins cette part.
 FAR_FAMILY_MIN_SKILLS = 3
 FAR_FAMILY_MIN_COVERAGE = 0.6
+
+#: Sans rien sur le métier lui-même (ni compétences comparables, ni métier
+#: identifié des deux côtés), le score ne repose que sur la logistique —
+#: contrat, ville, modalité, fraîcheur — que toute alternance de la bonne ville
+#: remplit. Un tel score ne peut pas dire « ça te correspond » : il est plafonné
+#: sous le seuil de présélection.
+CONTEXT_ONLY_CAP = 60
+
+#: Mots d'un intitulé qui ne disent rien du métier.
+_TITLE_NOISE = {
+    "alternance", "alternant", "alternante", "apprenti", "apprentie", "apprentissage", "stage",
+    "stagiaire", "junior", "senior", "confirme", "confirmee", "assistant", "assistante",
+    "charge", "chargee", "chef", "cheffe", "responsable", "gestionnaire", "agent", "agente",
+    "contrat", "poste", "offre", "pour", "avec", "dans", "des", "les", "une", "chez",
+    "etudiant", "etudiante", "projet", "service", "equipe", "paris", "lyon",
+}
+
+
+def _title_words(text: str | None) -> set[str]:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", (text or "").lower())
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    return {w for w in re.findall(r"[a-z]{4,}", t) if w not in _TITLE_NOISE}
 
 
 def normalize_contract(value: str | None) -> str:
@@ -279,6 +304,22 @@ def evaluate_match(
                     "à choisir dans les critères pour en voir"
                 )
 
+    # Métier de l'offre non identifiable alors que celui du candidat l'est :
+    # elle ne passe que si quelque chose la relie au profil (compétences
+    # couvertes, ou un mot de métier commun avec son titre). Sans cela, un
+    # « Assistant administratif » ou une « Secrétaire médicale » arrivait à
+    # 73 % chez un comptable, sur la seule foi du contrat et de la ville.
+    if criteria.job_families and not family_known:
+        required = canonical_set(tech_stack)
+        owned = canonical_set(candidate.skills)
+        coverage_ratio = skill_coverage(required, owned)[0] if required and owned else 0.0
+        shared = _title_words(title) & _title_words(candidate.headline)
+        if not shared and not (len(required) >= FAR_FAMILY_MIN_SKILLS and coverage_ratio >= 0.5):
+            rejections.append(
+                f"métier de l'offre non identifiable et sans lien avec le profil "
+                f"({', '.join(criteria.job_families)})"
+            )
+
     contract_known = job_contract not in ("unknown", "other", "")
     if wanted_contracts and contract_known and job_contract not in wanted_contracts:
         rejections.append(f"contrat '{job_contract}' hors du mandat")
@@ -442,6 +483,9 @@ def evaluate_match(
     raw = earned / possible
     confidence = COVERAGE_FLOOR + (1 - COVERAGE_FLOOR) * coverage
     score = int(round(100 * raw * confidence))
+    if "skills" not in dims and "family" not in dims:
+        score = min(score, CONTEXT_ONLY_CAP)
+        signals["context_only"] = True
 
     return MatchResult(
         score=max(0, min(100, score)),

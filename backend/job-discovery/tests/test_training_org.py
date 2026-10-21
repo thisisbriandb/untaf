@@ -32,7 +32,8 @@ PITCH = ("Rejoins notre école ! Formation gratuite et rémunérée, nous te tro
 
 @pytest.mark.parametrize("name,text,employer,level", [
     ("ISCOD", PITCH, None, "strong"),                                     # phrases seules, nombreuses
-    ("Studi", "Alternance commerciale", {"naf": "85.59B"}, "weak"),        # un seul indice
+    ("Studi", "Alternance commerciale", None, "strong"),                 # enseigne connue : le nom suffit
+    ("Acme Conseil", "Alternance commerciale", {"naf": "85.59B"}, "weak"),  # un seul indice
     ("MBway Lyon", "Alternance — frais de scolarité pris en charge", {"naf": "8542Z"}, "strong"),
     ("École de Commerce de Lyon", "Assistant RH en alternance dans nos services", None, "weak"),
     ("Institut Pasteur", "Technicien de laboratoire en alternance", None, None),

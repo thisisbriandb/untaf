@@ -239,20 +239,55 @@ def apply_mode(job: JobPosting) -> str:
 _DIRECT_CHANNELS = (ApplyChannel.EMAIL, ApplyChannel.RECRUITEE_API, ApplyChannel.TALEEZ_API)
 
 
+#: À partir de ce score, une offre où Alice postule elle-même passe devant les
+#: autres. En dessous, la pertinence l'emporte : une offre à 60 % qu'Alice
+#: peut envoyer ne doit pas cacher une offre à 95 % à finir sur le site.
+GOOD_MATCH = 70
+
+
 def direct_first():
     """
-    Clé de tri SQL : 0 pour une offre où Alice postule elle-même, 1 sinon.
+    Clé de tri SQL : 0 pour une offre bien notée où Alice postule elle-même, 1 sinon.
 
     Placée avant le score dans les `ORDER BY` : les sources où le candidat
     finit seul (Werecruit, sites employeurs…) sont nombreuses et ne doivent
-    jamais faire sortir de la sélection celles où Alice envoie. Approximation
-    en base de `apply_mode` (qui reste la référence pour l'affichage).
+    jamais faire sortir de la sélection celles où Alice envoie — à condition
+    qu'elles correspondent vraiment (`GOOD_MATCH`). Approximation en base de
+    `apply_mode` (qui reste la référence pour l'affichage).
     """
     from sqlalchemy import and_, case, not_, or_
+
+    from app.models.application import Application
 
     channels = _DIRECT_CHANNELS + ((ApplyChannel.LBA_API,) if settings.lba_apply_enabled else ())
     by_email = and_(
         JobPosting.contact_json["email"].astext.is_not(None),
         not_(JobPosting.contact_json.has_key("extra_documents")),
     ) if settings.can_send_email else False
-    return case((or_(JobPosting.apply_channel.in_(channels), by_email), 0), else_=1)
+    return case((and_(or_(JobPosting.apply_channel.in_(channels), by_email),
+                       Application.match_score >= GOOD_MATCH), 0), else_=1)
+
+
+def same_offer_key(title: str | None, company: str | None) -> tuple[str, str]:
+    """Une même offre arrive par plusieurs sources, ou une fois par campus : même clé."""
+    import re
+    import unicodedata
+
+    def norm(x: str | None) -> str:
+        x = unicodedata.normalize("NFKD", (x or "").lower())
+        x = "".join(c for c in x if not unicodedata.combining(c))
+        x = re.sub(r"\((h|f)\s*/\s*(f|h)\)|\bh\s*/\s*f\b|\bf\s*/\s*h\b", " ", x)
+        return " ".join(re.findall(r"[a-z0-9]+", x))
+    return norm(title), norm(company)
+
+
+def unique_offers(rows):
+    """Garde la première occurrence (la mieux classée) de chaque offre ; rows = (app, job, company)."""
+    seen, out = set(), []
+    for row in rows:
+        key = same_offer_key(row[1].title, row[2])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
