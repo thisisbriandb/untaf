@@ -183,15 +183,25 @@ _FAMILY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("support", ("customer care", "customer support", "customer success",
                  "support agent", "service client", "hotline", "helpdesk",
                  "conseiller client", "technicien support")),
-    ("marketing", ("marketing", "growth", "seo", "sea", "content manager",
+    ("marketing", ("marketing", "growth", "seo", "sea", "content manager", "crm",
                    "communication", "brand", "social media", "acquisition",
                    "community manager", "réseaux sociaux")),
     ("hr", ("recruiter", "recruteur", "talent acquisition", "talent partner",
             "human resources", "ressources humaines", "people ops", "hrbp",
             "chargé de recrutement")),
+    # Avant « finance » ? Non : « assistant administratif et comptable » reste
+    # de la comptabilité, d'où sa place juste après.
     ("finance", ("comptab", "accountant", "controller", "contrôleur de gestion",
                  "auditeur", "audit financier", "trésorerie", "analyste financier",
                  "cfo", "daf")),
+    ("admin", ("assistant administratif", "assistante administrative", "assistant(e) administratif",
+               "assistant(e) administrati", "secrétaire", "secretaire", "secrétariat", "secretariat",
+               "assistant de direction", "assistante de direction", "assistant(e) de direction",
+               "assistant de gestion", "assistante de gestion", "gestionnaire administrati",
+               "agent administratif", "agente administrative", "employé administratif",
+               "employée administrative", "agent d'accueil", "hôte d'accueil", "hôtesse d'accueil",
+               "chargé d'accueil", "administrative assistant", "office assistant", "receptionist",
+               "réceptionniste")),
     ("design", ("ux designer", "ui designer", "product designer", "designer",
                 "graphiste", "directeur artistique", "motion design", "ux/ui")),
     ("product", ("product manager", "product owner", "chef de produit",
@@ -265,13 +275,21 @@ _EDUCATION_NAF = re.compile(r"^\s*85")
 _SCHOOL_NAME = re.compile(
     r"\b(e|é)coles?\b|\bschool\b|\bcfa\b|\bcampus\b|\binstitut\b|\bacad(e|é)m(y|ie)\b|"
     r"\bcentre de formation\b|\borganisme de formation\b|\bformations?\b|\bbusiness school\b|"
-    r"\bapprentissage\b",
+    r"\bapprentissage\b|\b(e|é)ducation\b|\blearning\b",
+    re.I,
+)
+#: Enseignes d'écoles qui publient des « offres » pour remplir leurs promotions :
+#: le nom suffit, pas besoin d'un second indice.
+_SCHOOL_BRANDS = re.compile(
+    r"\bief2i\b|\biscod\b|\bstudi\b|my ?digital ?school|\bsup de vente\b|walter[- ]learning|"
+    r"\bescam\b|\bnextformation\b|\baftec\b|\bifocop\b|\bpigier\b|\bnetvibes school\b",
     re.I,
 )
 #: Instituts, académies… qui sont de vrais employeurs.
 _REAL_EMPLOYERS = re.compile(
     r"institut (pasteur|curie|gustave roussy|national|de recherche|fran(c|ç)ais du p(e|é)trole)|"
-    r"\binserm\b|\bcnrs\b|\binrae?\b|\bifremer\b|acad(e|é)mie (de|d')|\bminist(e|è)re\b",
+    r"\binserm\b|\bcnrs\b|\binrae?\b|\bifremer\b|acad(e|é)mie (de|d')|\bminist(e|è)re\b|"
+    r"(e|é)ducation nationale|hachette (e|é)ducation|\bnathan\b",
     re.I,
 )
 _STUDENT_PITCH = re.compile(
@@ -305,7 +323,11 @@ def training_org_evidence(
     if _EDUCATION_NAF.match(naf.replace(".", "")) or re.search(r"enseignement|formation", sector, re.I):
         clues.append(f"employeur du secteur de l'enseignement ({naf or sector})")
 
-    for label in dict.fromkeys(x for x in (name, employer.get("legal_name")) if x):
+    labels = list(dict.fromkeys(x for x in (name, employer.get("legal_name")) if x))
+    for label in labels:
+        if _SCHOOL_BRANDS.search(label):
+            return "strong", f"école connue pour publier des offres d'alternance (« {label} »)"
+    for label in labels:
         if _SCHOOL_NAME.search(label) and not _REAL_EMPLOYERS.search(label):
             clues.append(f"nom d'école ou d'organisme de formation (« {label} »)")
             break

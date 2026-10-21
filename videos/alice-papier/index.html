@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1350" />
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
+      #root { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #F6F5F2; }
+      .clip { position: absolute; inset: 0; width: 1080px; height: 1350px; }
+      #paper3d { position: absolute; inset: 0; width: 1080px; height: 1350px; display: block; }
+      #overlay { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #1A1918; pointer-events: none; }
+      #eyes { position: absolute; left: 430px; top: 128px; width: 220px; height: 110px; opacity: 0; }
+      #eyes .eye { transform-box: fill-box; transform-origin: 50% 50%; }
+      .cap { position: absolute; left: 0; width: 1080px; top: 150px; text-align: center; font-size: 46px; font-weight: 500;
+             letter-spacing: -0.02em; opacity: 0; }
+      .green { color: #006045; }
+      #rings { position: absolute; left: 0; top: 0; opacity: 0; }
+      #logo { position: absolute; left: 440px; top: 420px; width: 200px; height: 200px; opacity: 0; }
+      #end-name { position: absolute; left: 0; width: 1080px; top: 650px; text-align: center; font-size: 112px; font-weight: 600; letter-spacing: -0.035em; opacity: 0; }
+      #end-url { position: absolute; left: 0; width: 1080px; top: 800px; text-align: center; font-size: 40px; font-weight: 500; color: #006045; opacity: 0; }
+      #end-tag { position: absolute; left: 0; width: 1080px; top: 862px; text-align: center; font-size: 30px; color: #6B6A66; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="25.5" data-width="1080" data-height="1350" data-fx-chain='{"version": 1, "nodes": [{"type": "compressor", "id": "m1", "label": "Glue", "params": {"threshold": -24, "ratio": 2.5, "attack": 8, "release": 150, "knee": 6}}, {"type": "gain", "id": "m3", "label": "Loudness", "params": {"gain": 10}}, {"type": "truepeak", "id": "m2", "label": "Ceiling", "params": {"ceiling": -1.5, "lookahead": 3, "release": 80}}]}'>
+      <div id="scene" class="clip" data-start="0" data-duration="25.5" data-track-index="0">
+        <canvas id="paper3d" width="1080" height="1350"></canvas>
+        <div id="overlay">
+          <svg id="eyes" viewBox="0 0 220 110"><g class="eye" id="eyeL"><circle cx="55" cy="55" r="34" fill="none" stroke="#006045" stroke-width="13"/></g><g class="eye" id="eyeR"><circle cx="165" cy="55" r="34" fill="none" stroke="#006045" stroke-width="13"/></g></svg>
+          <div class="cap" id="capA">Alice trouve <span class="green">les offres</span> pour toi.</div>
+          <div class="cap" id="cap1">Alice rédige <span class="green">tes lettres de motivation.</span></div>
+          <div class="cap" id="capC">Et elle <span class="green">postule</span> pour toi.</div>
+          <svg id="rings" viewBox="0 0 1080 1350" width="1080" height="1350"><g id="ringsG"><circle cx="305.5" cy="675" r="167" fill="none" stroke="#006045" stroke-width="16"/><circle cx="774.5" cy="675" r="167" fill="none" stroke="#006045" stroke-width="16"/></g></svg>
+          <img id="logo" src="assets/brand/alice-eyes.svg" alt="Alice" />
+          <div id="end-name">Alice</div>
+          <div id="end-url">alice-agent.fr</div>
+          <div id="end-tag">Gratuit pour commencer</div>
+        </div>
+      </div>
+      <audio id="sound" src="assets/audio/sound.wav" data-start="0" data-duration="25.5" data-track-index="5" data-volume="1"></audio>
+    </div>
+
+    <script src="assets/handwriting/strokes.js"></script>
+    <script src="assets/journal/targets.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      // La suite de l'histoire se cale sur la fin de l'écriture (S2 = décalage par rapport au premier montage).
+      const S2 = window.STROKES.end - 10.3873;
+      const at = (x) => x + S2;
+      tl.fromTo("#capA", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 1.1);
+      tl.to("#capA", { opacity: 0, y: -10, duration: 0.3, ease: "power2.in" }, 4.4);
+      // Les yeux d'Alice s'ouvrent au-dessus de la feuille déchirée, clignent, puis s'effacent.
+      tl.fromTo("#eyes", { opacity: 0 }, { opacity: 1, duration: 0.25 }, at(12.75));
+      tl.fromTo(".eye", { scaleY: 0.06 }, { scaleY: 1, duration: 0.32, ease: "power3.out" }, at(12.75));
+      tl.to(".eye", { scaleY: 0.08, duration: 0.08, ease: "power2.in" }, at(13.25));
+      tl.to(".eye", { scaleY: 1, duration: 0.14, ease: "power2.out" }, at(13.33));
+      tl.to("#eyes", { scale: 0.88, duration: 0.6, ease: "power2.inOut" }, at(13.55));
+      tl.to("#eyes", { opacity: 0, duration: 0.3 }, at(14.3));
+      tl.fromTo("#cap1", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, at(14.6));
+      tl.to("#cap1", { opacity: 0, y: -10, duration: 0.3, ease: "power2.in" }, at(16.0));
+      tl.fromTo("#capC", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, at(18.3));
+      tl.to("#capC", { opacity: 0, y: -10, duration: 0.3, ease: "power2.in" }, at(20.6));
+      // Les enveloppes rangées en deux anneaux deviennent les yeux d'Alice, qui se resserrent en logo.
+      tl.to("#rings", { opacity: 1, duration: 0.3 }, at(20.95));
+      tl.to("#ringsG", { scale: 0.1333, y: -155, svgOrigin: "540 675", duration: 0.75, ease: "power3.inOut" }, at(21.3));
+      tl.to("#ringsG circle", { attr: { "stroke-width": 82 }, duration: 0.75, ease: "power3.inOut" }, at(21.3));
+      tl.fromTo("#logo", { opacity: 0 }, { opacity: 1, duration: 0.3 }, at(21.95));
+      tl.to("#rings", { opacity: 0, duration: 0.2 }, at(22.15));
+      tl.fromTo("#end-name", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, at(22.15));
+      tl.fromTo("#end-url", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, at(22.4));
+      tl.fromTo("#end-tag", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, at(22.6));
+      window.__timelines["main"] = tl;
+    </script>
+    <script type="module">
+      import * as THREE from "./assets/vendor/three.module.min.js";
+
+      const W = 1080, H = 1350;
+      // Deux décalages : S1 avant l'écriture (le stylo arrive après la recherche), S2 après (déchirure, enveloppe…).
+      const S1 = 6.5 - 2.75;
+      const S2 = window.STROKES.end - 10.3873;
+      const canvas = document.getElementById("paper3d");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(W, H, false);
+      renderer.setPixelRatio(1);
+      renderer.setClearColor(0xf6f5f2, 1);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.NeutralToneMapping;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 100);
+
+      // ---------- hasard déterministe ----------
+      function rng(seed) {
+        return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      }
+
+      // ---------- texture de papier (fibres + grain) et relief ----------
+      const TW = 1024, TH = 1448;
+      function paperCanvases() {
+        const r = rng(20261020);
+        const height = new Float32Array(TW * TH);
+        // grain fin
+        for (let i = 0; i < height.length; i++) height[i] = (r() - 0.5) * 0.35;
+        // fibres : courts traits orientés au hasard
+        for (let k = 0; k < 9000; k++) {
+          let x = r() * TW, y = r() * TH; const a = r() * Math.PI, len = 6 + r() * 26, s = (r() - 0.4) * 0.9;
+          for (let j = 0; j < len; j++) {
+            const xi = x | 0, yi = y | 0;
+            if (xi >= 0 && yi >= 0 && xi < TW && yi < TH) height[yi * TW + xi] += s;
+            x += Math.cos(a); y += Math.sin(a);
+          }
+        }
+        // flou léger 3x3
+        const h2 = new Float32Array(height.length);
+        for (let y = 1; y < TH - 1; y++) for (let x = 1; x < TW - 1; x++) {
+          let s = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += height[(y + dy) * TW + x + dx];
+          h2[y * TW + x] = s / 9;
+        }
+        const col = document.createElement("canvas"); col.width = TW; col.height = TH;
+        const nor = document.createElement("canvas"); nor.width = TW; nor.height = TH;
+        const ci = col.getContext("2d").createImageData(TW, TH), ni = nor.getContext("2d").createImageData(TW, TH);
+        for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+          const i = y * TW + x, h = h2[i];
+          const v = 246 + h * 10;
+          ci.data[i * 4] = v; ci.data[i * 4 + 1] = v - 1.5; ci.data[i * 4 + 2] = v - 5; ci.data[i * 4 + 3] = 255;
+          const hx = h2[y * TW + Math.min(x + 1, TW - 1)] - h2[y * TW + Math.max(x - 1, 0)];
+          const hy = h2[Math.min(y + 1, TH - 1) * TW + x] - h2[Math.max(y - 1, 0) * TW + x];
+          const k = 1.6, nx = -hx * k, ny = -hy * k, nz = 1, l = Math.hypot(nx, ny, nz);
+          ni.data[i * 4] = (nx / l * 0.5 + 0.5) * 255; ni.data[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255;
+          ni.data[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; ni.data[i * 4 + 3] = 255;
+        }
+        col.getContext("2d").putImageData(ci, 0, 0); nor.getContext("2d").putImageData(ni, 0, 0);
+        return { col, nor };
+      }
+      const { col, nor } = paperCanvases();
+      // L'encre s'écrit sur une copie de la texture, redessinée à chaque image (seek-safe).
+      const ink = document.createElement("canvas"); ink.width = TW; ink.height = TH;
+      const ictx = ink.getContext("2d");
+      const STROKES = window.STROKES.strokes;
+      const typed = new Image(); typed.src = "assets/letter/typed.png";
+      let lastT = 0;
+      typed.onload = () => renderAt(lastT);
+      function inkAt(t, tb) {
+        ictx.drawImage(col, 0, 0);
+        // La lettre se réécrit de haut en bas pendant que les morceaux se rejoignent.
+        const sweep = Math.min(Math.max((tb - REWRITE[0]) / (REWRITE[1] - REWRITE[0]), 0), 1) * TH;
+        if (sweep > 0 && typed.complete && typed.naturalWidth) {
+          ictx.save(); ictx.beginPath(); ictx.rect(0, 0, TW, sweep); ictx.clip(); ictx.drawImage(typed, 0, 0, TW, TH); ictx.restore();
+        }
+        ictx.save(); ictx.beginPath(); ictx.rect(0, sweep, TW, TH - sweep); ictx.clip();
+        ictx.lineCap = "round"; ictx.lineJoin = "round";
+        for (const s of STROKES) {
+          if (t <= s.t0) break;
+          const L = s.len[s.len.length - 1] * Math.min((t - s.t0) / (s.t1 - s.t0), 1);
+          const P = s.pts;
+          for (let j = 1; j < P.length && s.len[j - 1] < L; j++) {
+            let [x1, y1] = P[j];
+            if (s.len[j] > L) { const u = (L - s.len[j - 1]) / (s.len[j] - s.len[j - 1]); x1 = P[j - 1][0] + (x1 - P[j - 1][0]) * u; y1 = P[j - 1][1] + (y1 - P[j - 1][1]) * u; }
+            // bille : un trait fin, la pression varie un peu le long du tracé
+            ictx.lineWidth = 2.5 + 0.55 * Math.sin(s.len[j] * 0.09 + s.t0 * 7);
+            ictx.strokeStyle = "rgba(27,36,74,0.93)";
+            ictx.beginPath(); ictx.moveTo(P[j - 1][0], P[j - 1][1]); ictx.lineTo(x1, y1); ictx.stroke();
+          }
+        }
+        ictx.restore();
+        // Le bord déchiré : un liseré de fibres blanches, là où la déchirure est passée.
+        const tp = tearParams(tb);
+        if (tp.on) {
+          const front = (0.5 - tp.yf / SH) * TH;
+          ictx.fillStyle = "rgba(255,255,253,0.9)";
+          for (let cy = 0; cy < Math.min(front, TH); cy++) { const jx = JX[cy]; ictx.fillRect(jx - 2.5 - RAG2[cy], cy, 5 + RAG2[cy] * 2, 1); }
+        }
+        map.needsUpdate = true;
+      }
+      // Position de la pointe : sur le tracé en cours, ou en l'air entre deux tracés.
+      function tipAt(t) {
+        const first = STROKES[0], last = STROKES[STROKES.length - 1];
+        if (t <= first.t0) return { x: first.pts[0][0], y: first.pts[0][1], up: 1 };
+        if (t >= last.t1) { const q = last.pts[last.pts.length - 1]; return { x: q[0], y: q[1], up: Math.min((t - last.t1) / 0.25, 1) }; }
+        for (let i = 0; i < STROKES.length; i++) {
+          const s = STROKES[i];
+          if (t < s.t0) {
+            const a = STROKES[i - 1].pts[STROKES[i - 1].pts.length - 1], b = s.pts[0];
+            const u = (t - STROKES[i - 1].t1) / (s.t0 - STROKES[i - 1].t1), e = u * u * (3 - 2 * u);
+            return { x: a[0] + (b[0] - a[0]) * e, y: a[1] + (b[1] - a[1]) * e, up: Math.sin(u * Math.PI) * Math.min(Math.hypot(b[0] - a[0], b[1] - a[1]) / 60, 1) };
+          }
+          if (t <= s.t1) {
+            const L = s.len[s.len.length - 1] * (t - s.t0) / (s.t1 - s.t0);
+            let j = 1; while (j < s.len.length - 1 && s.len[j] < L) j++;
+            const u = (L - s.len[j - 1]) / Math.max(s.len[j] - s.len[j - 1], 1e-6);
+            return { x: s.pts[j - 1][0] + (s.pts[j][0] - s.pts[j - 1][0]) * u, y: s.pts[j - 1][1] + (s.pts[j][1] - s.pts[j - 1][1]) * u, up: 0 };
+          }
+        }
+      }
+      const map = new THREE.CanvasTexture(ink); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
+      const normalMap = new THREE.CanvasTexture(nor);
+
+      // ---------- la déchirure : un bord irrégulier, deux masques complémentaires ----------
+      const SW0 = 2.1, SH0 = 2.97;
+      const J = (y) => 0.035 + 0.05 * Math.sin(1.7 * y + 0.4) + 0.025 * Math.sin(4.3 * y + 1.1) + 0.012 * Math.sin(11 * y + 2.3);
+      const JX = new Float32Array(TH), RAG2 = new Float32Array(TH);
+      {
+        const r = rng(99); let n = 0;
+        for (let cy = 0; cy < TH; cy++) {
+          n = n * 0.82 + (r() - 0.5) * 1.6;
+          JX[cy] = TW / 2 + (J((0.5 - cy / TH) * SH0) / SW0) * TW + n * 2.2 + (r() - 0.5) * 1.4;
+          RAG2[cy] = r() * 1.8;
+        }
+      }
+      function maskCanvas(left) {
+        const c = document.createElement("canvas"); c.width = TW; c.height = TH;
+        const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, TW, TH); g.fillStyle = "#fff";
+        for (let cy = 0; cy < TH; cy++) left ? g.fillRect(0, cy, JX[cy], 1) : g.fillRect(JX[cy], cy, TW - JX[cy], 1);
+        return new THREE.CanvasTexture(c);
+      }
+      const maskL = maskCanvas(true), maskR = maskCanvas(false);
+
+      // ---------- la feuille : A4, maillage aligné sur les plis ----------
+      const SW = 2.1, SH = 2.97;
+      const geo = new THREE.PlaneGeometry(SW, SH, 84, 120);
+      const base = geo.attributes.position.array.slice();
+      // Le dos de la feuille reste vierge : la face arrière lit la texture du papier sans encre.
+      const backTex = new THREE.CanvasTexture(col); backTex.colorSpace = THREE.SRGBColorSpace;
+      const paperMat = (alphaMap) => {
+        const m = new THREE.MeshStandardMaterial({ map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55),
+          roughness: 0.92, metalness: 0, side: THREE.DoubleSide, alphaMap: alphaMap || null, alphaTest: alphaMap ? 0.5 : 0 });
+        m.onBeforeCompile = (sh) => {
+          sh.uniforms.uBack = { value: backTex };
+          sh.fragmentShader = "uniform sampler2D uBack;\n" + sh.fragmentShader.replace("#include <map_fragment>",
+            "vec4 sampledDiffuseColor = gl_FrontFacing ? texture2D( map, vMapUv ) : texture2D( uBack, vMapUv );\ndiffuseColor *= sampledDiffuseColor;");
+        };
+        return m;
+      };
+      const depthMat = (alphaMap) => new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaMap, alphaTest: 0.5, side: THREE.DoubleSide });
+      const matFull = paperMat(null), matL = paperMat(maskL), matR = paperMat(maskR);
+      const depthL = depthMat(maskL), depthR = depthMat(maskR);
+      const geoR = geo.clone();
+      const sheet = new THREE.Mesh(geo, matFull), sheetR = new THREE.Mesh(geoR, matR);
+      for (const m of [sheet, sheetR]) { m.castShadow = true; m.receiveShadow = true; }
+      const carrier = new THREE.Group(); scene.add(carrier);       // emporte lettre + enveloppe au départ
+      const group = new THREE.Group(); group.add(sheet, sheetR); carrier.add(group);
+      const F = new Float32Array(base.length);                      // feuille pliée/dépliée, avant déchirure
+
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.16 }));
+      ground.position.z = -0.035; ground.receiveShadow = true; scene.add(ground);
+
+      // Ombre de contact : un halo très doux sous les bords, qui suit la taille de la feuille.
+      const cs = document.createElement("canvas"); cs.width = 256; cs.height = 256;
+      { const g = cs.getContext("2d"); g.filter = "blur(18px)"; g.fillStyle = "rgba(60,52,40,1)"; g.fillRect(40, 40, 176, 176); }
+      const contactTex = new THREE.CanvasTexture(cs);
+      const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.2, depthWrite: false }));
+      contact.position.z = -0.034; scene.add(contact);
+
+      // Lumière d'ambiance pour les reflets (une grande fenêtre douce au-dessus, à gauche).
+      {
+        const ec = document.createElement("canvas"); ec.width = 512; ec.height = 256;
+        const g = ec.getContext("2d");
+        const grd = g.createLinearGradient(0, 0, 0, 256); grd.addColorStop(0, "#ffffff"); grd.addColorStop(0.5, "#d9d6cf"); grd.addColorStop(1, "#7c7a75");
+        g.fillStyle = grd; g.fillRect(0, 0, 512, 256);
+        g.fillStyle = "#ffffff"; g.filter = "blur(10px)"; g.fillRect(70, 30, 120, 70);
+        const et = new THREE.CanvasTexture(ec); et.mapping = THREE.EquirectangularReflectionMapping; et.colorSpace = THREE.SRGBColorSpace;
+        const pm = new THREE.PMREMGenerator(renderer);
+        scene.environment = pm.fromEquirectangular(et).texture;
+        scene.environmentIntensity = 0.35;
+      }
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xe4e0d8, 2.3));
+      const sun = new THREE.DirectionalLight(0xfffaf2, 1.9);
+      sun.position.set(-4.2, 2.6, 3.6); sun.castShadow = true;
+      sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.015;
+      Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 20 });
+      scene.add(sun);
+
+      // ---------- le stylo : un stylo bille noir, tenu de la main droite ----------
+      const pen = new THREE.Group();
+      {
+        const body = new THREE.Group();
+        const black = new THREE.MeshPhysicalMaterial({ color: 0x1d1f26, roughness: 0.28, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 2.2 });
+        const grip = new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.62, envMapIntensity: 1.6 });
+        const steel = new THREE.MeshStandardMaterial({ color: 0xd6d8dc, roughness: 0.22, metalness: 1, envMapIntensity: 2.5 });
+        const part = (geo, m, y) => { const o = new THREE.Mesh(geo, m); o.position.y = y; o.castShadow = true; body.add(o); };
+        part(new THREE.ConeGeometry(0.011, 0.05, 24), steel, 0.025);
+        body.children[0].rotation.x = Math.PI;
+        part(new THREE.CylinderGeometry(0.036, 0.012, 0.16, 32), grip, 0.13);
+        part(new THREE.CylinderGeometry(0.041, 0.038, 0.32, 32), grip, 0.37);
+        part(new THREE.CylinderGeometry(0.043, 0.042, 0.88, 32), black, 0.97);
+        part(new THREE.CylinderGeometry(0.039, 0.043, 0.06, 32), black, 1.44);
+        part(new THREE.BoxGeometry(0.018, 0.42, 0.03), steel, 1.2); body.children[5].position.z = 0.052;
+        const dir = new THREE.Vector3(0.36, -0.46, 0.81).normalize();
+        body.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        pen.add(body);
+      }
+      scene.add(pen);
+
+      // ---------- l'enveloppe : dos, poche (avec ses plis), rabat articulé ----------
+      const env = new THREE.Group(); carrier.add(env);
+      const flapPivot = new THREE.Group();
+      {
+        const EW = 2.36, EH = 1.2;
+        const envMat = new THREE.MeshStandardMaterial({ color: 0xf1ece2, roughness: 0.9, normalMap, normalScale: new THREE.Vector2(0.4, 0.4), side: THREE.DoubleSide });
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), envMat); back.position.z = 0.0005;
+        const pc = document.createElement("canvas"); pc.width = 1024; pc.height = 520;
+        { const g = pc.getContext("2d"); g.fillStyle = "#f3eee5"; g.fillRect(0, 0, 1024, 520);
+          g.strokeStyle = "rgba(90,80,60,0.10)"; g.lineWidth = 3;
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(512, 300); g.lineTo(1024, 0); g.stroke();
+          g.beginPath(); g.moveTo(0, 520); g.lineTo(430, 270); g.moveTo(1024, 520); g.lineTo(594, 270); g.stroke(); }
+        const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace;
+        const pocket = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), new THREE.MeshStandardMaterial({ map: pt, roughness: 0.9, normalMap, normalScale: new THREE.Vector2(0.4, 0.4), side: THREE.DoubleSide }));
+        pocket.position.z = 0.026;
+        const fg = new THREE.BufferGeometry();
+        fg.setAttribute("position", new THREE.Float32BufferAttribute([-EW / 2, 0, 0, EW / 2, 0, 0, 0, 0.66, 0], 3));
+        fg.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+        fg.computeVertexNormals();
+        const flap = new THREE.Mesh(fg, envMat);
+        flapPivot.position.set(0, EH / 2, 0.03); flapPivot.add(flap);
+        for (const m of [back, pocket, flap]) { m.castShadow = true; m.receiveShadow = m !== flap; }
+        env.add(back, pocket, flapPivot);
+      }
+
+      // ---------- les plis : une lettre pliée en trois ----------
+      // Pliage : le tiers du bas remonte (f1), puis le tiers du haut se rabat dessus (f2).
+      // Dépliage dans l'ordre inverse : le haut s'ouvre, le bas suit aussitôt.
+      const T3 = SH / 6; // 0.495
+      const FOLDS = [
+        { c: -T3, sgn: -1, gap: 0.002 },
+        { c: T3, sgn: 1, gap: 0.004 },
+      ];
+      const CREASES = [ { k: 0, c: -T3, s: 1 }, { k: 1, c: T3, s: -1 } ];
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      // Le rabat se lève franchement, se pose à plat, rebondit à peine.
+      function opening(t, t0, d) {
+        const u = Math.min(Math.max((t - t0) / d, 0), 1);
+        const lift = u < 1 ? Math.PI * (1 - ease(u)) : 0;
+        const b = Math.min(Math.max((t - t0 - d) / 0.28, 0), 1);
+        return lift + (u >= 1 ? Math.sin(b * Math.PI) * 0.035 : 0);
+      }
+      const SCHEDULE = [ [-4, 0.5], [-4, 0.5] ];  // la feuille est déjà à plat, sous le journal // f1 (bas), f2 (haut) : [début, durée]
+
+      // Bruit doux déterministe (ondulations du papier).
+      const R = rng(7);
+      const WAVES = Array.from({ length: 7 }, () => ({ fx: 0.6 + R() * 1.8, fy: 0.6 + R() * 1.8, ph: R() * 6.28, a: 0.0015 + R() * 0.0025 }));
+      const wobble = (x, y) => WAVES.reduce((z, w) => z + w.a * Math.sin(w.fx * x * 3.1 + w.ph) * Math.sin(w.fy * y * 2.7 + w.ph * 0.7), 0);
+
+      // Hauteur de la feuille à plat en un point (pour poser la pointe du stylo).
+      function flatZ(x0, y0) {
+        let z = wobble(x0, y0);
+        for (const cr of CREASES) { const d = Math.abs(y0 - cr.c); z += cr.s * 0.07 * (Math.min(d, 0.5) - (Math.min(d, 0.5) ** 2) / 1.0); }
+        return z;
+      }
+      // Un rabat se soulève en se courbant : l'angle croît vers la pointe (intégré le long du rabat, donc sans étirement).
+      const STEP = 0.025;
+      function arc(a, L) {
+        const n = Math.ceil(L / STEP) + 2, ys = new Float32Array(n), zs = new Float32Array(n), th = new Float32Array(n);
+        const B = 0.32 * Math.sin(Math.max(Math.min(a, Math.PI), 0));
+        let y = 0, z = 0;
+        for (let j = 0; j < n; j++) {
+          const sj = j * STEP, t0 = a + B * Math.pow(Math.min(sj / L, 1), 2);
+          th[j] = t0; ys[j] = y; zs[j] = z;
+          const t1 = a + B * Math.pow(Math.min((sj + STEP) / L, 1), 2), tm = (t0 + t1) / 2;
+          y += STEP * Math.cos(tm); z += STEP * Math.sin(tm);
+        }
+        return { ys, zs, th, n };
+      }
+      const LEN = [0.99, 0.99];
+
+      // Repli en trois après la réécriture : le bas remonte, le haut se rabat.
+      const REFOLD = [ [15.2, 0.45], [15.62, 0.45] ];
+      const REWRITE = [13.7, 14.5];
+      function angleAt(k, t) {
+        const [f0, fd] = REFOLD[k];
+        if (t >= f0) return Math.PI * ease(Math.min((t - f0) / fd, 1));
+        return opening(t, SCHEDULE[k][0], SCHEDULE[k][1]);
+      }
+
+      // Paramètres de la déchirure : front qui descend, écart, angle, envol, puis retour.
+      const sm = (a, b, x) => { const u = Math.min(Math.max((x - a) / (b - a), 0), 1); return u * u * (3 - 2 * u); };
+      function tearParams(t) {
+        const T0 = 11.55, T1 = 12.05, T2 = 12.6, R0 = 13.55, R1 = 14.3;
+        if (t < T0 || t >= R1) return { on: false, yf: 9, phi: 0, d: 0, lift: 0 };
+        const yf = 1.65 + (-1.9 - 1.65) * sm(T0, T1, t);
+        const back = sm(R0, R1, t);
+        const phi = (0.11 * sm(T0, T1, t) + 0.03 * sm(T1, T2, t)) * (1 - back);
+        const d = (0.16 * sm(T0, T1, t) + 0.14 * sm(T1, T2, t)) * (1 - back);
+        const lift = 0.09 * Math.sin(Math.PI * Math.min(Math.max((t - T0) / (T2 - T0), 0), 1)) + 0.11 * Math.sin(Math.PI * back);
+        return { on: true, yf, phi, d, lift };
+      }
+      function tear(src, dst, side, tp) {
+        const py = Math.max(Math.min(tp.yf, SH / 2), -SH / 2), px = J(py);
+        for (let i = 0; i < src.length; i += 3) {
+          let x = src[i], y = src[i + 1], z = src[i + 2];
+          const w = sm(tp.yf - 0.25, tp.yf + 0.25, y);
+          const th = -side * tp.phi * w, c = Math.cos(th), sn = Math.sin(th);
+          const rx = x - px, ry = y - py;
+          x = px + rx * c - ry * sn + side * tp.d * w;
+          y = py + rx * sn + ry * c;
+          z += tp.lift * w + 0.035 * w * (tp.phi / 0.14) * Math.exp(-Math.abs(src[i] - J(src[i + 1])) / 0.12);
+          dst[i] = x; dst[i + 1] = y; dst[i + 2] = z;
+        }
+      }
+
+      function shape(t) {
+        const angles = [0, 1].map((k) => angleAt(k, t));
+        const arcs = angles.map((a, k) => (Math.abs(a) > 1e-4 ? arc(a, LEN[k]) : null));
+        const pos = F;
+        for (let i = 0; i < pos.length; i += 3) {
+          const x0 = base[i], y0 = base[i + 1];
+          // Mémoire des plis : chaque pli ouvert garde un léger angle (10° environ), plus les ondulations du papier.
+          const flat = Math.min(...angles.map((a) => 1 - Math.abs(a) / Math.PI));
+          let z = wobble(x0, y0) * flat;
+          for (const cr of CREASES) {
+            const open = 1 - Math.abs(angles[cr.k]) / Math.PI;
+            if (open <= 0) continue;
+            const d = Math.abs(y0 - cr.c);
+            z += cr.s * 0.07 * open * (Math.min(d, 0.5) - (Math.min(d, 0.5) ** 2) / 1.0);
+          }
+          let x = x0, y = y0;
+          for (let k = 0; k < FOLDS.length; k++) {
+            const A = arcs[k]; if (!A) continue;
+            const f = FOLDS[k], h = f.gap;
+            const ry = f.sgn * (y - f.c);
+            if (ry > 1e-6) {
+              const rz = z - h;
+              const j = Math.min(Math.round(ry / STEP), A.n - 1);
+              const ny = A.ys[j] - rz * Math.sin(A.th[j]), nz = A.zs[j] + rz * Math.cos(A.th[j]);
+              y = f.c + f.sgn * ny;
+              z = h + nz;
+            }
+          }
+          pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
+        }
+        const tp = tearParams(t);
+        const PL = geo.attributes.position.array, PR = geoR.attributes.position.array;
+        if (tp.on) { tear(F, PL, 1 * -1, tp); tear(F, PR, 1, tp); } else PL.set(F);
+        sheet.material = tp.on ? matL : matFull; sheet.customDepthMaterial = tp.on ? depthL : undefined;
+        sheetR.visible = tp.on; sheetR.customDepthMaterial = depthR;
+        for (const g of tp.on ? [geo, geoR] : [geo]) { g.attributes.position.needsUpdate = true; g.computeVertexNormals(); }
+        // L'ombre de contact couvre la partie posée sur la table.
+        let lo = Infinity, hi = -Infinity;
+        for (let i = 0; i < pos.length; i += 3) if (pos[i + 2] < 0.03) { lo = Math.min(lo, pos[i + 1]); hi = Math.max(hi, pos[i + 1]); }
+        contact.scale.set(SW * 1.45, (hi - lo) * 1.32 + SW * 0.12, 1);
+        contact.position.set(0.035, (lo + hi) / 2 - 0.03, -0.034);
+        contact.scale.x = SW * 1.45 + (tp.on ? tp.d * 2 : 0);
+        contact.visible = t < 16.05;
+      }
+
+      // La lettre pliée monte, glisse dans l'enveloppe, le rabat se ferme, tout part.
+      function envelopeAt(t) {
+        const inE = 1 - Math.pow(1 - sm(16.0, 16.65, t), 2);
+        env.position.set(0, -3.6 + (3.45) * inE, 0);
+        const up = sm(16.1, 16.6, t), ins = sm(16.75, 17.25, t);
+        group.position.set(0, 1.12 * up - 1.27 * ins, 0.008 * (up > 0 ? 1 : 0) + 0.05 * Math.sin(Math.PI * up) * (1 - ins));
+        flapPivot.rotation.x = Math.PI * ease(Math.min(Math.max((t - 17.32) / 0.4, 0), 1));
+        flapPivot.position.z = 0.003 + 0.031 * sm(17.32, 17.5, t);   // ouvert sous la lettre, fermé par-dessus la poche
+        const press = Math.sin(Math.PI * Math.min(Math.max((t - 17.72) / 0.2, 0), 1)) * 0.006;
+        carrier.position.z = -press;
+        env.visible = t > 15.95;
+      }
+
+      // ================= Acte 1 : Alice trouve les offres =================
+      // Une page de petites annonces couvre la table ; les yeux d'Alice deviennent deux loupes.
+      const PW = 4.2, PH = 5.6, PCX = 0.78, PCY = -0.56, PZ = 0.035, PXS = PW / 2048;
+      const loader = new THREE.TextureLoader();
+      const pageTex = loader.load("assets/journal/page.png", () => { for (const c of cardTex) c.needsUpdate = true; renderAt(lastT); });
+      pageTex.colorSpace = THREE.SRGBColorSpace; pageTex.anisotropy = 8;
+      const lens = { c0: new THREE.Vector2(-9, -9), c1: new THREE.Vector2(-9, -9), r: 0.3, open: 0 };
+      const pageMat = new THREE.MeshStandardMaterial({ map: pageTex, roughness: 0.95, normalMap, normalScale: new THREE.Vector2(0.35, 0.35) });
+      pageMat.onBeforeCompile = (sh) => {
+        sh.uniforms.uC0 = { get value() { return lens.c0; } };
+        sh.uniforms.uC1 = { get value() { return lens.c1; } };
+        sh.uniforms.uR = { get value() { return lens.r; } };
+        sh.uniforms.uOpen = { get value() { return lens.open; } };
+        sh.fragmentShader = "uniform vec2 uC0; uniform vec2 uC1; uniform float uR; uniform float uOpen;\n" + sh.fragmentShader.replace("#include <map_fragment>", `
+          vec2 uvz = vMapUv; float glass = 0.0;
+          for (int k = 0; k < 2; k++) {
+            vec2 c = k == 0 ? uC0 : uC1;
+            vec2 d = (vMapUv - c) * vec2(${PW.toFixed(2)}, ${PH.toFixed(2)});
+            float r = length(d) / uR;
+            if (r < 1.0) {
+              float z = mix(1.0, 2.1, uOpen) * (1.0 + 0.18 * uOpen * (1.0 - r * r));
+              uvz = c + (vMapUv - c) / z; glass = uOpen * (1.0 - r * r);
+            }
+          }
+          vec4 sampledDiffuseColor = texture2D( map, uvz );
+          diffuseColor *= sampledDiffuseColor;
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.06 + 0.015, glass);`);
+      };
+      const page = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), pageMat);
+      page.position.set(PCX, PCY, PZ); page.castShadow = true; page.receiveShadow = true; scene.add(page);
+      const toUV = (x, y) => new THREE.Vector2((x - PCX) / PW + 0.5, (y - PCY) / PH + 0.5);
+
+      // Les deux yeux : des anneaux verts posés juste au-dessus du papier.
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0x006045, roughness: 0.4, metalness: 0.0 });
+      const rings = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 20, 120), ringMat); m.castShadow = true; scene.add(m); return m; });
+
+      // Les trois annonces retenues : un cadre vert, puis une coupure de papier qui se détache.
+      const frameTex = (() => { const c = document.createElement("canvas"); c.width = 512; c.height = 512;
+        const g = c.getContext("2d"); g.fillStyle = "rgba(0,96,69,0.10)"; g.strokeStyle = "#006045"; g.lineWidth = 14;
+        g.beginPath(); g.roundRect(10, 10, 492, 492, 36); g.fill(); g.stroke(); return new THREE.CanvasTexture(c); })();
+      const cardTex = [], cards = window.TARGETS.map((r) => {
+        const tex = pageTex.clone(); tex.repeat.set(r.w / 2048, r.h / 2730); tex.offset.set(r.x / 2048, 1 - (r.y + r.h) / 2730); cardTex.push(tex);
+        const w = r.w * PXS, h = r.h * PXS;
+        const g = new THREE.Group();
+        const paperBack = new THREE.MeshStandardMaterial({ color: 0xebe7de, roughness: 0.95 });
+        const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(w, h), paperBack); back.rotation.y = Math.PI;
+        const fr = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.07, h + 0.07), new THREE.MeshBasicMaterial({ map: frameTex, transparent: true, depthWrite: false }));
+        fr.position.z = 0.002;
+        card.castShadow = true; g.add(card, back, fr);
+        g.position.set(PCX + ((r.x + r.w / 2) / 2048 - 0.5) * PW, PCY + (0.5 - (r.y + r.h / 2) / 2730) * PH, PZ + 0.002);
+        g.userData = { x: g.position.x, y: g.position.y, fr }; scene.add(g);
+        return g;
+      });
+      const HILITE = [2.55, 3.35, 1.75];     // instant où chaque annonce passe sous un œil (T0, T1, T2)
+
+      // Trajet de l'œil gauche (l'œil droit suit à 0,74) : il ralentit sur chaque annonce, comme s'il lisait.
+      const EYE = [[1.05, -0.62, 1.70], [1.75, -0.237, 1.326], [2.55, -0.512, 1.01], [3.35, -0.003, 0.361], [3.8, -0.1, 0.55]];
+      function eyePos(t) {
+        if (t <= EYE[0][0]) return [EYE[0][1], EYE[0][2]];
+        if (t >= EYE[EYE.length - 1][0]) return [EYE[EYE.length - 1][1], EYE[EYE.length - 1][2]];
+        let i = 0; while (t > EYE[i + 1][0]) i++;
+        const u = sm(EYE[i][0], EYE[i + 1][0], t);
+        const P = (k) => EYE[Math.max(0, Math.min(EYE.length - 1, k))];
+        const cr = (a, b, c, d, u) => 0.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u * u * u);
+        return [1, 2].map((j) => cr(P(i - 1)[j], P(i)[j], P(i + 1)[j], P(i + 2)[j], u));
+      }
+      function searchAt(t) {
+        // ouverture, clignement, fermeture
+        let sy = sm(0.35, 0.7, t);
+        if (t > 1.0 && t < 1.22) sy = 1 - 0.92 * Math.sin(Math.PI * (t - 1.0) / 0.22);
+        if (t > 3.95) sy = 1 - sm(3.95, 4.1, t);
+        const [ex, ey] = eyePos(t);
+        rings[0].position.set(ex, ey, PZ + 0.045); rings[1].position.set(ex + 0.74, ey, PZ + 0.045);
+        for (const r of rings) { r.scale.set(1, Math.max(sy, 0.04), 1); r.visible = t < 4.12 && t > 0.3; }
+        lens.c0 = toUV(ex, ey); lens.c1 = toUV(ex + 0.74, ey); lens.open = t < 4.12 ? sy : 0;
+        // le journal glisse hors de la table et dévoile la feuille
+        const slide = sm(4.75, 5.55, t);
+        page.position.x = PCX - 6.6 * slide; page.position.y = PCY - 0.4 * slide; page.rotation.z = 0.06 * slide;
+        page.visible = slide < 1;
+        cards.forEach((g, i) => {
+          const hl = sm(HILITE[i] - 0.05, HILITE[i] + 0.15, t);
+          g.userData.fr.material.opacity = hl; g.userData.fr.scale.setScalar(1 + 0.12 * (1 - hl) * (hl > 0 ? 1 : 0));
+          const lift = sm(3.95 + i * 0.06, 4.5 + i * 0.06, t), fly = sm(4.5 + i * 0.09, 5.15 + i * 0.09, t);
+          g.position.set(g.userData.x + (i - 1) * 0.12 * lift, g.userData.y + 0.25 * lift + 3.6 * fly * fly, PZ + 0.002 + 0.55 * lift + 0.6 * fly);
+          g.rotation.set(-0.25 * lift, 0.1 * (i - 1) * lift, (i - 1) * -0.08 * lift);
+          g.scale.setScalar(1 + 0.2 * lift);
+          g.visible = t < 5.4;
+        });
+      }
+
+      // ================= Acte 3 : elle postule (le vol d'enveloppes) =================
+      const addrTex = loader.load("assets/envelopes/addresses.png", () => { for (const c of addrClones) c.needsUpdate = true; renderAt(lastT); });
+      addrTex.colorSpace = THREE.SRGBColorSpace; addrTex.anisotropy = 8;
+      const addrClones = [];
+      const addrRow = (k) => { const c = addrTex.clone(); c.repeat.set(1, 1 / 8); c.offset.set(0, 1 - (k + 1) / 8); addrClones.push(c); return c; };
+      // adresse au dos de l'enveloppe principale (on la découvre quand elle se retourne)
+      {
+        const a = new THREE.Mesh(new THREE.PlaneGeometry(2.36, 1.2), new THREE.MeshStandardMaterial({ map: addrRow(0), roughness: 0.9 }));
+        a.rotation.y = Math.PI; a.position.z = -0.001; env.add(a); env.userData.addr = a;
+      }
+      const SLOTS = [];
+      for (const side of [-1, 1]) for (let k = 0; k < 8; k++) { const a = (2 * Math.PI * k) / 8 + Math.PI / 8; SLOTS.push({ x: side * 2.6 + 1.85 * Math.cos(a), y: 1.85 * Math.sin(a), rz: a + Math.PI / 2 }); }
+      const plain = new THREE.MeshStandardMaterial({ color: 0xf1ece2, roughness: 0.9 });
+      const R2 = rng(42);
+      const flock = SLOTS.slice(1).map((sl, i) => {
+        const m = new THREE.MeshStandardMaterial({ map: addrRow((i + 1) % 8), roughness: 0.9 });
+        const box = new THREE.Mesh(new THREE.BoxGeometry(2.36, 1.2, 0.012), [plain, plain, plain, plain, m, plain]);
+        box.castShadow = true;
+        const a = R2() * Math.PI * 2, rad = 11 + R2() * 4;
+        box.userData = { sl, m, sx: Math.cos(a) * rad, sy: Math.sin(a) * rad, sz: 2 + R2() * 4, t0: 18.25 + i * 0.075, ph: R2() * 6.28, spin: (R2() - 0.5) * 2 };
+        box.visible = false; scene.add(box); return box;
+      });
+      const GREEN = new THREE.Color(0x006045), CREAM = new THREE.Color(0xffffff);
+      let shadowWide = false;
+      function flockAt(tb) {
+        const wide = tb > 18.0;
+        if (wide !== shadowWide) { shadowWide = wide; const s = wide ? 14 : 4; Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s }); sun.shadow.camera.updateProjectionMatrix(); }
+        const tint = sm(20.45, 20.95, tb);
+        // l'enveloppe principale décolle, se retourne (adresse : Atelier Nord) et prend sa place dans le premier anneau
+        const lift = sm(18.0, 18.6, tb), place = sm(18.55, 19.8, tb), flip = sm(18.05, 18.7, tb);
+        const sl0 = SLOTS[0];
+        if (tb > 18.0) {
+          carrier.position.set(sl0.x * place, (0.15 + sl0.y) * place, 0.9 * lift - 0.78 * place + 0.12 * Math.sin(tb * 3.1) * (1 - place));
+          carrier.rotation.set(0.15 * Math.sin(Math.PI * flip), Math.PI * flip, sl0.rz * place);
+          carrier.scale.setScalar(1 - 0.58 * place);
+        }
+        env.userData.addr.material.color.copy(CREAM).lerp(GREEN, tint);
+        for (const b of flock) {
+          const d = b.userData, u = sm(d.t0, d.t0 + 1.35, tb), e = 1 - Math.pow(1 - u, 3);
+          b.visible = tb > d.t0 && tb < 21.3;
+          const bend = Math.sin(Math.PI * u) * 1.6;
+          b.position.set(d.sx + (d.sl.x - d.sx) * e - d.sy * 0.06 * bend, d.sy + (d.sl.y - d.sy) * e + d.sx * 0.06 * bend, d.sz + (0.12 - d.sz) * e);
+          const fl = (1 - u) * 0.5;
+          b.rotation.set(fl * Math.sin(tb * 6 + d.ph), fl * Math.cos(tb * 5 + d.ph), d.sl.rz * e + d.spin * (1 - e));
+          b.scale.setScalar(0.42);
+          d.m.color.copy(CREAM).lerp(GREEN, tint);
+        }
+        if (tb > 21.3) { carrier.visible = false; } else carrier.visible = true;
+      }
+
+      // Caméra : plans fixes, reliés par quelques mouvements francs.
+      const mix = (a, b, u) => a + (b - a) * u;
+      const CAM = [ // t, cx, cy, distance, inclinaison
+        [0, 0.02, 1.38, 6.2, 0.1], [4.5, -0.02, 1.3, 6.0, 0.1], [5.9, 0.02, 0.33, 5.4, 0.2],
+        [10.55 + S2, 0.02, 0.33, 5.4, 0.2], [11.45 + S2, 0, 0.0, 9.4, 0.1], [12.55 + S2, 0, 0.0, 9.4, 0.1], [13.4 + S2, 0, -0.12, 10.5, 0.1],
+        [18.1 + S2, 0, -0.12, 10.5, 0.1], [19.9 + S2, 0, 0, 30, 0.06],
+      ];
+      function frame(t) {
+        let k = CAM.length - 1;
+        for (let i = 0; i < CAM.length - 1; i++) if (t < CAM[i + 1][0]) { k = i; break; }
+        const A = CAM[k], B = CAM[Math.min(k + 1, CAM.length - 1)];
+        const u = B === A ? 0 : ease(Math.min(Math.max((t - A[0]) / (B[0] - A[0]), 0), 1));
+        const cx = mix(A[1], B[1], u), cy = mix(A[2], B[2], u), dist = mix(A[3], B[3], u), tilt = mix(A[4], B[4], u);
+        camera.position.set(cx, cy - dist * Math.sin(tilt), dist * Math.cos(tilt));
+        camera.lookAt(cx, cy, 0);
+      }
+
+      // Le stylo arrive d'en bas à droite, écrit, puis se relève.
+      function penAt(t, tb) {
+        const tip = tipAt(t);
+        const x = (tip.x / TW - 0.5) * SW, y = (0.5 - tip.y / TH) * SH;
+        const enter = 1 - Math.pow(1 - Math.min(Math.max((t - S1 - 1.85) / 0.9, 0), 1), 3);
+        const exit = sm(10.5, 11.15, tb);
+        const lift = 0.045 * tip.up + (1 - enter) * 0.22 + exit * 0.25;
+        pen.position.set(x + (1 - enter) * 2.2 + exit * 2.8, y - (1 - enter) * 2.4 - exit * 2.6, flatZ(x, y) + 0.004 + lift);
+        pen.rotation.set(0.02 * Math.sin(t * 5.3), 0.025 * Math.sin(t * 3.7 + 1), 0.04 * Math.sin(t * 2.1));
+        pen.visible = t - S1 > 1.85 && tb < 11.2;
+      }
+
+      function renderAt(t) {
+        lastT = t;
+        const tb = t - S2;
+        shape(tb);
+        envelopeAt(tb);
+        flockAt(tb);
+        searchAt(t);
+        inkAt(t, tb);
+        penAt(t, tb);
+        frame(t);
+        renderer.render(scene, camera);
+      }
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

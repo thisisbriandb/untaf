@@ -1,0 +1,29 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Postuler — Alternance Chargé·e de marketing digital — Atelier Nord</title>
+<style>
+ body{margin:0;background:#f6f6f4;font-family:Inter,"Liberation Sans",Arial,sans-serif;color:#1d1d1b}
+ header{background:#fff;border-bottom:1px solid #e6e5e1;padding:22px 48px;display:flex;align-items:center;gap:14px}
+ .logo{width:34px;height:34px;border-radius:8px;background:#1d1d1b}
+ header b{font-size:18px} header span{color:#7a7973;font-size:14px;margin-left:auto}
+ main{max-width:680px;margin:36px auto;background:#fff;border:1px solid #e6e5e1;border-radius:14px;padding:36px 40px}
+ h1{font-size:26px;margin:0 0 4px} .meta{color:#7a7973;margin-bottom:26px;font-size:15px}
+ label{display:block;font-size:14px;font-weight:600;margin:16px 0 6px}
+ input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #d4d3ce;border-radius:8px;padding:11px 12px;font-size:15px;font-family:inherit}
+ textarea{height:150px} .row{display:flex;gap:14px}.row>div{flex:1}
+ button{margin-top:26px;background:#1d1d1b;color:#fff;border:0;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:600}
+</style></head><body>
+<header><div class="logo"></div><b>Atelier Nord</b><span>Carrières</span></header>
+<main>
+<h1>Alternance — Chargé·e de marketing digital</h1>
+<div class="meta">Lyon · Alternance 24 mois · Septembre</div>
+<form onsubmit="return false">
+ <div class="row"><div><label for="fn">Prénom</label><input id="fn" name="firstname" autocomplete="given-name"></div>
+ <div><label for="ln">Nom</label><input id="ln" name="lastname" autocomplete="family-name"></div></div>
+ <label for="em">E-mail</label><input id="em" name="email" type="email" autocomplete="email">
+ <label for="ph">Téléphone</label><input id="ph" name="phone" type="tel" autocomplete="tel">
+ <label for="cv">CV</label><input id="cv" name="resume" type="file">
+ <label for="lm">Lettre de motivation</label><textarea spellcheck="false" id="lm" name="cover_letter"></textarea>
+ <label for="ed">Niveau d'études</label><select id="ed" name="education"><option value="">Choisir…</option><option>Bac +2</option><option>Bac +3</option><option>Bac +5</option></select>
+ <label for="dispo">Date de disponibilité</label><input id="dispo" name="availability" placeholder="jj/mm/aaaa">
+ <button>Envoyer ma candidature</button>
+</form></main></body></html>
