@@ -96,6 +96,13 @@ celery_app.conf.beat_schedule = {
         "task": "app.agents.discovery.tasks.qualify_and_match_jobs",
         "schedule": crontab(hour=7, minute=15),
     },
+    # Les règles et le stock bougent : chaque matin, après la qualification,
+    # toutes les offres sont renotées pour chaque candidat (pas seulement
+    # quand il écrit à Alice).
+    "daily-rematch-all": {
+        "task": "app.agents.discovery.tasks.rematch_all_candidates",
+        "schedule": crontab(hour=7, minute=40),
+    },
     # Le registre des boards ATS bouge lentement : un passage par semaine
     # suffit, et il tourne avant les scrapes du jour.
     "weekly-discover-ats-boards": {

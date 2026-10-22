@@ -451,12 +451,31 @@ async def pre_send_check(session, dispatch: ApplicationDispatch,
 
     if application:
         row = (await session.execute(
-            select(JobPosting, Company.domain)
+            select(JobPosting, Company.domain, Company.name)
             .join(Company, JobPosting.company_id == Company.id)
             .where(JobPosting.id == application.job_posting_id)
         )).first()
         if row:
-            job, domain = row
+            job, domain, company_name = row
+            # Une école qui « recrute » des alternants remplit sa promotion.
+            # Au moindre indice, rien ne part sans le feu vert du candidat.
+            if not dispatch.approved_at:
+                from app.agents.discovery.signals import school_spread_clues, training_org_evidence
+                same_employer = (await session.execute(
+                    select(JobPosting.title, JobPosting.contract_type)
+                    .where(JobPosting.company_id == job.company_id)
+                    .where(JobPosting.status == PostingStatus.ACTIVE)
+                )).all()
+                spread = school_spread_clues((t, company_name, c) for t, c in same_employer)
+                level, motif = training_org_evidence(
+                    company_name, job.description_raw,
+                    (job.description_parsed or {}).get("employer"),
+                    spread.get((company_name or "").strip().lower()),
+                )
+                if level:
+                    return Hold(DispatchStatus.AWAITING_APPROVAL,
+                                f"cet employeur ressemble à une école qui recrute des élèves "
+                                f"({motif}) : je ne l'envoie qu'avec ton accord")
             open_ = await offer_still_open(job, domain)
             if open_ is False:
                 if job.status == PostingStatus.ACTIVE:

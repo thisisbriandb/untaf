@@ -6,6 +6,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
+from celery.signals import worker_ready
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import defer
 from sqlalchemy.orm.attributes import set_committed_value
@@ -30,6 +31,7 @@ from app.agents.discovery.scrapers.base import ScrapedJob
 from app.agents.discovery.deduplicator import compute_fingerprint
 from app.agents.discovery.qualification import qualify_job_description
 from app.agents.discovery.matching import evaluate_match
+from app.agents.discovery.signals import school_spread_clues
 
 #: Ce que le matching lit d'une annonce (langue, indices) : son début.
 DESCRIPTION_EXCERPT = 3000
@@ -561,6 +563,12 @@ async def _match_candidate_to_existing_jobs(candidate_id):
             set_committed_value(job, "description_raw", text)
             rows.append((job, company_name))
 
+        # Un employeur qui recrute des alternants dans 4 métiers ou plus est
+        # une école : l'indice s'ajoute à ceux de l'annonce elle-même.
+        spread = school_spread_clues(
+            (job.title, company_name, job.contract_type) for job, company_name in rows
+        )
+
         existing_result = await session.execute(
             select(Application).where(Application.candidate_id == candidate.id)
         )
@@ -586,6 +594,7 @@ async def _match_candidate_to_existing_jobs(candidate_id):
                 match = evaluate_match(
                     candidate, job, job.description_parsed, criteria,
                     company_name=company_name,
+                    school_clue=spread.get((company_name or "").strip().lower()),
                 )
             except Exception as e:  # noqa: BLE001
                 # One unscoreable posting must never abort the whole pass.
@@ -694,6 +703,55 @@ def match_candidate_jobs(candidate_id_str: str):
     finally:
         _release(loop)
 
+
+
+#: À incrémenter à chaque changement des règles de notation : au premier
+#: démarrage d'un worker qui porte la nouvelle version, tout le stock est
+#: renoté pour tous les candidats, sans attendre qu'ils écrivent à Alice.
+MATCHING_VERSION = "2026-10-22"
+
+
+async def _rematch_all() -> dict:
+    async with async_session() as session:
+        ids = (await session.execute(select(Candidate.id))).scalars().all()
+    done = failed = 0
+    for cid in ids:
+        try:
+            await _match_candidate_to_existing_jobs(cid)
+            done += 1
+        except Exception:
+            # Un candidat en échec ne prive pas les autres de leur renotation.
+            logger.exception("Rematch failed for candidate %s", cid)
+            failed += 1
+    return {"candidates": done, "failed": failed}
+
+
+@celery_app.task(name="app.agents.discovery.tasks.rematch_all_candidates")
+def rematch_all_candidates():
+    """Renote tout le stock actif pour chaque candidat (règles à jour)."""
+    loop = asyncio.new_event_loop()
+    try:
+        report = loop.run_until_complete(_rematch_all())
+        logger.info("Rematch all candidates: %s", report)
+        return report
+    finally:
+        _release(loop)
+
+
+@worker_ready.connect
+def _rematch_after_rules_change(sender=None, **_):
+    """Une seule renotation par version de règles, même avec plusieurs workers."""
+    try:
+        import redis
+
+        client = redis.Redis.from_url(settings.redis_url)
+        first = client.set(f"alice:matching-version:{MATCHING_VERSION}", "1", nx=True)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Matching version check skipped: %s", e)
+        return
+    if first:
+        logger.info("Matching rules %s: rescoring every candidate", MATCHING_VERSION)
+        rematch_all_candidates.delay()
 
 
 @celery_app.task(name="app.agents.discovery.tasks.discover_ats_boards")
