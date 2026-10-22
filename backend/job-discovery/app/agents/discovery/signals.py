@@ -282,7 +282,10 @@ _SCHOOL_NAME = re.compile(
 #: le nom suffit, pas besoin d'un second indice.
 _SCHOOL_BRANDS = re.compile(
     r"\bief2i\b|\biscod\b|\bstudi\b|my ?digital ?school|\bsup de vente\b|walter[- ]learning|"
-    r"\bescam\b|\bnextformation\b|\baftec\b|\bifocop\b|\bpigier\b|\bnetvibes school\b",
+    r"\bescam\b|\bnextformation\b|\baftec\b|\bifocop\b|\bpigier\b|\bnetvibes school\b|"
+    # relevées dans les offres actives (octobre 2026)
+    r"\baureis\b|\binatec\b|\balterline\b|\biseah\b|\bdigitalys\b|my ?digital ?campus|"
+    r"diderot (e|é)ducation",
     re.I,
 )
 #: Instituts, académies… qui sont de vrais employeurs.
@@ -305,10 +308,51 @@ _STUDENT_PITCH = re.compile(
 )
 
 
+#: Un employeur qui publie des alternances dans autant de métiers différents
+#: (comptable, secrétaire médicale, conseiller en assurances…) recrute des
+#: élèves pour ses formations, pas des alternants pour un service.
+SCHOOL_FAMILY_SPREAD = 4
+#: …à condition que l'alternance soit presque tout ce qu'il publie : un grand
+#: groupe (Orange, Decathlon) prend des alternants partout mais publie aussi
+#: ses CDI.
+SCHOOL_ALTERNANCE_SHARE = 0.8
+
+
+def school_spread_clues(postings) -> dict[str, str]:
+    """
+    {nom d'employeur en minuscules: indice décisif} pour ceux qui publient
+    des alternances dans au moins SCHOOL_FAMILY_SPREAD métiers et presque
+    rien d'autre. `postings` : itérable de (intitulé, employeur, contrat).
+    """
+    families: dict[str, set[str]] = {}
+    total: dict[str, int] = {}
+    alternance: dict[str, int] = {}
+    for title, company, contract in postings:
+        name = (company or "").strip().lower()
+        if not name:
+            continue
+        total[name] = total.get(name, 0) + 1
+        contract = getattr(contract, "value", contract)
+        if contract != "alternance" and not re.search(r"alternan|apprenti", title or "", re.IGNORECASE):
+            continue
+        alternance[name] = alternance.get(name, 0) + 1
+        fam = detect_job_family(title)
+        if fam != "unknown":
+            families.setdefault(name, set()).add(fam)
+    return {
+        name: f"publie des alternances dans {len(fams)} métiers différents ({', '.join(sorted(fams))})"
+        for name, fams in families.items()
+        if len(fams) >= SCHOOL_FAMILY_SPREAD
+        and alternance[name] >= SCHOOL_ALTERNANCE_SHARE * total[name]
+        and not _REAL_EMPLOYERS.search(name)
+    }
+
+
 def training_org_evidence(
     company_name: str | None,
     description: str | None,
     employer: dict | None = None,
+    extra_clue: str | None = None,
 ) -> tuple[str | None, str]:
     """
     (« strong » | « weak » | None, motif) : l'annonce vient-elle d'une école
@@ -327,6 +371,9 @@ def training_org_evidence(
     for label in labels:
         if _SCHOOL_BRANDS.search(label):
             return "strong", f"école connue pour publier des offres d'alternance (« {label} »)"
+    # Indice décisif calculé sur tout le stock (voir school_spread_clues).
+    if extra_clue:
+        return "strong", extra_clue
     for label in labels:
         if _SCHOOL_NAME.search(label) and not _REAL_EMPLOYERS.search(label):
             clues.append(f"nom d'école ou d'organisme de formation (« {label} »)")

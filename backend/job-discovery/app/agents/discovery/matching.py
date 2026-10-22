@@ -197,6 +197,7 @@ def evaluate_match(
     parsed: dict | None = None,
     criteria: MatchingCriteria | None = None,
     company_name: str | None = None,
+    school_clue: str | None = None,
 ) -> MatchResult:
     parsed = parsed or job.description_parsed or {}
     criteria = criteria or MatchingCriteria.resolve(candidate)
@@ -271,7 +272,7 @@ def evaluate_match(
     if job_contract in ("alternance", "stage") or re.search(r"alternan|apprenti", title, re.I):
         level, motif = training_org_evidence(
             company_name if company_name is not None else _safe_company_name(job),
-            job.description_raw, parsed.get("employer"),
+            job.description_raw, parsed.get("employer"), school_clue,
         )
         if level == "strong":
             rejections.append(f"organisme de formation : {motif}")

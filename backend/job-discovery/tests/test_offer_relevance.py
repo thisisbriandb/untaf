@@ -5,7 +5,11 @@ from types import SimpleNamespace
 
 from app.agents.application.feasibility import same_offer_key, unique_offers
 from app.agents.discovery.matching import CONTEXT_ONLY_CAP, evaluate_match
-from app.agents.discovery.signals import detect_job_family, training_org_evidence
+from app.agents.discovery.signals import (
+    detect_job_family,
+    school_spread_clues,
+    training_org_evidence,
+)
 from app.models.candidate import Candidate
 from app.models.job_posting import JobPosting
 
@@ -82,3 +86,82 @@ def test_same_offer_from_two_sources_is_shown_once():
     rows = [(1, job("Comptable (H/F)"), "Agatha"), (2, job("Comptable"), "Agatha"),
             (3, job("Comptable"), "Autre")]
     assert [r[0] for r in unique_offers(rows)] == [1, 3]
+
+
+def test_db_schools_are_recognised():
+    for name in ("AUREIS FORMATION", "INATEC Business School", "CFA ALTERLINE", "ISEAH FORMATION",
+                 "DIGITALYS FORMATION", "MY DIGITAL CAMPUS", "Diderot Education"):
+        assert training_org_evidence(name, "", None)[0] == "strong", name
+
+
+def test_employer_recruiting_apprentices_in_many_trades_is_a_school():
+    titles = ["Comptable (H/F) - Alternance", "Secrétaire Médicale - Alternance",
+              "Développeur web en alternance", "Commercial B2B - Alternance"]
+    postings = [(t, "Groupe Avenir", "alternance") for t in titles]
+    postings += [("Comptable - Alternance", "Agatha", "alternance"),
+                 ("Commercial - Alternance", "Agatha", "alternance")]
+    # un grand groupe qui publie surtout des CDI n'est pas une école
+    postings += [(t.replace("Alternance", "CDI").replace("en alternance", "CDI"), "Orange", "cdi")
+                 for t in titles * 2]
+    postings += [(t, "Orange", "alternance") for t in titles]
+    clues = school_spread_clues(postings)
+    assert set(clues) == {"groupe avenir"}
+    assert training_org_evidence("Groupe Avenir", "", None)[0] is None
+    assert training_org_evidence("Groupe Avenir", "", None, clues["groupe avenir"])[0] == "strong"
+    res = evaluate_match(_candidate(), _job("Comptable (H/F) - Alternance"), parsed={},
+                         company_name="Groupe Avenir", school_clue=clues["groupe avenir"])
+    assert not res.accepted
+
+
+class _Rows:
+    def __init__(self, row):
+        self.row = row
+
+    def first(self):
+        return self.row
+
+    def all(self):
+        return []
+
+
+class _SchoolSession:
+    def __init__(self, job):
+        self.job = job
+
+    async def execute(self, stmt, *_a, **_k):
+        sql = str(stmt)
+        if "companies.name" in sql and "application_dispatches" not in sql:
+            return _Rows((self.job, "ief2i.fr", "IEF2I Education"))
+        return _Rows(None)
+
+    async def get(self, _model, _id):
+        return SimpleNamespace(full_name="Camille Martin", signature_image=b"x")
+
+
+def test_school_offer_is_never_sent_without_approval():
+    import asyncio
+
+    from app.agents.application.dispatcher import pre_send_check
+    from app.models.dispatch import DispatchStatus
+
+    job = _job("Comptable - Alternance", description_parsed={})
+    app = SimpleNamespace(status=None, job_posting_id=1, metadata_json={})
+    dispatch = SimpleNamespace(id=1, application_id=2, candidate_id=3, destination="x",
+                               channel=None, approved_at=None)
+    hold = asyncio.run(pre_send_check(_SchoolSession(job), dispatch, app))
+    assert hold and hold.status == DispatchStatus.AWAITING_APPROVAL and "école" in hold.reason
+
+
+def test_reminder_emails_are_off_by_default(monkeypatch):
+    from app.agents.notifications import tasks
+    from app.config import settings
+
+    assert settings.reminder_emails_enabled is False
+
+    def boom(*_a, **_k):
+        raise AssertionError("aucune relance ne doit partir")
+
+    monkeypatch.setattr(tasks.asyncio, "new_event_loop", boom)
+    assert tasks.reengage()["skipped"]
+    assert tasks.remind_pending()["skipped"]
+    assert tasks.send_digests("daily")["skipped"]
