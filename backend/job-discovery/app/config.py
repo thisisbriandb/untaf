@@ -233,6 +233,12 @@ class Settings(BaseSettings):
     #: Secret partagé pour un autre relais (Cloudflare Email Worker…), en en-tête
     #: X-Inbound-Secret.
     inbound_secret: str = ""
+    #: Relances « reviens », rappels de dossiers en attente et récapitulatifs.
+    #: Coupés tant que les listes d'offres n'ont pas été renotées : une
+    #: relance vers une liste polluée confirme la mauvaise impression. Les
+    #: e-mails déclenchés par un événement (envoi, réponse d'un recruteur,
+    #: dossier à valider, rapport de mission) partent toujours.
+    reminder_emails_enabled: bool = False
     #: Racine du frontend, pour les liens des e-mails.
     frontend_url: str = "http://localhost:3000"
 

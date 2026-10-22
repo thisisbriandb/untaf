@@ -150,3 +150,18 @@ def test_school_offer_is_never_sent_without_approval():
                                channel=None, approved_at=None)
     hold = asyncio.run(pre_send_check(_SchoolSession(job), dispatch, app))
     assert hold and hold.status == DispatchStatus.AWAITING_APPROVAL and "école" in hold.reason
+
+
+def test_reminder_emails_are_off_by_default(monkeypatch):
+    from app.agents.notifications import tasks
+    from app.config import settings
+
+    assert settings.reminder_emails_enabled is False
+
+    def boom(*_a, **_k):
+        raise AssertionError("aucune relance ne doit partir")
+
+    monkeypatch.setattr(tasks.asyncio, "new_event_loop", boom)
+    assert tasks.reengage()["skipped"]
+    assert tasks.remind_pending()["skipped"]
+    assert tasks.send_digests("daily")["skipped"]
